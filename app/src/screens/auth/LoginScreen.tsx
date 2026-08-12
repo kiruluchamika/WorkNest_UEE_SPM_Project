@@ -2,38 +2,51 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { GoogleButton } from "../../components/common/GoogleButton";
 import { colors } from "../../theme/colors";
-import { radius, spacing } from "../../theme/spacing";
+import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { APP_NAME, APP_TAGLINE } from "../../utils/constants";
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState("amal@example.com");
-  const [password, setPassword] = useState("password");
+  const { login, loginWithGoogle, isLoading } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
     setError("");
     try {
       await login(email, password);
+      Alert.alert("Welcome back!", "You've signed in successfully.");
     } catch (err) {
-      setError("Invalid email or password");
+      setError(err instanceof Error ? err.message : "Invalid email or password");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    try {
+      await loginWithGoogle();
+      Alert.alert("Welcome back!", "You've signed in successfully.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign in with Google");
     }
   };
 
@@ -45,9 +58,11 @@ export const LoginScreen: React.FC = () => {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <View style={styles.logo}>
-              <Feather name="layers" size={24} color={colors.textInverse} />
-            </View>
+            <Image
+              source={require("../../../assets/images/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Welcome to {APP_NAME}</Text>
             <Text style={styles.tagline}>Bridging the gap between local talent and community shops.</Text>
           </View>
@@ -58,29 +73,29 @@ export const LoginScreen: React.FC = () => {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            placeholder="amal@example.com"
+            placeholder="Enter your email"
           />
           <Input
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholder="password"
+            placeholder="Enter your password"
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           {isLoading ? (
             <LoadingSpinner message="Signing in..." />
           ) : (
-            <Button title="Sign in" onPress={handleLogin} size="lg" />
+            <>
+              <Button title="Sign in" onPress={handleLogin} size="lg" />
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <GoogleButton onPress={handleGoogleLogin} />
+            </>
           )}
-
-          <View style={styles.hint}>
-            <Text style={styles.hintText}>Demo accounts:</Text>
-            <Text style={styles.hintText}>jobseeker: amal@example.com</Text>
-            <Text style={styles.hintText}>shopowner: savi@example.com</Text>
-            <Text style={styles.hintText}>verifier: nuwan@example.com</Text>
-            <Text style={styles.hintText}>Password: password</Text>
-          </View>
 
           <TouchableOpacity onPress={() => navigation.navigate("Register" as never)}>
             <Text style={styles.link}>
@@ -108,12 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   logo: {
-    width: 58,
-    height: 58,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 72,
+    height: 72,
     marginBottom: spacing.lg,
   },
   title: {
@@ -139,18 +150,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontSize: typography.sizes.sm,
   },
-  hint: {
-    marginTop: spacing.xl,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
   },
-  hintText: {
-    fontSize: typography.sizes.sm,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: spacing.sm,
     color: colors.textMuted,
-    marginBottom: 2,
+    fontSize: typography.sizes.xs,
   },
   link: {
     textAlign: "center",

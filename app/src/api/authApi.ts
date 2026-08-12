@@ -1,52 +1,24 @@
-import { mockClient } from "./client";
+import { http, extractErrorMessage } from "./http";
 import type { User } from "../types";
 
-const MOCK_USERS: User[] = [
-  {
-    id: "user-1",
-    email: "amal@example.com",
-    name: "Amal Perera",
-    role: "jobseeker",
-    phone: "0771234567",
-    bio: "Hard-working student looking for weekend retail and event gigs.",
-    location: "Colombo 03",
-    trustScore: 78,
-    createdAt: "2024-01-15T08:00:00Z",
-  },
-  {
-    id: "user-2",
-    email: "savi@example.com",
-    name: "Savithri Silva",
-    role: "shopowner",
-    phone: "0712345678",
-    bio: "Owner of Savi's Café & Bakeshop.",
-    location: "Colombo 05",
-    trustScore: 88,
-    createdAt: "2023-11-20T08:00:00Z",
-  },
-  {
-    id: "user-3",
-    email: "nuwan@example.com",
-    name: "Nuwan Dias",
-    role: "verifier",
-    phone: "0761234567",
-    bio: "Community leader and youth employment coordinator.",
-    location: "Colombo 04",
-    trustScore: 95,
-    createdAt: "2023-09-10T08:00:00Z",
-  },
-];
-
-let currentUser: User | null = null;
-
-export async function login(email: string, password: string): Promise<User> {
-  const user = MOCK_USERS.find((u) => u.email === email.toLowerCase());
-  if (!user || password.length < 6) {
-    throw new Error("Invalid email or password");
-  }
-  currentUser = user;
-  return mockClient(user).then((r) => r.data);
+export interface AuthResult {
+  token: string;
+  user: User;
+  provider: "password" | "google";
 }
+
+// Fully simulated — no real Google OAuth is wired up for this build.
+const GOOGLE_MOCK_USER: User = {
+  id: "user-google-1",
+  email: "amal.google@gmail.com",
+  name: "Amal Perera",
+  role: "jobseeker",
+  phone: "0771234567",
+  bio: "Signed in with Google.",
+  location: "Colombo 03",
+  trustScore: 78,
+  createdAt: "2024-01-15T08:00:00Z",
+};
 
 export async function register(payload: {
   name: string;
@@ -54,33 +26,43 @@ export async function register(payload: {
   phone: string;
   role: "jobseeker" | "shopowner" | "verifier";
   password: string;
-}): Promise<User> {
-  const newUser: User = {
-    id: `user-${Date.now()}`,
-    email: payload.email.toLowerCase(),
-    name: payload.name,
-    role: payload.role,
-    phone: payload.phone,
-    trustScore: 50,
-    createdAt: new Date().toISOString(),
-  };
-  currentUser = newUser;
-  return mockClient(newUser).then((r) => r.data);
+}): Promise<AuthResult> {
+  try {
+    const { data } = await http.post("/auth/register", payload);
+    return { token: data.token, user: data.user, provider: "password" };
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not create account. Try again."));
+  }
 }
 
-export async function getCurrentUser(): Promise<User | null> {
-  return mockClient(currentUser).then((r) => r.data);
+export async function login(email: string, password: string): Promise<AuthResult> {
+  try {
+    const { data } = await http.post("/auth/login", { email, password });
+    return { token: data.token, user: data.user, provider: "password" };
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Invalid email or password"));
+  }
+}
+
+export async function loginWithGoogle(): Promise<AuthResult> {
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  return {
+    token: `mock-google-${Date.now()}`,
+    user: GOOGLE_MOCK_USER,
+    provider: "google",
+  };
+}
+
+export async function fetchCurrentUser(): Promise<User> {
+  const { data } = await http.get("/auth/me");
+  return data.user;
 }
 
 export async function logout(): Promise<void> {
-  currentUser = null;
-  return mockClient(undefined).then(() => undefined);
+  // JWT sessions are stateless — nothing to invalidate server-side.
 }
 
-export async function updateProfile(userId: string, updates: Partial<User>): Promise<User> {
-  const user = MOCK_USERS.find((u) => u.id === userId) || currentUser;
-  if (!user) throw new Error("User not found");
-  const updated = { ...user, ...updates };
-  if (currentUser?.id === userId) currentUser = updated;
-  return mockClient(updated).then((r) => r.data);
+export async function updateProfile(current: User, updates: Partial<User>): Promise<User> {
+  // No backend endpoint for profile updates yet — merge locally for now.
+  return { ...current, ...updates };
 }

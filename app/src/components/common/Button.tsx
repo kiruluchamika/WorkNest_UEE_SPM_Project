@@ -2,8 +2,8 @@ import React from "react";
 import {
   TouchableOpacity,
   Text,
+  Image,
   StyleSheet,
-  ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from "react-native";
@@ -76,7 +76,11 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={textColors[variant]} />
+        <Image
+          source={require("../../../assets/images/loading.gif")}
+          style={styles.loadingGif}
+          resizeMode="contain"
+        />
       ) : (
         <Text
           style={[
@@ -101,5 +105,9 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: "600",
+  },
+  loadingGif: {
+    width: 28,
+    height: 28,
   },
 });

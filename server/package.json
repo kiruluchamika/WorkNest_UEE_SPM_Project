@@ -9,7 +9,11 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "ts-node --transpile-only prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",

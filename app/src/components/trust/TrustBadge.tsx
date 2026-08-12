@@ -16,7 +16,7 @@ const variantStyles: Record<Variant, { background: string; text: string }> = {
   warning: { background: "#FFF8E1", text: colors.warning },
   danger: { background: colors.dangerLight, text: colors.danger },
   muted: { background: colors.cream, text: colors.textMuted },
-  primary: { background: "#FFEEE5", text: colors.primaryDark },
+  primary: { background: colors.primarySoft, text: colors.primaryDark },
 };
 
 export const TrustBadge: React.FC<TrustBadgeProps> = ({ label, variant = "primary" }) => {

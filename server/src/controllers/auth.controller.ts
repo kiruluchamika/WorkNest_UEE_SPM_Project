@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db";
-import { hashPassword } from "../utils/hash";
+import { hashPassword, comparePassword } from "../utils/hash";
 import { signToken } from "../utils/jwt";
 import { HttpError } from "../middleware/error.middleware";
-import { RegisterInput } from "../validators/auth.validator";
+import { AuthedRequest } from "../middleware/auth.middleware";
+import { RegisterInput, LoginInput } from "../validators/auth.validator";
 
 function toPublicUser(user: {
   id: string;
@@ -53,6 +54,47 @@ export async function register(
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return next(new HttpError(409, "Email already registered"));
     }
+    next(err);
+  }
+}
+
+export async function login(
+  req: Request<unknown, unknown, LoginInput>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { email, password } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return next(new HttpError(401, "Invalid email or password"));
+    }
+
+    const passwordMatches = await comparePassword(password, user.passwordHash);
+    if (!passwordMatches) {
+      return next(new HttpError(401, "Invalid email or password"));
+    }
+
+    const token = signToken({ userId: user.id, role: user.role });
+
+    res.json({ token, user: toPublicUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function me(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req as AuthedRequest;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return next(new HttpError(401, "Invalid or expired session"));
+    }
+
+    res.json({ user: toPublicUser(user) });
+  } catch (err) {
     next(err);
   }
 }

@@ -1,18 +1,23 @@
 export const colors = {
-  // Primary palette
-  primary: "#FF7A3D",
-  primaryDark: "#C14513",
-  primarySoft: "#FFE3D5",
+  // Primary palette (matches the WorkNest logo teal)
+  primary: "#0090A6",
+  primaryDark: "#045F70",
+  primarySoft: "#DCF2F4",
+
+  // Accent (matches the WorkNest logo lime)
+  accent: "#C7C804",
+  accentDark: "#8C8D03",
+  accentSoft: "#F4F7D6",
 
   // Backgrounds
-  background: "#F8F4EA",
-  surface: "#FFFDF7",
-  cream: "#EFECE2",
-  warmPanel: "#FFF0D9",
+  background: "#F2FAFA",
+  surface: "#FFFFFF",
+  cream: "#E8F2F2",
+  warmPanel: "#F4F7D6",
 
   // Text
-  text: "#2D251E",
-  textMuted: "#81776A",
+  text: "#1F2A2E",
+  textMuted: "#667479",
   textInverse: "#FFFFFF",
 
   // Accents / semantic
@@ -21,12 +26,12 @@ export const colors = {
   warning: "#D98918",
   danger: "#D54B35",
   dangerLight: "#FDECE8",
-  info: "#2D6A7A",
+  info: "#3B6FA5",
   trust: "#16875E",
 
   // Borders / dividers
-  border: "#E3DCCF",
-  borderStrong: "#D4C8B8",
+  border: "#DCE8E8",
+  borderStrong: "#C3D6D6",
   shadow: "#000000",
 };
 

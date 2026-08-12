@@ -2,33 +2,40 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { GoogleButton } from "../../components/common/GoogleButton";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { ROLES } from "../../utils/constants";
 import { registerSchema } from "../../utils/validators";
+import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { register, isLoading } = useAuth();
+  const route = useRoute<RouteProp<AuthStackParamList, "Register">>();
+  const { register, loginWithGoogle, isLoading } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"jobseeker" | "shopowner" | "verifier">("jobseeker");
+  const [role, setRole] = useState<"jobseeker" | "shopowner" | "verifier">(
+    route.params?.role ?? "jobseeker"
+  );
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -59,8 +66,19 @@ export const RegisterScreen: React.FC = () => {
 
     try {
       await register({ name, email, phone, role, password });
+      Alert.alert("Account created!", "Welcome to WorkNest.");
     } catch (err) {
-      setError("Could not create account. Try again.");
+      setError(err instanceof Error ? err.message : "Could not create account. Try again.");
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setError("");
+    try {
+      await loginWithGoogle();
+      Alert.alert("Welcome!", "You've signed in successfully.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign in with Google");
     }
   };
 
@@ -72,9 +90,11 @@ export const RegisterScreen: React.FC = () => {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <View style={styles.logo}>
-              <Feather name="layers" size={22} color={colors.textInverse} />
-            </View>
+            <Image
+              source={require("../../../assets/images/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Welcome to WorkNest</Text>
             <Text style={styles.subtitle}>Select your role and join the trusted local gig network.</Text>
           </View>
@@ -168,7 +188,15 @@ export const RegisterScreen: React.FC = () => {
           {isLoading ? (
             <LoadingSpinner message="Creating account..." />
           ) : (
-            <Button title="Create account" onPress={handleRegister} size="lg" />
+            <>
+              <Button title="Create account" onPress={handleRegister} size="lg" />
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <GoogleButton onPress={handleGoogleSignUp} label="Sign up with Google" />
+            </>
           )}
 
           <TouchableOpacity onPress={() => navigation.navigate("Login" as never)}>
@@ -196,12 +224,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   logo: {
-    width: 54,
-    height: 54,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 68,
+    height: 68,
     marginBottom: spacing.md,
   },
   title: {
@@ -254,6 +278,21 @@ const styles = StyleSheet.create({
     color: colors.danger,
     marginBottom: spacing.md,
     fontSize: typography.sizes.sm,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: spacing.sm,
+    color: colors.textMuted,
+    fontSize: typography.sizes.xs,
   },
   link: {
     textAlign: "center",
