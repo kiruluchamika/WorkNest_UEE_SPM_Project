@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(npx expo-doctor *)",
+      "Bash(NODE_OPTIONS=\"--use-system-ca\" npx expo-doctor)",
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/expo config *)",
+      "Bash(node \"C:\\\\Users\\\\MSI\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--A-SLIIT-3rd-YEAR-2nd-sem-UEE-WorkNest-UEE-SPM-Project\\\\134c5a7d-4b0e-4cc2-b105-ef0f77822f18\\\\scratchpad\\\\make-png.js\" \"assets/images\")",
+      "Bash(EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo export --platform ios --output-dir __TRACKED_VAR__/expo-export-test)",
+      "Bash(EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo export --platform ios --output-dir \"/d/A SLIIT/3rd YEAR/2nd sem/UEE/WorkNest_UEE_SPM_Project/app/.export-test\")",
+      "Bash(EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo start --lan)",
+      "Bash(./node_modules/.bin/expo install *)",
+      "Bash(npm install *)",
+      "Bash(powershell -NoProfile -Command \"Get-Process node,npm -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,CPU,StartTime | Format-Table -AutoSize\")",
+      "Bash(npm config *)",
+      "Bash(npm ping *)",
+      "Bash(powershell -NoProfile -Command \"Test-NetConnection -ComputerName registry.npmjs.org -Port 443 -InformationLevel Detailed\")",
+      "WebFetch(domain:docs.expo.dev)",
+      "WebFetch(domain:expo.dev)",
+      "Bash(EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo export --platform android --output-dir \"/d/A SLIIT/3rd YEAR/2nd sem/UEE/WorkNest_UEE_SPM_Project/app/.export-test\")",
+      "Bash(cd \"d:/A SLIIT/3rd YEAR/2nd sem/UEE/WorkNest_UEE_SPM_Project/app\" && rm -rf \".export-test\")"
+    ],
+    "additionalDirectories": [
+      "d:\\A SLIIT\\3rd YEAR\\2nd sem\\UEE\\WorkNest_UEE_SPM_Project\\app\\.export-test"
+    ]
+  }
+}
