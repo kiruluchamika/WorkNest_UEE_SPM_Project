@@ -19,7 +19,16 @@
       "WebFetch(domain:docs.expo.dev)",
       "WebFetch(domain:expo.dev)",
       "Bash(EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo export --platform android --output-dir \"/d/A SLIIT/3rd YEAR/2nd sem/UEE/WorkNest_UEE_SPM_Project/app/.export-test\")",
-      "Bash(cd \"d:/A SLIIT/3rd YEAR/2nd sem/UEE/WorkNest_UEE_SPM_Project/app\" && rm -rf \".export-test\")"
+      "Bash(cd \"d:/A SLIIT/3rd YEAR/2nd sem/UEE/WorkNest_UEE_SPM_Project/app\" && rm -rf \".export-test\")",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(48\\).toString\\('hex'\\)\\)\")",
+      "Bash(./node_modules/.bin/prisma migrate *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:4000/health)",
+      "Bash(curl -s -X POST http://localhost:4000/api/auth/register -H \"Content-Type: application/json\" -d '{\"name\":\"Test User\",\"email\":\"testuser1@example.com\",\"phone\":\"0771234567\",\"role\":\"jobseeker\",\"password\":\"password123\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:4000/api/auth/register -H \"Content-Type: application/json\" -d '{\"name\":\"Test User\",\"email\":\"testuser1@example.com\",\"phone\":\"0771234567\",\"role\":\"jobseeker\",\"password\":\"password123\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:4000/api/auth/register -H \"Content-Type: application/json\" -d '{\"name\":\"a\",\"email\":\"not-an-email\",\"role\":\"admin\",\"password\":\"123\"}')",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -m 5 http://192.168.254.223:4000/health)"
     ],
     "additionalDirectories": [
       "d:\\A SLIIT\\3rd YEAR\\2nd sem\\UEE\\WorkNest_UEE_SPM_Project\\app\\.export-test"
