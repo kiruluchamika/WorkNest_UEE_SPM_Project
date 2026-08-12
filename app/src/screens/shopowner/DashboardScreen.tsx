@@ -45,7 +45,7 @@ export const DashboardScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <AppHeader subtitle="Shop dashboard" />
       <ScrollView
         contentContainerStyle={styles.scroll}

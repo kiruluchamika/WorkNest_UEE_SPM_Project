@@ -45,7 +45,7 @@ export const ApplicantsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
           <Feather name="arrow-left" size={24} color={colors.text} />

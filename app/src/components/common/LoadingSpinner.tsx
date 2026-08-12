@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
+import { View, Image, Text, StyleSheet } from "react-native";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -20,7 +20,11 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         fullScreen ? { flex: 1, backgroundColor: colors.background } : null,
       ]}
     >
-      <ActivityIndicator size="large" color={colors.primary} />
+      <Image
+        source={require("../../../assets/images/loading.gif")}
+        style={fullScreen ? styles.gifLarge : styles.gifSmall}
+        resizeMode="contain"
+      />
       <Text style={styles.message}>{message}</Text>
     </View>
   );
@@ -31,6 +35,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.xl,
+  },
+  gifLarge: {
+    width: 120,
+    height: 120,
+  },
+  gifSmall: {
+    width: 56,
+    height: 56,
   },
   message: {
     marginTop: spacing.md,

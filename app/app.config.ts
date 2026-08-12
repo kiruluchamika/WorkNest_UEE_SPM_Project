@@ -8,7 +8,7 @@ export default {
   splash: {
     image: "./assets/images/splash.png",
     resizeMode: "contain",
-    backgroundColor: "#FCFBF8",
+    backgroundColor: "#F2FAFA",
   },
   assetBundlePatterns: ["**/*"],
   ios: {
@@ -18,7 +18,7 @@ export default {
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#FCFBF8",
+      backgroundColor: "#F2FAFA",
     },
     package: "com.worknest.mobile",
   },

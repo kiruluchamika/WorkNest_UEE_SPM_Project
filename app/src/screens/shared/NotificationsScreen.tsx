@@ -53,7 +53,7 @@ export const NotificationsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
         {notifications.some((n) => !n.read) ? (

@@ -54,7 +54,7 @@ export const BrowseGigsScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <AppHeader subtitle="Find gigs near you" />
       <View style={styles.header}>
         <Text style={styles.title}>Browse Gigs</Text>
@@ -70,14 +70,10 @@ export const BrowseGigsScreen: React.FC = () => {
         </View>
       </View>
 
-      <FlatList
-        horizontal
-        data={[{ value: "all", label: "All" }, ...GIG_CATEGORIES]}
-        keyExtractor={(item) => item.value}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categories}
-        renderItem={({ item }) => (
+      <View style={styles.categories}>
+        {[{ value: "all", label: "All" }, ...GIG_CATEGORIES].map((item) => (
           <TouchableOpacity
+            key={item.value}
             onPress={() => setCategory(item.value)}
             style={[
               styles.categoryChip,
@@ -96,8 +92,8 @@ export const BrowseGigsScreen: React.FC = () => {
               {item.label}
             </Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </View>
 
       <FlatList
         data={filtered}
@@ -152,6 +148,8 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   categories: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
@@ -163,6 +161,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginRight: spacing.sm,
+    marginBottom: spacing.sm,
   },
   categoryText: {
     fontSize: typography.sizes.sm,

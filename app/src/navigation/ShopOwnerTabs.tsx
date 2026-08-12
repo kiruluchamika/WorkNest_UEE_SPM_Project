@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 
+import { colors } from "../theme/colors";
 import { DashboardScreen } from "../screens/shopowner/DashboardScreen";
 import { ApplicantsScreen } from "../screens/shopowner/ApplicantsScreen";
 import { PostGigScreen } from "../screens/shopowner/PostGigScreen";
@@ -42,11 +43,11 @@ export const ShopOwnerTabs: React.FC = () => {
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "#F4A261",
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: "#5D6D7E",
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E5E1DA",
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
         },
       })}
     >

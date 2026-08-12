@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { colors } from "../../theme/colors";
@@ -20,9 +20,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <View style={styles.logo}>
-          <Feather name="briefcase" size={14} color={colors.textInverse} />
-        </View>
+        <Image
+          source={require("../../../assets/images/icon.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <View style={styles.copy}>
           <Text style={styles.brand}>WorkNest</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -57,12 +59,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primaryDark,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 28,
+    height: 28,
     marginRight: spacing.sm,
   },
   copy: {

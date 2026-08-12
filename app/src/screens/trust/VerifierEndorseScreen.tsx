@@ -71,7 +71,7 @@ export const VerifierEndorseScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <AppHeader subtitle="Verifier endorsements" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}

@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as authApi from "../api/authApi";
+import { setAuthToken } from "../api/http";
+import { loadSession, saveSession, clearSession } from "../utils/session";
 import type { User, UserRole } from "../types";
 
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
@@ -27,17 +30,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    authApi
-      .getCurrentUser()
-      .then((u) => setUser(u))
-      .finally(() => setIsLoading(false));
+    (async () => {
+      try {
+        const session = await loadSession();
+        if (!session) return;
+
+        if (session.provider === "google") {
+          setUser(session.user);
+          return;
+        }
+
+        setAuthToken(session.token);
+        try {
+          const freshUser = await authApi.fetchCurrentUser();
+          setUser(freshUser);
+          await saveSession({ ...session, user: freshUser });
+        } catch {
+          setAuthToken(null);
+          await clearSession();
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const u = await authApi.login(email, password);
-      setUser(u);
+      const result = await authApi.login(email, password);
+      setAuthToken(result.token);
+      await saveSession(result);
+      setUser(result.user);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await authApi.loginWithGoogle();
+      await saveSession(result);
+      setUser(result.user);
     } finally {
       setIsLoading(false);
     }
@@ -46,8 +81,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = useCallback(async (payload: RegisterPayload) => {
     setIsLoading(true);
     try {
-      const u = await authApi.register(payload);
-      setUser(u);
+      const result = await authApi.register(payload);
+      setAuthToken(result.token);
+      await saveSession(result);
+      setUser(result.user);
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +94,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       await authApi.logout();
+      setAuthToken(null);
+      await clearSession();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -67,15 +106,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser((prev) => (prev ? { ...prev, role } : prev));
   }, []);
 
-  const updateUser = useCallback(async (updates: Partial<User>) => {
-    if (!user) throw new Error("Not logged in");
-    const updated = await authApi.updateProfile(user.id, updates);
-    setUser(updated);
-  }, [user]);
+  const updateUser = useCallback(
+    async (updates: Partial<User>) => {
+      if (!user) throw new Error("Not logged in");
+      const updated = await authApi.updateProfile(user, updates);
+      setUser(updated);
+    },
+    [user]
+  );
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, register, logout, switchRole, updateUser }}
+      value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser }}
     >
       {children}
     </AuthContext.Provider>

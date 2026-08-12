@@ -48,7 +48,7 @@ export const ProfileScreen: React.FC = () => {
   const level = trustLevel(user.trustScore);
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Card style={styles.profileCard}>
           <View style={styles.avatar}>
