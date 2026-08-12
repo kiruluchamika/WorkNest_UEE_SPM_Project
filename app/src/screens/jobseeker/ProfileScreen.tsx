@@ -1,0 +1,273 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+
+import { useAuth } from "../../context/AuthContext";
+import * as endorsementApi from "../../api/endorsementApi";
+import * as ratingApi from "../../api/ratingApi";
+import * as applicationApi from "../../api/applicationApi";
+import { Button } from "../../components/common/Button";
+import { Card } from "../../components/common/Card";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { EndorsementTag } from "../../components/trust/EndorsementTag";
+import { colors } from "../../theme/colors";
+import { spacing } from "../../theme/spacing";
+import { typography } from "../../theme/typography";
+import { initials, trustLevel } from "../../utils/formatters";
+import type { Endorsement, Rating, Application } from "../../types";
+
+export const ProfileScreen: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([
+      endorsementApi.listEndorsementsForJobSeeker(user.id),
+      ratingApi.listRatingsForUser(user.id),
+      applicationApi.listApplicationsByJobSeeker(user.id),
+    ]).then(([e, r, a]) => {
+      setEndorsements(e);
+      setRatings(r);
+      setApplications(a);
+      setLoading(false);
+    });
+  }, [user]);
+
+  if (!user) return null;
+  const level = trustLevel(user.trustScore);
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Card style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials(user.name)}</Text>
+          </View>
+          <Text style={styles.name}>{user.name}</Text>
+          <Text style={styles.role}>{user.role.toUpperCase()}</Text>
+          <View style={styles.trustRow}>
+            <View style={[styles.trustBadge, { backgroundColor: level.color }]}>
+              <Text style={styles.trustScore}>{user.trustScore}</Text>
+            </View>
+            <Text style={[styles.trustLabel, { color: level.color }]}>{level.label}</Text>
+          </View>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Contact</Text>
+          <View style={styles.infoRow}>
+            <Feather name="mail" size={16} color={colors.textMuted} />
+            <Text style={styles.infoText}>{user.email}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Feather name="phone" size={16} color={colors.textMuted} />
+            <Text style={styles.infoText}>{user.phone || "Not set"}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Feather name="map-pin" size={16} color={colors.textMuted} />
+            <Text style={styles.infoText}>{user.location || "Not set"}</Text>
+          </View>
+          <Text style={styles.bio}>{user.bio || "No bio yet."}</Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Endorsements</Text>
+          {loading ? (
+            <LoadingSpinner message="Loading endorsements..." />
+          ) : endorsements.length > 0 ? (
+            <View style={styles.tags}>
+              {endorsements.map((e) => (
+                <EndorsementTag
+                  key={e.id}
+                  skill={e.skill}
+                  verifierName={e.verifierName}
+                />
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.empty}>No endorsements yet.</Text>
+          )}
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>My applications</Text>
+          {loading ? (
+            <LoadingSpinner message="Loading applications..." />
+          ) : applications.length > 0 ? (
+            applications.map((a) => (
+              <View key={a.id} style={styles.appRow}>
+                <Text style={styles.appTitle}>{a.gigTitle}</Text>
+                <Text style={[styles.appStatus, { color: a.status === "accepted" ? colors.success : colors.textMuted }]}>
+                  {a.status.toUpperCase()}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.empty}>You have not applied to any gigs yet.</Text>
+          )}
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Ratings</Text>
+          {loading ? (
+            <LoadingSpinner message="Loading ratings..." />
+          ) : ratings.length > 0 ? (
+            ratings.map((r) => (
+              <View key={r.id} style={styles.ratingRow}>
+                <Text style={styles.ratingStars}>{"★".repeat(r.score)}{"☆".repeat(5 - r.score)}</Text>
+                <Text style={styles.ratingComment}>&ldquo;{r.comment}&rdquo;</Text>
+                <Text style={styles.ratingBy}>— {r.fromUserName}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.empty}>No ratings yet.</Text>
+          )}
+        </Card>
+
+        <Button title="Sign out" variant="outline" onPress={logout} />
+        <View style={{ height: spacing.xxl }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scroll: {
+    padding: spacing.lg,
+  },
+  profileCard: {
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  avatarText: {
+    fontSize: typography.sizes.lg,
+    fontWeight: "800",
+    color: colors.textInverse,
+  },
+  name: {
+    fontSize: typography.sizes.lg,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  role: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    marginTop: 2,
+    marginBottom: spacing.md,
+  },
+  trustRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  trustBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.sm,
+  },
+  trustScore: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: typography.sizes.base,
+  },
+  trustLabel: {
+    fontWeight: "700",
+    fontSize: typography.sizes.base,
+  },
+  section: {
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  infoText: {
+    fontSize: typography.sizes.base,
+    color: colors.text,
+    marginLeft: spacing.sm,
+  },
+  bio: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+  tags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  empty: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+  },
+  appRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  appTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    flex: 1,
+  },
+  appStatus: {
+    fontSize: typography.sizes.xs,
+    fontWeight: "700",
+  },
+  ratingRow: {
+    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: spacing.md,
+  },
+  ratingStars: {
+    fontSize: typography.sizes.base,
+    color: colors.warning,
+    marginBottom: spacing.xs,
+  },
+  ratingComment: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontStyle: "italic",
+  },
+  ratingBy: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+});
