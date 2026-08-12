@@ -4,10 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
-import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
 import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatRelativeDate } from "../../utils/formatters";
 import type { Notification } from "../../types";
@@ -58,7 +57,13 @@ export const NotificationsScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
         {notifications.some((n) => !n.read) ? (
-          <Button title="Mark all read" size="sm" variant="outline" onPress={markAllRead} />
+          <TouchableOpacity
+            onPress={markAllRead}
+            activeOpacity={0.75}
+            style={styles.markAllButton}
+          >
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </TouchableOpacity>
         ) : null}
       </View>
 
@@ -106,13 +111,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: "700",
     color: colors.text,
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  markAllButton: {
+    alignSelf: "flex-start",
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  markAllText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
   },
   list: {
     padding: spacing.lg,
@@ -155,4 +174,3 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.base,
   },
 });
-
