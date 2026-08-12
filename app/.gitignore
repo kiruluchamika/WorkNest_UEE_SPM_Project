@@ -5,4 +5,3 @@ dist/
 web-build/
 *.log
 package-lock.json
-.claude/
