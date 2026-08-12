@@ -28,7 +28,12 @@
       "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:4000/api/auth/register -H \"Content-Type: application/json\" -d '{\"name\":\"Test User\",\"email\":\"testuser1@example.com\",\"phone\":\"0771234567\",\"role\":\"jobseeker\",\"password\":\"password123\"}')",
       "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:4000/api/auth/register -H \"Content-Type: application/json\" -d '{\"name\":\"a\",\"email\":\"not-an-email\",\"role\":\"admin\",\"password\":\"123\"}')",
       "Bash(node -e ' *)",
-      "Bash(curl -s -m 5 http://192.168.254.223:4000/health)"
+      "Bash(curl -s -m 5 http://192.168.254.223:4000/health)",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4000,8081 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress,LocalPort,State\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress,LocalPort,OwningProcess | ForEach-Object { $_; Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,Path,StartTime })",
+      "PowerShell(Get-Process -Id 27760 -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Id 27760 -Force -Confirm:$false)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue)"
     ],
     "additionalDirectories": [
       "d:\\A SLIIT\\3rd YEAR\\2nd sem\\UEE\\WorkNest_UEE_SPM_Project\\app\\.export-test"
