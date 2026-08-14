@@ -31,6 +31,26 @@ const DEMO_USERS = [
     location: "Colombo 04",
     trustScore: 95,
   },
+  {
+    email: "admin@worknest.dev",
+    name: "WorkNest Admin",
+    role: "admin" as const,
+    phone: "0700000000",
+    bio: "Platform administrator.",
+    location: "Colombo",
+    trustScore: 100,
+  },
+];
+
+const DEFAULT_CATEGORIES = [
+  { name: "Retail", description: "In-store sales and customer service roles." },
+  { name: "Delivery", description: "Courier and delivery gigs." },
+  { name: "Cleaning", description: "Residential and commercial cleaning work." },
+  { name: "Hospitality", description: "Hotels, guest services, and front-of-house roles." },
+  { name: "Event Staff", description: "Setup, ushering, and support for events." },
+  { name: "Warehouse", description: "Picking, packing, and inventory work." },
+  { name: "Office Support", description: "Administrative and clerical support tasks." },
+  { name: "Food & Beverage", description: "Kitchen, service, and cafe work." },
 ];
 
 async function main() {
@@ -45,6 +65,16 @@ async function main() {
   }
 
   console.log(`Seeded ${DEMO_USERS.length} demo users (password: "password")`);
+
+  for (const category of DEFAULT_CATEGORIES) {
+    await prisma.category.upsert({
+      where: { name: category.name },
+      update: {},
+      create: category,
+    });
+  }
+
+  console.log(`Seeded ${DEFAULT_CATEGORIES.length} default categories`);
 }
 
 main()
