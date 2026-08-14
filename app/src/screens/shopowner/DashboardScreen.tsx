@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
 import { useGigs } from "../../context/GigContext";
+import { useGigPosts } from "../../context/GigPostContext";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -28,12 +29,19 @@ export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { gigs, isLoading, refresh } = useGigs();
+  const { stats: gigPostStats, refresh: refreshGigPosts } = useGigPosts();
   const [refreshing, setRefreshing] = useState(false);
   const myGigs = gigs.filter((g) => g.shopOwnerId === user?.id || g.shopOwnerId === "user-2");
 
+  useFocusEffect(
+    useCallback(() => {
+      refreshGigPosts();
+    }, [refreshGigPosts])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await refresh();
+    await Promise.all([refresh(), refreshGigPosts()]);
     setRefreshing(false);
   };
 
@@ -59,6 +67,37 @@ export const DashboardScreen: React.FC = () => {
           <View style={styles.heroIcon}>
             <Feather name="users" size={18} color={colors.primaryDark} />
           </View>
+        </View>
+
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>Gig Post Overview</Text>
+          <TouchableOpacity
+            onPress={() => (navigation as any).getParent()?.jumpTo("MyGigsTab")}
+          >
+            <Text style={styles.viewAll}>Manage</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.statsGrid}>
+          <Card style={styles.statCard}>
+            <Feather name="grid" size={16} color={colors.primaryDark} />
+            <Text style={styles.statValue}>{gigPostStats.total}</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Feather name="activity" size={16} color={colors.success} />
+            <Text style={styles.statValue}>{gigPostStats.active}</Text>
+            <Text style={styles.statLabel}>Active</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Feather name="clock" size={16} color={colors.warning} />
+            <Text style={styles.statValue}>{gigPostStats.pending}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Feather name="x-circle" size={16} color={colors.danger} />
+            <Text style={styles.statValue}>{gigPostStats.rejected}</Text>
+            <Text style={styles.statLabel}>Rejected</Text>
+          </Card>
         </View>
 
         <View style={styles.statsGrid}>
