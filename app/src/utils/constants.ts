@@ -12,10 +12,10 @@ export const GIG_CATEGORIES: { value: string; label: string }[] = [
   { value: "general", label: "General" },
 ];
 
-export const WAGE_TYPES: { value: "hour" | "day" | "fixed"; label: string }[] = [
-  { value: "hour", label: "Per hour" },
-  { value: "day", label: "Per day" },
-  { value: "fixed", label: "Fixed amount" },
+export const GIG_PAYMENT_TYPES: { value: "HOURLY" | "DAILY" | "FIXED"; label: string }[] = [
+  { value: "HOURLY", label: "Hourly" },
+  { value: "DAILY", label: "Daily" },
+  { value: "FIXED", label: "Fixed" },
 ];
 
 export const MIN_PASSWORD_LENGTH = 6;
