@@ -19,15 +19,30 @@ export const registerSchema = z
     path: ["confirmPassword"],
   });
 
-export const gigPostSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(20, "Description must be at least 20 characters"),
-  category: z.enum(["retail", "hospitality", "delivery", "events", "general"]),
-  location: z.string().min(3, "Location is required"),
-  wage: z.coerce.number().min(1, "Wage must be greater than 0"),
-  wageType: z.enum(["hour", "day", "fixed"]),
-  requiredSkills: z.string().min(3, "Please list at least one skill"),
-  startDate: z.string().min(1, "Start date is required"),
+export const categorySchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  description: z.string().optional(),
+});
+
+export const gigPostFormSchema = z.object({
+  title: z.string().trim().min(1, "Gig title is required."),
+  categoryId: z.string().trim().min(1, "Please select a category."),
+  description: z.string().trim().min(20, "Description must be at least 20 characters."),
+  location: z.string().trim().min(1, "Location is required."),
+  paymentAmount: z.coerce.number().positive("Payment must be greater than 0."),
+  paymentType: z.enum(["HOURLY", "DAILY", "FIXED"]),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date."),
+  startTime: z.string().trim().optional().or(z.literal("")),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date.")
+    .optional()
+    .or(z.literal("")),
+  endTime: z.string().trim().optional().or(z.literal("")),
+  workersNeeded: z.coerce.number().int().min(1, "Workers needed must be at least 1."),
+  requiredSkills: z.string().optional(),
+  contactInfo: z.string().trim().optional(),
+  imageUrl: z.string().trim().url("Please enter a valid image URL.").optional().or(z.literal("")),
 });
 
 export const applicationSchema = z.object({
