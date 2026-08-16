@@ -209,6 +209,13 @@ export const GigPostDetailScreen: React.FC = () => {
           />
         ) : null}
 
+        <Button
+          title="Application Settings"
+          variant="secondary"
+          onPress={() => (navigation as any).navigate("ApplicationSettings", { gigId: gig.id })}
+          style={{ marginBottom: spacing.md }}
+        />
+
         {gig.status === "ACTIVE" ? (
           <Button
             title="Close Gig"
