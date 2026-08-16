@@ -29,6 +29,12 @@ enum PaymentType {
   FIXED
 }
 
+enum ApplicationMode {
+  QUICK_APPLY
+  STANDARD
+  PROFESSIONAL
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -80,4 +86,24 @@ model GigPost {
   deletedAt       DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  applicationSettings ApplicationSettings?
+}
+
+model ApplicationSettings {
+  id                     String          @id @default(uuid())
+  gigPostId              String          @unique
+  gigPost                GigPost         @relation(fields: [gigPostId], references: [id])
+  applicationMode        ApplicationMode @default(STANDARD)
+  requireCV              Boolean         @default(false)
+  requireCoverLetter     Boolean         @default(false)
+  requireExperience      Boolean         @default(true)
+  requireAvailability    Boolean         @default(true)
+  requireTransportation  Boolean         @default(false)
+  requirePortfolio       Boolean         @default(false)
+  requireExpectedSalary  Boolean         @default(true)
+  requireShortMessage    Boolean         @default(true)
+  customQuestions        Json            @default("[]")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 }
