@@ -92,6 +92,35 @@ export interface Application {
   createdAt: string;
 }
 
+export type ApplicationMode = "QUICK_APPLY" | "STANDARD" | "PROFESSIONAL";
+export type QuestionType = "YES_NO" | "TEXT" | "MULTIPLE_CHOICE";
+
+export interface ApplicationRequirements {
+  requireCV: boolean;
+  requireCoverLetter: boolean;
+  requireExperience: boolean;
+  requireAvailability: boolean;
+  requireTransportation: boolean;
+  requirePortfolio: boolean;
+  requireExpectedSalary: boolean;
+  requireShortMessage: boolean;
+}
+
+export interface ApplicationQuestion {
+  id?: string;
+  question: string;
+  type: QuestionType;
+  required: boolean;
+  options?: string[];
+}
+
+export interface ApplicationSettings {
+  gigId: string;
+  applicationMode: ApplicationMode;
+  requirements: ApplicationRequirements;
+  customQuestions: ApplicationQuestion[];
+}
+
 export interface Endorsement {
   id: string;
   verifierId: string;
