@@ -16,6 +16,15 @@ export async function getApplicationSettings(gigId: string): Promise<Application
   }
 }
 
+export async function getPublicApplicationSettings(gigId: string): Promise<ApplicationSettings | null> {
+  try {
+    const { data } = await http.get(`/application-settings/${gigId}/public`);
+    return data.settings;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not load this gig's application requirements."));
+  }
+}
+
 export async function createApplicationSettings(
   gigId: string,
   payload: ApplicationSettingsPayload
