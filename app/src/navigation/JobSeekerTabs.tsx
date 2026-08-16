@@ -7,6 +7,7 @@ import { colors } from "../theme/colors";
 import { BrowseGigsScreen } from "../screens/jobseeker/BrowseGigsScreen";
 import { GigDetailScreen } from "../screens/jobseeker/GigDetailScreen";
 import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
+import { ApplyToGigScreen } from "../screens/jobseeker/ApplyToGigScreen";
 import { ProfileScreen } from "../screens/jobseeker/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
@@ -14,6 +15,7 @@ export type JobSeekerStackParamList = {
   BrowseGigs: undefined;
   GigDetail: { gigId: string };
   ApplyGig: { gigId: string };
+  ApplyToGig: { gigId: string };
 };
 
 export type JobSeekerTabParamList = {
@@ -31,6 +33,7 @@ function JobSeekerStack() {
       <Stack.Screen name="BrowseGigs" component={BrowseGigsScreen} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} />
       <Stack.Screen name="ApplyGig" component={ApplyGigScreen} />
+      <Stack.Screen name="ApplyToGig" component={ApplyToGigScreen} />
     </Stack.Navigator>
   );
 }
