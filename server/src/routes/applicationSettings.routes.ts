@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getApplicationSettings,
+  getPublicApplicationSettings,
   createApplicationSettings,
   updateApplicationSettings,
 } from "../controllers/applicationSettings.controller";
@@ -12,6 +13,7 @@ import { applicationSettingsSchema } from "../validators/applicationSettings.val
 export const applicationSettingsRoutes = Router();
 
 applicationSettingsRoutes.get("/:gigId", requireAuth, requireRole("shopowner"), getApplicationSettings);
+applicationSettingsRoutes.get("/:gigId/public", requireAuth, getPublicApplicationSettings);
 applicationSettingsRoutes.post(
   "/:gigId",
   requireAuth,
