@@ -69,6 +69,27 @@ export async function getApplicationSettings(
   }
 }
 
+export async function getPublicApplicationSettings(
+  req: Request<{ gigId: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { gigId } = req.params;
+
+    const gig = await prisma.gigPost.findFirst({ where: { id: gigId, isDeleted: false } });
+    if (!gig) {
+      return next(new HttpError(404, "Gig not found"));
+    }
+
+    const settings = await prisma.applicationSettings.findUnique({ where: { gigPostId: gigId } });
+
+    res.json({ settings: settings ? toPublicSettings(settings) : null });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function createApplicationSettings(
   req: Request<{ gigId: string }, unknown, ApplicationSettingsInput>,
   res: Response,
