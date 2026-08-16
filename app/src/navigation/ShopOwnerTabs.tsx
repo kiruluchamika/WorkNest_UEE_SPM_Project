@@ -9,6 +9,7 @@ import { ApplicantsScreen } from "../screens/shopowner/ApplicantsScreen";
 import { MyGigsScreen } from "../screens/shopowner/MyGigsScreen";
 import { GigPostDetailScreen } from "../screens/shopowner/GigPostDetailScreen";
 import { GigPostFormScreen } from "../screens/shopowner/GigPostFormScreen";
+import { ApplicationSettingsScreen } from "../screens/shopowner/ApplicationSettingsScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
 export type ShopOwnerStackParamList = {
@@ -20,6 +21,7 @@ export type MyGigsStackParamList = {
   MyGigs: undefined;
   GigDetail: { gigId: string };
   GigForm: { gigId?: string } | undefined;
+  ApplicationSettings: { gigId: string };
 };
 
 export type ShopOwnerTabParamList = {
@@ -48,6 +50,7 @@ function MyGigsStackNavigator() {
       <MyGigsStack.Screen name="MyGigs" component={MyGigsScreen} />
       <MyGigsStack.Screen name="GigDetail" component={GigPostDetailScreen} />
       <MyGigsStack.Screen name="GigForm" component={GigPostFormScreen} />
+      <MyGigsStack.Screen name="ApplicationSettings" component={ApplicationSettingsScreen} />
     </MyGigsStack.Navigator>
   );
 }
