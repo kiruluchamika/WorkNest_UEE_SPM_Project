@@ -92,6 +92,101 @@ export interface Application {
   createdAt: string;
 }
 
+export type ApplicationMode = "QUICK_APPLY" | "STANDARD" | "PROFESSIONAL";
+export type QuestionType = "YES_NO" | "TEXT" | "MULTIPLE_CHOICE";
+
+export interface ApplicationRequirements {
+  requireCV: boolean;
+  requireCoverLetter: boolean;
+  requireExperience: boolean;
+  requireAvailability: boolean;
+  requireTransportation: boolean;
+  requirePortfolio: boolean;
+  requireExpectedSalary: boolean;
+  requireShortMessage: boolean;
+}
+
+export interface ApplicationQuestion {
+  id?: string;
+  question: string;
+  type: QuestionType;
+  required: boolean;
+  options?: string[];
+}
+
+export interface ApplicationSettings {
+  gigId: string;
+  applicationMode: ApplicationMode;
+  requirements: ApplicationRequirements;
+  customQuestions: ApplicationQuestion[];
+}
+
+// Real, backend-connected job application submitted against a GigPost.
+// Distinct from the legacy mock `Application`/`ApplicationStatus` above,
+// which belongs to the old in-memory Gig system and is left untouched.
+export type JobApplicationStatus =
+  | "PENDING"
+  | "SHORTLISTED"
+  | "HIRED"
+  | "REJECTED"
+  | "WITHDRAWN"
+  | "COMPLETED";
+
+export interface ApplicationAnswer {
+  questionId: string;
+  question?: string;
+  answer: string | boolean | string[];
+}
+
+export interface JobApplication {
+  id: string;
+  gigId: string;
+  applicantId: string;
+  applicationMode: ApplicationMode;
+  status: JobApplicationStatus;
+  experience?: string;
+  availability?: string;
+  transportation?: boolean;
+  shortMessage?: string;
+  cvUrl?: string;
+  coverLetter?: string;
+  portfolioUrl?: string;
+  expectedSalary?: number;
+  answers: ApplicationAnswer[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubmitApplicationPayload {
+  gigId: string;
+  experience?: string;
+  availability?: string;
+  transportation?: boolean;
+  shortMessage?: string;
+  cvUrl?: string;
+  coverLetter?: string;
+  portfolioUrl?: string;
+  expectedSalary?: number;
+  answers: ApplicationAnswer[];
+}
+
+export interface ApplicantGigSummary {
+  id: string;
+  title: string;
+  description: string;
+  category?: Category;
+  location: string;
+  paymentAmount: number;
+  paymentType: GigPaymentType;
+  startDate: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  workersNeeded: number;
+  requiredSkills: string[];
+  status: GigPostStatus;
+}
+
 export interface Endorsement {
   id: string;
   verifierId: string;

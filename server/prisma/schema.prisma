@@ -29,6 +29,21 @@ enum PaymentType {
   FIXED
 }
 
+enum ApplicationMode {
+  QUICK_APPLY
+  STANDARD
+  PROFESSIONAL
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  HIRED
+  REJECTED
+  WITHDRAWN
+  COMPLETED
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -43,6 +58,7 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   gigPosts     GigPost[]
+  applications Application[]
 }
 
 model Category {
@@ -80,4 +96,48 @@ model GigPost {
   deletedAt       DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  applicationSettings ApplicationSettings?
+  applications        Application[]
+}
+
+model ApplicationSettings {
+  id                     String          @id @default(uuid())
+  gigPostId              String          @unique
+  gigPost                GigPost         @relation(fields: [gigPostId], references: [id])
+  applicationMode        ApplicationMode @default(STANDARD)
+  requireCV              Boolean         @default(false)
+  requireCoverLetter     Boolean         @default(false)
+  requireExperience      Boolean         @default(true)
+  requireAvailability    Boolean         @default(true)
+  requireTransportation  Boolean         @default(false)
+  requirePortfolio       Boolean         @default(false)
+  requireExpectedSalary  Boolean         @default(true)
+  requireShortMessage    Boolean         @default(true)
+  customQuestions        Json            @default("[]")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+}
+
+model Application {
+  id               String            @id @default(uuid())
+  gigPostId        String
+  gigPost          GigPost           @relation(fields: [gigPostId], references: [id])
+  applicantId      String
+  applicant        User              @relation(fields: [applicantId], references: [id])
+  applicationMode  ApplicationMode
+  status           ApplicationStatus @default(PENDING)
+  experience       String?
+  availability     String?
+  transportation   Boolean?
+  shortMessage     String?
+  cvUrl            String?
+  coverLetter      String?
+  portfolioUrl     String?
+  expectedSalary   Decimal?
+  answers          Json              @default("[]")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([gigPostId, applicantId], name: "gigPostId_applicantId")
 }
