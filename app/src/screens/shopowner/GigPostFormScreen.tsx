@@ -18,6 +18,7 @@ import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { Select } from "../../components/common/Select";
 import { DateTimeField } from "../../components/common/DateTimeField";
+import { ImagePickerField } from "../../components/common/ImagePickerField";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
@@ -246,6 +247,14 @@ export const GigPostFormScreen: React.FC = () => {
             </View>
           </View>
 
+          <FormSection icon="image" title="Gig Photo">
+            <ImagePickerField
+              value={imageUrl || undefined}
+              onChange={(v) => setImageUrl(v ?? "")}
+              error={errors.imageUrl}
+            />
+          </FormSection>
+
           <FormSection icon="file-text" title="Basic Information">
             <Input
               label="Gig Title"
@@ -388,13 +397,6 @@ export const GigPostFormScreen: React.FC = () => {
               onChangeText={setContactInfo}
               placeholder="Phone number or email"
               error={errors.contactInfo}
-            />
-            <Input
-              label="Image URL (optional)"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://..."
-              error={errors.imageUrl}
             />
           </FormSection>
 
