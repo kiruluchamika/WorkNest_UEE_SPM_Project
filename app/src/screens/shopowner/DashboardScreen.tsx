@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -12,26 +13,26 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
-import { useGigs } from "../../context/GigContext";
 import { useGigPosts } from "../../context/GigPostContext";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
-import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { TrustBadge } from "../../components/trust/TrustBadge";
 import { AppHeader } from "../../components/common/AppHeader";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatCurrency } from "../../utils/formatters";
-import type { Gig } from "../../types";
 
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { gigs, isLoading, refresh } = useGigs();
-  const { stats: gigPostStats, refresh: refreshGigPosts } = useGigPosts();
+  const { gigPosts, stats: gigPostStats, refresh: refreshGigPosts } = useGigPosts();
   const [refreshing, setRefreshing] = useState(false);
-  const myGigs = gigs.filter((g) => g.shopOwnerId === user?.id || g.shopOwnerId === "user-2");
+
+  const activeGigPosts = useMemo(
+    () => gigPosts.filter((g) => g.status === "ACTIVE"),
+    [gigPosts]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -41,20 +42,16 @@ export const DashboardScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refresh(), refreshGigPosts()]);
+    await refreshGigPosts();
     setRefreshing(false);
-  };
-
-  const stats = {
-    total: myGigs.length,
-    open: myGigs.filter((g) => g.status === "open").length,
-    filled: myGigs.filter((g) => g.status === "filled").length,
-    totalApplicants: myGigs.reduce((sum, g) => sum + g.applicantsCount, 0),
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <AppHeader subtitle="Shop dashboard" />
+      <AppHeader
+        subtitle="Shop dashboard"
+        onProfilePress={() => navigation.navigate("Profile" as never)}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -77,50 +74,39 @@ export const DashboardScreen: React.FC = () => {
             <Text style={styles.viewAll}>Manage</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard}>
-            <Feather name="grid" size={16} color={colors.primaryDark} />
-            <Text style={styles.statValue}>{gigPostStats.total}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="activity" size={16} color={colors.success} />
-            <Text style={styles.statValue}>{gigPostStats.active}</Text>
-            <Text style={styles.statLabel}>Active</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="clock" size={16} color={colors.warning} />
-            <Text style={styles.statValue}>{gigPostStats.pending}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="x-circle" size={16} color={colors.danger} />
-            <Text style={styles.statValue}>{gigPostStats.rejected}</Text>
-            <Text style={styles.statLabel}>Rejected</Text>
-          </Card>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard}>
-            <Feather name="briefcase" size={16} color={colors.primaryDark} />
-            <Text style={styles.statValue}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Gigs posted</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="activity" size={16} color={colors.success} />
-            <Text style={styles.statValue}>{stats.open}</Text>
-            <Text style={styles.statLabel}>Open</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="check-circle" size={16} color={colors.info} />
-            <Text style={styles.statValue}>{stats.filled}</Text>
-            <Text style={styles.statLabel}>Filled</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Feather name="user-plus" size={16} color={colors.warning} />
-            <Text style={styles.statValue}>{stats.totalApplicants}</Text>
-            <Text style={styles.statLabel}>Applicants</Text>
-          </Card>
+        <View style={styles.statsColumn}>
+          <View style={styles.statsRow}>
+            <Card style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: colors.accentSoft }]}>
+                <Feather name="grid" size={16} color={colors.accentDark} />
+              </View>
+              <Text style={styles.statValue}>{gigPostStats.total}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: colors.successLight }]}>
+                <Feather name="activity" size={16} color={colors.success} />
+              </View>
+              <Text style={styles.statValue}>{gigPostStats.active}</Text>
+              <Text style={styles.statLabel}>Active</Text>
+            </Card>
+          </View>
+          <View style={styles.statsRow}>
+            <Card style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: "#FFF8E1" }]}>
+                <Feather name="clock" size={16} color={colors.warning} />
+              </View>
+              <Text style={styles.statValue}>{gigPostStats.pending}</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: colors.dangerLight }]}>
+                <Feather name="x-circle" size={16} color={colors.danger} />
+              </View>
+              <Text style={styles.statValue}>{gigPostStats.rejected}</Text>
+              <Text style={styles.statLabel}>Rejected</Text>
+            </Card>
+          </View>
         </View>
 
         <Button
@@ -131,37 +117,56 @@ export const DashboardScreen: React.FC = () => {
 
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Active Gigs</Text>
-          <Text style={styles.viewAll}>View All</Text>
+          <TouchableOpacity onPress={() => (navigation as any).getParent()?.jumpTo("MyGigsTab")}>
+            <Text style={styles.viewAll}>View All</Text>
+          </TouchableOpacity>
         </View>
-        {isLoading && myGigs.length === 0 ? (
-          <LoadingSpinner message="Loading your gigs..." />
-        ) : myGigs.length === 0 ? (
-          <Text style={styles.empty}>No gigs yet. Post your first gig above.</Text>
+        {activeGigPosts.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <View style={styles.emptyIcon}>
+              <Feather name="activity" size={20} color={colors.primaryDark} />
+            </View>
+            <Text style={styles.emptyTitle}>No active gigs yet</Text>
+            <Text style={styles.emptyText}>
+              Approved gigs will show up here once an admin reviews them.
+            </Text>
+          </Card>
         ) : (
-          myGigs.map((gig) => (
+          activeGigPosts.slice(0, 4).map((gig) => (
             <TouchableOpacity
               key={gig.id}
+              activeOpacity={0.85}
               onPress={() =>
-                (navigation as any).navigate("Applicants", { gigId: gig.id })
+                (navigation as any)
+                  .getParent()
+                  ?.navigate("MyGigsTab", { screen: "GigDetail", params: { gigId: gig.id } })
               }
             >
-
-
-              <Card style={styles.gigCard}>
-                <View style={styles.gigHeader}>
-                  <Text style={styles.gigTitle}>{gig.title}</Text>
-                  <TrustBadge
-                    label={gig.status}
-                    variant={gig.status === "open" ? "success" : "muted"}
-                  />
-                </View>
-                <Text style={styles.gigWage}>
-                  {formatCurrency(gig.wage)} / {gig.wageType}
-                </Text>
-                <View style={styles.manageRow}>
-                  <Text style={styles.gigApplicants}>{gig.applicantsCount} applicants</Text>
-                  <View style={styles.manageButton}>
-                    <Text style={styles.manageText}>Manage</Text>
+              <Card style={styles.gigCard} noPadding>
+                <View style={styles.gigRow}>
+                  {gig.imageUrl ? (
+                    <Image source={{ uri: gig.imageUrl }} style={styles.gigThumb} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.gigThumbPlaceholder}>
+                      <Feather name="image" size={16} color={colors.primaryDark} />
+                    </View>
+                  )}
+                  <View style={styles.gigContent}>
+                    <View style={styles.gigHeader}>
+                      <Text style={styles.gigTitle} numberOfLines={1}>
+                        {gig.title}
+                      </Text>
+                      <TrustBadge label="Active" variant="success" />
+                    </View>
+                    <Text style={styles.gigWage}>
+                      {formatCurrency(gig.paymentAmount)} / {gig.paymentType.toLowerCase()}
+                    </Text>
+                    <View style={styles.manageRow}>
+                      <Text style={styles.gigApplicants}>{gig.location}</Text>
+                      <View style={styles.manageButton}>
+                        <Text style={styles.manageText}>View</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               </Card>
@@ -214,28 +219,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.primarySoft,
   },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -spacing.sm,
+  statsColumn: {
     marginBottom: spacing.md,
   },
-  statCard: {
-    width: "46%",
-    marginHorizontal: spacing.sm,
+  statsRow: {
+    flexDirection: "row",
     marginBottom: spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    marginRight: spacing.sm,
     alignItems: "flex-start",
-    padding: spacing.sm,
+    padding: spacing.md,
+  },
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
   },
   statValue: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: "800",
-    color: colors.primaryDark,
+    color: colors.text,
   },
   statLabel: {
     fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
   sectionRow: {
     flexDirection: "row",
@@ -253,14 +266,52 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: "700",
   },
-  empty: {
+  emptyCard: {
+    alignItems: "center",
+    padding: spacing.xl,
+  },
+  emptyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
+  emptyTitle: {
     fontSize: typography.sizes.base,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  emptyText: {
+    fontSize: typography.sizes.sm,
     color: colors.textMuted,
     textAlign: "center",
-    marginTop: spacing.md,
   },
   gigCard: {
     marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  gigRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  gigThumb: {
+    width: 72,
+    minHeight: 80,
+    backgroundColor: colors.cream,
+  },
+  gigThumbPlaceholder: {
+    width: 72,
+    minHeight: 80,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gigContent: {
+    flex: 1,
     padding: spacing.md,
   },
   gigHeader: {
