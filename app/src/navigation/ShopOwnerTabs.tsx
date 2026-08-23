@@ -6,7 +6,10 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "../theme/colors";
 import { DashboardScreen } from "../screens/shopowner/DashboardScreen";
 import { ApplicantsScreen } from "../screens/shopowner/ApplicantsScreen";
-import { PostGigScreen } from "../screens/shopowner/PostGigScreen";
+import { MyGigsScreen } from "../screens/shopowner/MyGigsScreen";
+import { GigPostDetailScreen } from "../screens/shopowner/GigPostDetailScreen";
+import { GigPostFormScreen } from "../screens/shopowner/GigPostFormScreen";
+import { ApplicationSettingsScreen } from "../screens/shopowner/ApplicationSettingsScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
 export type ShopOwnerStackParamList = {
@@ -14,13 +17,22 @@ export type ShopOwnerStackParamList = {
   Applicants: { gigId: string };
 };
 
+export type MyGigsStackParamList = {
+  MyGigs: undefined;
+  GigDetail: { gigId: string };
+  GigForm: { gigId?: string } | undefined;
+  ApplicationSettings: { gigId: string };
+};
+
 export type ShopOwnerTabParamList = {
   Dashboard: undefined;
+  MyGigsTab: undefined;
   PostGig: undefined;
   Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<ShopOwnerStackParamList>();
+const MyGigsStack = createNativeStackNavigator<MyGigsStackParamList>();
 const Tab = createBottomTabNavigator<ShopOwnerTabParamList>();
 
 function ShopOwnerStack() {
@@ -32,6 +44,17 @@ function ShopOwnerStack() {
   );
 }
 
+function MyGigsStackNavigator() {
+  return (
+    <MyGigsStack.Navigator screenOptions={{ headerShown: false }}>
+      <MyGigsStack.Screen name="MyGigs" component={MyGigsScreen} />
+      <MyGigsStack.Screen name="GigDetail" component={GigPostDetailScreen} />
+      <MyGigsStack.Screen name="GigForm" component={GigPostFormScreen} />
+      <MyGigsStack.Screen name="ApplicationSettings" component={ApplicationSettingsScreen} />
+    </MyGigsStack.Navigator>
+  );
+}
+
 export const ShopOwnerTabs: React.FC = () => {
   return (
     <Tab.Navigator
@@ -39,6 +62,7 @@ export const ShopOwnerTabs: React.FC = () => {
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Feather.glyphMap = "grid";
+          if (route.name === "MyGigsTab") iconName = "briefcase";
           if (route.name === "PostGig") iconName = "plus-circle";
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
@@ -52,7 +76,8 @@ export const ShopOwnerTabs: React.FC = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={ShopOwnerStack} options={{ title: "Dashboard" }} />
-      <Tab.Screen name="PostGig" component={PostGigScreen} options={{ title: "Post Gig" }} />
+      <Tab.Screen name="MyGigsTab" component={MyGigsStackNavigator} options={{ title: "My Gigs" }} />
+      <Tab.Screen name="PostGig" component={GigPostFormScreen} options={{ title: "Post Gig" }} />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}

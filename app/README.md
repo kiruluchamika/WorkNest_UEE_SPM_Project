@@ -8,7 +8,7 @@ WorkNest connects local businesses and youth job seekers in a trusted community 
 
 - **Youth job seeker** – browse and apply to local gigs, build a trust profile.
 - **Local shop owner** – post gigs and review applicants.
-- **Community verifier** – endorse job seekers for skills they have witnessed.
+- **Community verifier** – review and verify youth job seeker verification requests by checking identity information and supporting evidence to improve trust within the platform.
 
 ## Tech stack
 

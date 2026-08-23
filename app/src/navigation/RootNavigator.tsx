@@ -8,12 +8,14 @@ import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { AuthStack } from "./AuthStack";
 import { JobSeekerTabs } from "./JobSeekerTabs";
 import { ShopOwnerTabs } from "./ShopOwnerTabs";
+import { AdminStack } from "./AdminStack";
 import { VerifierEndorseScreen } from "../screens/trust/VerifierEndorseScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
   JobSeeker: undefined;
   ShopOwner: undefined;
+  Admin: undefined;
   Verifier: undefined;
 };
 
@@ -38,6 +40,8 @@ export const RootNavigator: React.FC = () => {
           <Stack.Screen name="JobSeeker" component={JobSeekerTabs} />
         ) : user.role === "shopowner" ? (
           <Stack.Screen name="ShopOwner" component={ShopOwnerTabs} />
+        ) : user.role === "admin" ? (
+          <Stack.Screen name="Admin" component={AdminStack} />
         ) : (
           <Stack.Screen name="Verifier" component={VerifierEndorseScreen} />
         )}

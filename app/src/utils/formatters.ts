@@ -2,12 +2,17 @@ export function formatCurrency(value: number): string {
   return `Rs. ${value.toLocaleString("en-LK")}`;
 }
 
+// WorkNest operates only in Sri Lanka, so dates are always shown in
+// Asia/Colombo local time (UTC+5:30) rather than the viewer's device
+// timezone — otherwise a device set to a timezone west of UTC can
+// display dates a day early.
 export function formatDate(isoDate: string): string {
   const date = new Date(isoDate);
   return date.toLocaleDateString("en-LK", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Colombo",
   });
 }
 
@@ -30,6 +35,25 @@ export function initials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+export function gigStatusBadge(
+  status: string
+): { label: string; variant: "success" | "warning" | "danger" | "muted" | "primary" } {
+  switch (status) {
+    case "ACTIVE":
+      return { label: "Active", variant: "success" };
+    case "PENDING":
+      return { label: "Pending", variant: "warning" };
+    case "REJECTED":
+      return { label: "Rejected", variant: "danger" };
+    case "CLOSED":
+      return { label: "Closed", variant: "muted" };
+    case "COMPLETED":
+      return { label: "Completed", variant: "primary" };
+    default:
+      return { label: status, variant: "muted" };
+  }
 }
 
 export function trustLevel(score: number): { label: string; color: string } {
