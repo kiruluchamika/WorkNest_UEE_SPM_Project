@@ -19,6 +19,16 @@ export const registerSchema = z
     path: ["confirmPassword"],
   });
 
+// Accepts either an http(s) URL or a base64 data URI (from the device image picker).
+const imageSourceSchema = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^https?:\/\//.test(v) || /^data:image\//.test(v), {
+    message: "Please attach a valid image.",
+  })
+  .optional()
+  .or(z.literal(""));
+
 export const categorySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
@@ -42,7 +52,15 @@ export const gigPostFormSchema = z.object({
   workersNeeded: z.coerce.number().int().min(1, "Workers needed must be at least 1."),
   requiredSkills: z.string().optional(),
   contactInfo: z.string().trim().optional(),
-  imageUrl: z.string().trim().url("Please enter a valid image URL.").optional().or(z.literal("")),
+  imageUrl: imageSourceSchema,
+});
+
+export const profileFormSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters."),
+  phone: z.string().trim().optional().or(z.literal("")),
+  bio: z.string().trim().optional().or(z.literal("")),
+  location: z.string().trim().optional().or(z.literal("")),
+  avatarUrl: imageSourceSchema,
 });
 
 export const applicationSchema = z.object({
