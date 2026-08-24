@@ -10,6 +10,8 @@ import { MyGigsScreen } from "../screens/shopowner/MyGigsScreen";
 import { GigPostDetailScreen } from "../screens/shopowner/GigPostDetailScreen";
 import { GigPostFormScreen } from "../screens/shopowner/GigPostFormScreen";
 import { ApplicationSettingsScreen } from "../screens/shopowner/ApplicationSettingsScreen";
+import { GigApplicantsScreen } from "../screens/shopowner/GigApplicantsScreen";
+import { ApplicantDetailsScreen } from "../screens/shopowner/ApplicantDetailsScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
 export type ShopOwnerStackParamList = {
@@ -22,6 +24,8 @@ export type MyGigsStackParamList = {
   GigDetail: { gigId: string };
   GigForm: { gigId?: string } | undefined;
   ApplicationSettings: { gigId: string };
+  GigApplicants: { gigId: string };
+  ApplicantDetails: { applicationId: string };
 };
 
 export type ShopOwnerTabParamList = {
@@ -51,6 +55,8 @@ function MyGigsStackNavigator() {
       <MyGigsStack.Screen name="GigDetail" component={GigPostDetailScreen} />
       <MyGigsStack.Screen name="GigForm" component={GigPostFormScreen} />
       <MyGigsStack.Screen name="ApplicationSettings" component={ApplicationSettingsScreen} />
+      <MyGigsStack.Screen name="GigApplicants" component={GigApplicantsScreen} />
+      <MyGigsStack.Screen name="ApplicantDetails" component={ApplicantDetailsScreen} />
     </MyGigsStack.Navigator>
   );
 }
