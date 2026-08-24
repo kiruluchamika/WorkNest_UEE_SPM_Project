@@ -11,7 +11,8 @@ import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 export const app = express();
 
 app.use(cors());
-app.use(express.json());
+// Raised from the default 100kb so gig/profile photos (sent as base64 data URIs) fit.
+app.use(express.json({ limit: "8mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

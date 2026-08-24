@@ -10,11 +10,13 @@ import { MyGigsScreen } from "../screens/shopowner/MyGigsScreen";
 import { GigPostDetailScreen } from "../screens/shopowner/GigPostDetailScreen";
 import { GigPostFormScreen } from "../screens/shopowner/GigPostFormScreen";
 import { ApplicationSettingsScreen } from "../screens/shopowner/ApplicationSettingsScreen";
+import { ProfileScreen } from "../screens/shopowner/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
 export type ShopOwnerStackParamList = {
   DashboardHome: undefined;
   Applicants: { gigId: string };
+  Profile: undefined;
 };
 
 export type MyGigsStackParamList = {
@@ -40,6 +42,7 @@ function ShopOwnerStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardHome" component={DashboardScreen} />
       <Stack.Screen name="Applicants" component={ApplicantsScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }

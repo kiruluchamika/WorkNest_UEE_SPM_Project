@@ -5,7 +5,7 @@ import { hashPassword, comparePassword } from "../utils/hash";
 import { signToken } from "../utils/jwt";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
-import { RegisterInput, LoginInput } from "../validators/auth.validator";
+import { RegisterInput, LoginInput, UpdateProfileInput } from "../validators/auth.validator";
 
 function toPublicUser(user: {
   id: string;
@@ -92,6 +92,26 @@ export async function me(req: Request, res: Response, next: NextFunction) {
     if (!user) {
       return next(new HttpError(401, "Invalid or expired session"));
     }
+
+    res.json({ user: toPublicUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateProfile(
+  req: Request<unknown, unknown, UpdateProfileInput>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { userId } = req as AuthedRequest;
+    const { name, phone, bio, location, avatarUrl } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { name, phone, bio, location, avatarUrl },
+    });
 
     res.json({ user: toPublicUser(user) });
   } catch (err) {
