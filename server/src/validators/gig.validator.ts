@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// Accepts either an http(s) URL or a base64 data URI (uploaded from the device).
+const imageSourceSchema = z
+  .string()
+  .trim()
+  .refine((v) => /^https?:\/\//.test(v) || /^data:image\//.test(v), {
+    message: "Please attach a valid image.",
+  });
+
 export const createGigPostSchema = z.object({
   title: z.string().trim().min(1, "Gig title is required."),
   categoryId: z.string().trim().min(1, "Please select a category."),
@@ -14,7 +22,7 @@ export const createGigPostSchema = z.object({
   workersNeeded: z.coerce.number().int().min(1, "Workers needed must be at least 1."),
   requiredSkills: z.array(z.string().trim().min(1)).optional(),
   contactInfo: z.string().trim().min(1).optional(),
-  imageUrl: z.string().trim().url("Please enter a valid image URL.").optional(),
+  imageUrl: imageSourceSchema.optional(),
 });
 
 export type CreateGigPostInput = z.infer<typeof createGigPostSchema>;
