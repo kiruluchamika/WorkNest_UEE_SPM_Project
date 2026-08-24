@@ -136,6 +136,7 @@ model Application {
   portfolioUrl     String?
   expectedSalary   Decimal?
   answers          Json              @default("[]")
+  completedAt      DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
