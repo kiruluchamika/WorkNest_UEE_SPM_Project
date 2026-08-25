@@ -1,0 +1,43 @@
+import React, { useEffect, useState } from "react";
+import { Alert, Modal, ScrollView, Text, View, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import type { VerificationManagementStackParamList } from "../../navigation/AdminStack";
+import type { VerifierApplication } from "../../types";
+import { approveReactivationRequest, getApplication, rejectReactivationRequest, suspendApplication } from "../../api/verifierApplicationsApi";
+import { AppHeader } from "../../components/common/AppHeader";
+import { Card } from "../../components/common/Card";
+import { Button } from "../../components/common/Button";
+import { Input } from "../../components/common/Input";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { colors } from "../../theme/colors";
+import { radius, spacing } from "../../theme/spacing";
+import { typography } from "../../theme/typography";
+
+export const VerifierDetailsScreen: React.FC = () => {
+  const route = useRoute<RouteProp<VerificationManagementStackParamList, "VerifierDetails">>();
+  const navigation = useNavigation();
+  const [application,setApplication]=useState<VerifierApplication>(); const [suspendModal,setSuspendModal]=useState(false); const [rejectModal,setRejectModal]=useState(false);
+  const [reason,setReason]=useState(""); const [reviewReason,setReviewReason]=useState(""); const [busy,setBusy]=useState(false);
+  const load=()=>getApplication(route.params.applicationId).then(setApplication).catch((error)=>Alert.alert("Error",error.message));
+  useEffect(()=>{load();},[route.params.applicationId]);
+  if(!application)return <LoadingSpinner fullScreen message="Loading verifier details..."/>;
+  const requests=application.reactivationRequests??[]; const currentRequest=requests[0];
+  const field=(label:string,value:string)=><View style={styles.field}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>;
+  const suspend=async()=>{if(reason.trim().length<5)return Alert.alert("Reason required","Please provide a meaningful suspension reason.");setBusy(true);try{await suspendApplication(application.id,reason.trim());setSuspendModal(false);Alert.alert("Verifier suspended","The verifier was moved to Suspended Verifiers.");navigation.goBack();}catch(error){Alert.alert("Error",error instanceof Error?error.message:"Could not suspend verifier.");}finally{setBusy(false);}};
+  const approve=async()=>{if(!currentRequest)return;setBusy(true);try{await approveReactivationRequest(currentRequest.id);Alert.alert("Verifier reactivated","Verifier access has been restored.");navigation.goBack();}catch(error){Alert.alert("Error",error instanceof Error?error.message:"Could not reactivate verifier.");}finally{setBusy(false);}};
+  const reject=async()=>{if(!currentRequest)return;if(reviewReason.trim().length<5)return Alert.alert("Reason required","Please provide a meaningful rejection reason.");setBusy(true);try{await rejectReactivationRequest(currentRequest.id,reviewReason.trim());setRejectModal(false);setReviewReason("");await load();Alert.alert("Request rejected","The verifier remains suspended.");}catch(error){Alert.alert("Error",error instanceof Error?error.message:"Could not reject the request.");}finally{setBusy(false);}};
+  return <SafeAreaView style={styles.container}><AppHeader subtitle="Verifier details"/><ScrollView contentContainerStyle={styles.scroll}>
+    <Text style={styles.title}>VERIFIER DETAILS</Text><Card>{field("Name",application.applicant.name)}{field("Email",application.applicant.email)}{field("District",application.district)}{field("Account Status",application.status==="APPROVED"?"ACTIVE":"SUSPENDED")}{field("Availability","NOT CONFIGURED")}</Card>
+    <Text style={styles.section}>Statistics</Text><Card><Text style={styles.help}>Statistics will be available when verification case assignment and case tracking are enabled.</Text><View style={styles.grid}>{["Assigned","Approved","Rejected","Flagged"].map((label)=><View key={label} style={styles.stat}><Text style={styles.statValue}>Not configured</Text><Text style={styles.label}>{label}</Text></View>)}</View></Card>
+    {application.suspendedAt?<Card>{field("Suspension reason",application.suspensionReason||"Reason unavailable")}{field("Suspended",new Date(application.suspendedAt).toLocaleString())}{field("Original approval reviewed",application.reviewedAt?new Date(application.reviewedAt).toLocaleString():"Not available")}</Card>:null}
+    {requests.length?<Text style={styles.section}>Reactivation Request History</Text>:null}
+    {requests.map((request,index)=><Card key={request.id}>{field(index===0?"Current request":"Previous request",request.status)}{field("Explanation",request.explanation)}{field("Supporting document",request.attachmentReference?"Attached":"No supporting document attached")}{request.attachmentReference?field("Private reference",request.attachmentReference):null}{field("Requested",new Date(request.createdAt).toLocaleString())}{request.reviewedAt?field("Reviewed",new Date(request.reviewedAt).toLocaleString()):null}{request.reviewReason?field("Admin response",request.reviewReason):null}{index===0&&application.status==="SUSPENDED"&&request.status==="PENDING"?<View style={styles.actions}><View style={styles.half}><Button title="Reject Request" variant="danger" onPress={()=>setRejectModal(true)} disabled={busy}/></View><View style={styles.half}><Button title="Approve Reactivation" onPress={approve} loading={busy}/></View></View>:null}</Card>)}
+    {application.status==="APPROVED"?<Button title="Suspend Verifier" variant="danger" onPress={()=>setSuspendModal(true)}/>:null}
+  </ScrollView>
+  <Modal visible={suspendModal} transparent animationType="fade" onRequestClose={()=>setSuspendModal(false)}><View style={styles.backdrop}><View style={styles.sheet}><Text style={styles.modalTitle}>Suspend Verifier</Text><Text style={styles.help}>Are you sure you want to suspend this verifier?</Text><Input label="Reason" value={reason} onChangeText={setReason} multiline rows={3}/><View style={styles.actions}><View style={styles.half}><Button title="Cancel" variant="outline" onPress={()=>setSuspendModal(false)}/></View><View style={styles.half}><Button title="Confirm Suspension" variant="danger" onPress={suspend} loading={busy}/></View></View></View></View></Modal>
+  <Modal visible={rejectModal} transparent animationType="fade" onRequestClose={()=>setRejectModal(false)}><View style={styles.backdrop}><View style={styles.sheet}><Text style={styles.modalTitle}>Reject Reactivation Request</Text><Input label="Reason" value={reviewReason} onChangeText={setReviewReason} multiline rows={3}/><View style={styles.actions}><View style={styles.half}><Button title="Cancel" variant="outline" onPress={()=>setRejectModal(false)}/></View><View style={styles.half}><Button title="Reject Request" variant="danger" onPress={reject} loading={busy}/></View></View></View></View></Modal>
+  </SafeAreaView>;
+};
+
+const styles=StyleSheet.create({container:{flex:1,backgroundColor:colors.background},scroll:{padding:spacing.md},title:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.primaryDark,marginBottom:spacing.md},section:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.text,marginVertical:spacing.md},field:{marginBottom:spacing.md},label:{fontSize:typography.sizes.xs,color:colors.textMuted},value:{fontSize:typography.sizes.sm,fontWeight:"700",color:colors.text,marginTop:2},grid:{flexDirection:"row",flexWrap:"wrap"},stat:{width:"50%",marginBottom:spacing.md},statValue:{fontSize:typography.sizes.sm,fontWeight:"700",color:colors.textMuted},help:{fontSize:typography.sizes.sm,color:colors.textMuted,marginBottom:spacing.md},backdrop:{flex:1,backgroundColor:"rgba(0,0,0,.35)",justifyContent:"flex-end"},sheet:{backgroundColor:colors.surface,padding:spacing.lg,borderTopLeftRadius:radius.lg,borderTopRightRadius:radius.lg},modalTitle:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},actions:{flexDirection:"row"},half:{flex:1,marginHorizontal:spacing.xs}});
