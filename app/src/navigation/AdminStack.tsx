@@ -2,74 +2,29 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
-
 import { colors } from "../theme/colors";
 import { CategoryManagementScreen } from "../screens/admin/CategoryManagementScreen";
 import { CategoryFormScreen } from "../screens/admin/CategoryFormScreen";
 import { GigManagementScreen } from "../screens/admin/GigManagementScreen";
 import { GigReviewScreen } from "../screens/admin/GigReviewScreen";
+import { VerificationManagementScreen } from "../screens/admin/VerificationManagementScreen";
+import { VerifierManagementScreen } from "../screens/admin/VerifierManagementScreen";
+import { VerifierApprovalRequestsScreen } from "../screens/admin/VerifierApprovalRequestsScreen";
+import { VerifierApplicationDetailScreen } from "../screens/admin/VerifierApplicationDetailScreen";
+import { ApprovedVerifiersScreen, SuspendedVerifiersScreen, VerifierApprovalHistoryScreen } from "../screens/admin/VerifierRecordsScreen";
+import { VerifierDetailsScreen } from "../screens/admin/VerifierDetailsScreen";
+import { IncomingReactivationRequestsScreen } from "../screens/admin/IncomingReactivationRequestsScreen";
+import { VerificationEmptyStateScreen } from "../screens/admin/VerificationEmptyStateScreen";
 
-export type CategoryStackParamList = {
-  CategoryManagement: undefined;
-  CategoryForm: { categoryId?: string } | undefined;
-};
+export type CategoryStackParamList = { CategoryManagement: undefined; CategoryForm: { categoryId?: string } | undefined };
+export type AdminGigStackParamList = { GigManagement: undefined; GigReview: { gigId: string } };
+export type AdminTabParamList = { CategoriesTab: undefined; GigsTab: undefined; VerificationOverviewTab: undefined; VerifierRequestsTab: undefined };
+export type VerificationStackParamList = { VerifierApprovalRequests: undefined; VerifierApplicationDetail: { applicationId: string } };
+export type VerificationManagementStackParamList = { VerificationManagementHome: undefined; VerificationRequests: undefined; FlaggedReturnedCases: undefined; VerifierManagement: undefined; VerificationHistory: undefined; VerifierApprovalRequests: undefined; VerifierApplicationDetail: { applicationId: string }; ApprovedVerifiers: undefined; SuspendedVerifiers: undefined; IncomingReactivationRequests: undefined; VerifierDetails: { applicationId: string }; VerifierApprovalHistory: undefined };
 
-export type AdminGigStackParamList = {
-  GigManagement: undefined;
-  GigReview: { gigId: string };
-};
-
-export type AdminTabParamList = {
-  CategoriesTab: undefined;
-  GigsTab: undefined;
-};
-
-const CategoryStack = createNativeStackNavigator<CategoryStackParamList>();
-const AdminGigStack = createNativeStackNavigator<AdminGigStackParamList>();
-const Tab = createBottomTabNavigator<AdminTabParamList>();
-
-function CategoryStackNavigator() {
-  return (
-    <CategoryStack.Navigator screenOptions={{ headerShown: false }}>
-      <CategoryStack.Screen name="CategoryManagement" component={CategoryManagementScreen} />
-      <CategoryStack.Screen name="CategoryForm" component={CategoryFormScreen} />
-    </CategoryStack.Navigator>
-  );
-}
-
-function AdminGigStackNavigator() {
-  return (
-    <AdminGigStack.Navigator screenOptions={{ headerShown: false }}>
-      <AdminGigStack.Screen name="GigManagement" component={GigManagementScreen} />
-      <AdminGigStack.Screen name="GigReview" component={GigReviewScreen} />
-    </AdminGigStack.Navigator>
-  );
-}
-
-export const AdminStack: React.FC = () => {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarIcon: ({ color, size }) => {
-          const iconName: keyof typeof Feather.glyphMap =
-            route.name === "GigsTab" ? "briefcase" : "grid";
-          return <Feather name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#5D6D7E",
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-        },
-      })}
-    >
-      <Tab.Screen name="GigsTab" component={AdminGigStackNavigator} options={{ title: "Gigs" }} />
-      <Tab.Screen
-        name="CategoriesTab"
-        component={CategoryStackNavigator}
-        options={{ title: "Categories" }}
-      />
-    </Tab.Navigator>
-  );
-};
+const CategoryStack=createNativeStackNavigator<CategoryStackParamList>(); const AdminGigStack=createNativeStackNavigator<AdminGigStackParamList>(); const RequestStack=createNativeStackNavigator<VerificationStackParamList>(); const ManagementStack=createNativeStackNavigator<VerificationManagementStackParamList>(); const Tab=createBottomTabNavigator<AdminTabParamList>();
+function CategoryStackNavigator(){return <CategoryStack.Navigator screenOptions={{headerShown:false}}><CategoryStack.Screen name="CategoryManagement" component={CategoryManagementScreen}/><CategoryStack.Screen name="CategoryForm" component={CategoryFormScreen}/></CategoryStack.Navigator>}
+function AdminGigStackNavigator(){return <AdminGigStack.Navigator screenOptions={{headerShown:false}}><AdminGigStack.Screen name="GigManagement" component={GigManagementScreen}/><AdminGigStack.Screen name="GigReview" component={GigReviewScreen}/></AdminGigStack.Navigator>}
+function VerificationStackNavigator(){return <RequestStack.Navigator><RequestStack.Screen name="VerifierApprovalRequests" component={VerifierApprovalRequestsScreen} options={{headerShown:false}}/><RequestStack.Screen name="VerifierApplicationDetail" component={VerifierApplicationDetailScreen} options={{title:"Application details"}}/></RequestStack.Navigator>}
+function VerificationManagementStackNavigator(){return <ManagementStack.Navigator screenOptions={{headerBackTitle:"Back"}}><ManagementStack.Screen name="VerificationManagementHome" component={VerificationManagementScreen} options={{headerShown:false}}/><ManagementStack.Screen name="VerificationRequests" component={VerificationEmptyStateScreen} options={{title:"Verification Requests"}}/><ManagementStack.Screen name="FlaggedReturnedCases" component={VerificationEmptyStateScreen} options={{title:"Flagged / Returned Cases"}}/><ManagementStack.Screen name="VerifierManagement" component={VerifierManagementScreen} options={{title:"Verifier Management"}}/><ManagementStack.Screen name="VerificationHistory" component={VerificationEmptyStateScreen} options={{title:"Verification History"}}/><ManagementStack.Screen name="VerifierApprovalRequests" component={VerifierApprovalRequestsScreen} options={{title:"Approval Requests"}}/><ManagementStack.Screen name="VerifierApplicationDetail" component={VerifierApplicationDetailScreen} options={{title:"Application details"}}/><ManagementStack.Screen name="ApprovedVerifiers" component={ApprovedVerifiersScreen} options={{title:"Approved Verifiers"}}/><ManagementStack.Screen name="SuspendedVerifiers" component={SuspendedVerifiersScreen} options={{title:"Suspended Verifiers"}}/><ManagementStack.Screen name="IncomingReactivationRequests" component={IncomingReactivationRequestsScreen} options={{title:"Incoming Reactivation Requests"}}/><ManagementStack.Screen name="VerifierDetails" component={VerifierDetailsScreen} options={{title:"Verifier Details"}}/><ManagementStack.Screen name="VerifierApprovalHistory" component={VerifierApprovalHistoryScreen} options={{title:"Approval History"}}/></ManagementStack.Navigator>}
+export const AdminStack:React.FC=()=> <Tab.Navigator screenOptions={({route})=>({headerShown:false,tabBarIcon:({color,size})=>{const icon:keyof typeof Feather.glyphMap=route.name==="GigsTab"?"briefcase":route.name==="VerificationOverviewTab"?"activity":route.name==="VerifierRequestsTab"?"shield":"grid";return <Feather name={icon} size={size} color={color}/>},tabBarActiveTintColor:colors.primary,tabBarInactiveTintColor:"#5D6D7E",tabBarStyle:{backgroundColor:colors.surface,borderTopColor:colors.border}})}><Tab.Screen name="GigsTab" component={AdminGigStackNavigator} options={{title:"Gigs"}}/><Tab.Screen name="CategoriesTab" component={CategoryStackNavigator} options={{title:"Categories"}}/><Tab.Screen name="VerificationOverviewTab" component={VerificationManagementStackNavigator} options={{title:"Verification"}}/><Tab.Screen name="VerifierRequestsTab" component={VerificationStackNavigator} options={{title:"Requests"}}/></Tab.Navigator>;
