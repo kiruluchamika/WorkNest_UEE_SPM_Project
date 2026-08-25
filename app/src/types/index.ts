@@ -11,6 +11,56 @@ export interface User {
   avatarUrl?: string;
   trustScore: number;
   createdAt: string;
+  verifierApplication?: Pick<VerifierApplication, "id" | "status" | "submittedAt" | "reviewedAt" | "rejectionReason" | "approvalAcknowledgedAt" | "suspendedAt" | "suspensionReason">;
+}
+
+export type VerifierApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+export interface VerifierApplication {
+  id: string;
+  applicantId: string;
+  applicant: { id: string; name: string; email: string; phone?: string; createdAt: string };
+  district: string;
+  identityType: string;
+  identityNumber: string;
+  identityDocumentReference: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation: string;
+  communityReference?: string;
+  status: VerifierApplicationStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  approvalAcknowledgedAt?: string;
+  suspendedAt?: string;
+  suspensionReason?: string;
+  reviewer?: { id: string; name: string; email: string };
+  suspendedBy?: { id: string; name: string; email: string };
+  reactivationRequests?: VerifierReactivationRequest[];
+}
+
+export type VerifierReactivationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+export interface VerifierReactivationRequest {
+  id: string;
+  verifierId: string;
+  verifierApplicationId: string;
+  explanation: string;
+  attachmentReference?: string;
+  attachmentMetadata?: Record<string, unknown>;
+  status: VerifierReactivationRequestStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewReason?: string;
+  reviewer?: { id: string; name: string; email: string };
+}
+
+export interface VerifierApplicationPayload {
+  district: string;
+  identityType: "NATIONAL_ID" | "PASSPORT" | "DRIVING_LICENCE";
+  identityNumber: string;
+  identityDocumentReference?: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation: string;
+  communityReference?: string;
 }
 
 export interface Category {

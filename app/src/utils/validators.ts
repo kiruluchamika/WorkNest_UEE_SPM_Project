@@ -13,11 +13,34 @@ export const registerSchema = z
     role: z.enum(["jobseeker", "shopowner", "verifier"]),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(6, "Please confirm your password"),
+    district: z.string().trim().optional(),
+    identityType: z.string().trim().optional(),
+    identityNumber: z.string().trim().optional(),
+    identityDocumentReference: z.string().trim().optional(),
+    addressInformation: z.string().trim().optional(),
+    communityReference: z.string().trim().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  }).superRefine((data, ctx) => {
+    if (data.role !== "verifier") return;
+    const required = [
+      ["district", "District is required"], ["identityType", "ID type is required"],
+      ["identityNumber", "ID number is required"],
+      ["addressInformation", "Address information is required"],
+    ] as const;
+    required.forEach(([field, message]) => { if (!data[field]) ctx.addIssue({ code: "custom", path: [field], message }); });
   });
+
+export const verifierReapplicationSchema = z.object({
+  district: z.string().trim().min(2, "District is required"),
+  identityType: z.enum(["NATIONAL_ID", "PASSPORT", "DRIVING_LICENCE"]),
+  identityNumber: z.string().trim().min(4, "ID number is required"),
+  identityDocumentReference: z.string().trim().optional(),
+  addressInformation: z.string().trim().min(5, "Address information is required"),
+  communityReference: z.string().trim().optional(),
+});
 
 export const categorySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),

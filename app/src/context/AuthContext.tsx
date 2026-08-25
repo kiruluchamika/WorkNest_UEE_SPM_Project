@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as authApi from "../api/authApi";
+import * as verifierApplicationsApi from "../api/verifierApplicationsApi";
 import { setAuthToken } from "../api/http";
 import { loadSession, saveSession, clearSession } from "../utils/session";
-import type { User, UserRole } from "../types";
+import type { User, UserRole, VerifierApplicationPayload } from "../types";
 
 interface AuthContextValue {
   user: User | null;
@@ -13,6 +14,8 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
+  acknowledgeVerifierApproval: () => Promise<void>;
+  submitVerifierReapplication: (payload: VerifierApplicationPayload) => Promise<void>;
 }
 
 export interface RegisterPayload {
@@ -21,6 +24,13 @@ export interface RegisterPayload {
   phone: string;
   role: "jobseeker" | "shopowner" | "verifier";
   password: string;
+  district?: string;
+  identityType?: string;
+  identityNumber?: string;
+  identityDocumentReference?: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation?: string;
+  communityReference?: string;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -115,9 +125,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [user]
   );
 
+  const persistVerifierApplication = useCallback(async (application: NonNullable<User["verifierApplication"]>) => {
+    setUser((current) => current ? { ...current, verifierApplication: application } : current);
+    const session = await loadSession();
+    if (session) await saveSession({ ...session, user: { ...session.user, verifierApplication: application } });
+  }, []);
+
+  const acknowledgeVerifierApproval = useCallback(async () => {
+    if (!user?.verifierApplication) throw new Error("Approved verifier application not found.");
+    const application = await verifierApplicationsApi.acknowledgeApproval(user.verifierApplication.id);
+    await persistVerifierApplication(application);
+  }, [persistVerifierApplication, user]);
+
+  const submitVerifierReapplication = useCallback(async (payload: VerifierApplicationPayload) => {
+    await verifierApplicationsApi.submitReapplication(payload);
+    const freshUser = await authApi.fetchCurrentUser();
+    setUser(freshUser);
+    const session = await loadSession();
+    if (session) await saveSession({ ...session, user: freshUser });
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser }}
+      value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser, acknowledgeVerifierApproval, submitVerifierReapplication }}
     >
       {children}
     </AuthContext.Provider>

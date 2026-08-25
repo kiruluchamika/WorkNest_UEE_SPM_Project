@@ -26,6 +26,13 @@ export async function register(payload: {
   phone: string;
   role: "jobseeker" | "shopowner" | "verifier";
   password: string;
+  district?: string;
+  identityType?: string;
+  identityNumber?: string;
+  identityDocumentReference?: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation?: string;
+  communityReference?: string;
 }): Promise<AuthResult> {
   try {
     const { data } = await http.post("/auth/register", payload);
