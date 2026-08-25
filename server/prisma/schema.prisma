@@ -44,6 +44,19 @@ enum ApplicationStatus {
   COMPLETED
 }
 
+enum VerifierApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum VerifierReactivationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -59,6 +72,60 @@ model User {
   updatedAt    DateTime  @updatedAt
   gigPosts     GigPost[]
   applications Application[]
+  verifierApplications VerifierApplication[] @relation("VerifierApplicant")
+  reviewedVerifierApplications VerifierApplication[] @relation("VerifierReviewer")
+  suspendedVerifierApplications VerifierApplication[] @relation("VerifierSuspender")
+  verifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationRequester")
+  reviewedVerifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationReviewer")
+}
+
+model VerifierApplication {
+  id                        String                    @id @default(uuid())
+  applicantId               String
+  applicant                 User                      @relation("VerifierApplicant", fields: [applicantId], references: [id])
+  district                  String
+  identityType              String
+  identityNumber            String
+  identityDocumentReference String
+  identityDocumentMetadata  Json?
+  addressInformation        String
+  communityReference        String?
+  status                    VerifierApplicationStatus @default(PENDING)
+  submittedAt               DateTime                  @default(now())
+  reviewedAt                DateTime?
+  rejectionReason           String?
+  reviewerId                String?
+  reviewer                  User?                     @relation("VerifierReviewer", fields: [reviewerId], references: [id])
+  approvalAcknowledgedAt    DateTime?
+  suspendedAt               DateTime?
+  suspensionReason          String?
+  suspendedById             String?
+  suspendedBy               User?                     @relation("VerifierSuspender", fields: [suspendedById], references: [id])
+  reactivationRequests      VerifierReactivationRequest[]
+
+  @@index([applicantId, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model VerifierReactivationRequest {
+  id                    String                              @id @default(uuid())
+  verifierId            String
+  verifier              User                                @relation("ReactivationRequester", fields: [verifierId], references: [id])
+  verifierApplicationId String
+  verifierApplication   VerifierApplication                 @relation(fields: [verifierApplicationId], references: [id])
+  explanation           String
+  attachmentReference   String?
+  attachmentMetadata    Json?
+  status                VerifierReactivationRequestStatus   @default(PENDING)
+  createdAt             DateTime                            @default(now())
+  reviewedAt            DateTime?
+  reviewerId            String?
+  reviewer              User?                               @relation("ReactivationReviewer", fields: [reviewerId], references: [id])
+  reviewReason          String?
+
+  @@index([verifierId, createdAt])
+  @@index([verifierApplicationId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Category {
