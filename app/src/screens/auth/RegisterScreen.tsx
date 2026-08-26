@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { Select } from "../../components/common/Select";
+import { SearchableSelect } from "../../components/common/SearchableSelect";
+import { getDistricts } from "../../api/districtsApi";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { GoogleButton } from "../../components/common/GoogleButton";
 import { colors } from "../../theme/colors";
@@ -40,6 +42,8 @@ export const RegisterScreen: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [district, setDistrict] = useState("");
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [districtLoadError, setDistrictLoadError] = useState("");
   const [identityType, setIdentityType] = useState("");
   const [identityNumber, setIdentityNumber] = useState("");
   const [identityDocumentReference, setIdentityDocumentReference] = useState("");
@@ -48,9 +52,18 @@ export const RegisterScreen: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    getDistricts().then(setDistricts).catch((err) => setDistrictLoadError(err instanceof Error ? err.message : "Could not load districts."));
+  }, []);
+
   const handleRegister = async () => {
     setErrors({});
     setError("");
+
+    if (role === "verifier" && district && !districts.includes(district)) {
+      setErrors({ district: "Please select a supported district" });
+      return;
+    }
 
     const result = registerSchema.safeParse({
       name,
@@ -182,7 +195,7 @@ export const RegisterScreen: React.FC = () => {
             <View style={styles.verifierSection}>
               <Text style={styles.sectionTitle}>Verifier application</Text>
               <Text style={styles.sectionHelp}>Provide your identity and local community information for administrator review.</Text>
-              <Input label="District" value={district} onChangeText={setDistrict} placeholder="Colombo" error={errors.district} />
+              <SearchableSelect label="District" value={district} onChange={setDistrict} placeholder="Select district..." searchPlaceholder="Search districts..." options={districts.map((item) => ({ value: item, label: item }))} error={errors.district || districtLoadError} emptyMessage={districtLoadError || "No districts found"} />
               <Select label="ID type" value={identityType} onChange={setIdentityType} placeholder="Select ID type" error={errors.identityType} options={[
                 { value: "NATIONAL_ID", label: "National identity card" }, { value: "PASSPORT", label: "Passport" }, { value: "DRIVING_LICENCE", label: "Driving licence" },
               ]} />

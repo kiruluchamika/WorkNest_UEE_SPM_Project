@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { districtSchemaValues } from "../constants/districts";
 
 export const rejectVerifierApplicationSchema = z.object({
   reason: z.string().trim().min(5, "Please provide a meaningful rejection reason."),
@@ -9,7 +10,7 @@ export const suspendVerifierApplicationSchema = z.object({
 });
 
 export const verifierReapplicationSchema = z.object({
-  district: z.string().trim().min(2, "District is required"),
+  district: z.enum(districtSchemaValues, { error: "Please select a supported district" }),
   identityType: z.enum(["NATIONAL_ID", "PASSPORT", "DRIVING_LICENCE"]),
   identityNumber: z.string().trim().min(4, "ID number is required"),
   identityDocumentReference: z.string().trim().optional(),

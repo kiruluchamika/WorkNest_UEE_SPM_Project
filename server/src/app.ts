@@ -8,6 +8,7 @@ import { applicationSettingsRoutes } from "./routes/applicationSettings.routes";
 import { applicationRoutes } from "./routes/applications.routes";
 import { verifierApplicationRoutes, verifierSelfServiceRoutes } from "./routes/verifierApplications.routes";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
+import { SRI_LANKAN_DISTRICTS } from "./constants/districts";
 
 export const app = express();
 
@@ -16,6 +17,10 @@ app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/api/districts", (_req, res) => {
+  res.json({ districts: SRI_LANKAN_DISTRICTS });
 });
 
 app.use("/api/auth", authRoutes);

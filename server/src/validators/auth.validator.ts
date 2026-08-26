@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { districtSchemaValues } from "../constants/districts";
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
@@ -6,7 +7,7 @@ export const registerSchema = z.object({
   phone: z.string().trim().min(9, "Please enter a valid phone number").optional(),
   role: z.enum(["jobseeker", "shopowner", "verifier"]),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  district: z.string().trim().min(2, "District is required").optional(),
+  district: z.enum(districtSchemaValues, { error: "Please select a supported district" }).optional(),
   identityType: z.string().trim().min(2, "ID type is required").optional(),
   identityNumber: z.string().trim().min(4, "ID number is required").optional(),
   identityDocumentReference: z.string().trim().optional(),
