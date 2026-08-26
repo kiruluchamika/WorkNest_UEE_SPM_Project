@@ -36,6 +36,17 @@ export interface VerifierApplication {
   reviewer?: { id: string; name: string; email: string };
   suspendedBy?: { id: string; name: string; email: string };
   reactivationRequests?: VerifierReactivationRequest[];
+  suspensionEvents?: VerifierSuspensionEvent[];
+}
+
+export interface VerifierSuspensionEvent {
+  id: string;
+  verifierApplicationId: string;
+  reason: string;
+  suspendedAt: string;
+  suspendedBy?: { id: string; name: string; email: string };
+  reactivatedAt?: string;
+  reactivationRequests?: VerifierReactivationRequest[];
 }
 
 export type VerifierReactivationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -43,6 +54,7 @@ export interface VerifierReactivationRequest {
   id: string;
   verifierId: string;
   verifierApplicationId: string;
+  suspensionEventId?: string;
   explanation: string;
   attachmentReference?: string;
   attachmentMetadata?: Record<string, unknown>;

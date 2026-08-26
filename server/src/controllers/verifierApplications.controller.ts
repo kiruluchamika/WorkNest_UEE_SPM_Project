@@ -14,6 +14,13 @@ const includeApplication = {
     orderBy: { createdAt: "desc" as const },
     include: { reviewer: { select: { id: true, name: true, email: true } } },
   },
+  suspensionEvents: {
+    orderBy: { suspendedAt: "asc" as const },
+    include: {
+      suspendedBy: { select: { id: true, name: true, email: true } },
+      reactivationRequests: { orderBy: { createdAt: "asc" as const } },
+    },
+  },
 } as const;
 
 export async function listVerifierApplications(req: Request, res: Response, next: NextFunction) {
@@ -79,14 +86,24 @@ export async function rejectVerifierApplication(req: Request<{ id: string }, unk
 export async function suspendVerifierApplication(req: Request<{ id: string }, unknown, SuspendVerifierApplicationInput>, res: Response, next: NextFunction) {
   try {
     const { userId } = req as unknown as AuthedRequest;
+    const suspendedAt = new Date();
+    const eventId = randomUUID();
     const updated = await neonSql`
-      UPDATE "VerifierApplication"
-      SET "status" = 'SUSPENDED'::"VerifierApplicationStatus",
-          "suspendedById" = ${userId},
-          "suspendedAt" = ${new Date()},
-          "suspensionReason" = ${req.body.reason}
-      WHERE "id" = ${req.params.id}
-        AND "status" = 'APPROVED'::"VerifierApplicationStatus"
+      WITH suspended AS (
+        UPDATE "VerifierApplication"
+        SET "status" = 'SUSPENDED'::"VerifierApplicationStatus",
+            "suspendedById" = ${userId},
+            "suspendedAt" = ${suspendedAt},
+            "suspensionReason" = ${req.body.reason}
+        WHERE "id" = ${req.params.id}
+          AND "status" = 'APPROVED'::"VerifierApplicationStatus"
+        RETURNING "id"
+      )
+      INSERT INTO "VerifierSuspensionEvent" (
+        "id", "verifierApplicationId", "reason", "suspendedAt", "suspendedById"
+      )
+      SELECT ${eventId}, "id", ${req.body.reason}, ${suspendedAt}, ${userId}
+      FROM suspended
       RETURNING "id"
     `;
     if (!updated.length) return next(new HttpError(409, "Only approved verifiers can be suspended."));
@@ -198,12 +215,15 @@ export async function createReactivationRequest(req: Request<unknown, unknown, R
     const inserted = await neonSql`
       INSERT INTO "VerifierReactivationRequest" (
         "id", "verifierId", "verifierApplicationId", "explanation",
-        "attachmentReference", "attachmentMetadata", "status", "createdAt"
+        "attachmentReference", "attachmentMetadata", "status", "createdAt", "suspensionEventId"
       )
       SELECT ${id}, ${userId}, ${application.id}, ${req.body.explanation},
         ${req.body.attachmentReference || null},
         ${req.body.attachmentMetadata ? JSON.stringify(req.body.attachmentMetadata) : null}::jsonb,
-        'PENDING'::"VerifierReactivationRequestStatus", ${createdAt}
+        'PENDING'::"VerifierReactivationRequestStatus", ${createdAt},
+        (SELECT "id" FROM "VerifierSuspensionEvent"
+          WHERE "verifierApplicationId" = ${application.id} AND "reactivatedAt" IS NULL
+          ORDER BY "suspendedAt" DESC LIMIT 1)
       WHERE NOT EXISTS (
         SELECT 1 FROM "VerifierReactivationRequest"
         WHERE "verifierId" = ${userId}
@@ -226,8 +246,8 @@ export async function approveReactivationRequest(req: Request<{ requestId: strin
   try {
     const { userId } = req as unknown as AuthedRequest;
     const reviewedAt = new Date();
-    const [requestResult, applicationResult] = await neonSql.transaction([
-      neonSql`
+    const updated = await neonSql`
+      WITH updated_request AS (
         UPDATE "VerifierReactivationRequest" AS request
         SET "status" = 'APPROVED'::"VerifierReactivationRequestStatus",
             "reviewerId" = ${userId}, "reviewedAt" = ${reviewedAt}, "reviewReason" = NULL
@@ -238,25 +258,24 @@ export async function approveReactivationRequest(req: Request<{ requestId: strin
             WHERE application."id" = request."verifierApplicationId"
               AND application."status" = 'SUSPENDED'::"VerifierApplicationStatus"
           )
-        RETURNING request."verifierApplicationId"
-      `,
-      neonSql`
+        RETURNING request."verifierApplicationId", request."suspensionEventId"
+      ), updated_application AS (
         UPDATE "VerifierApplication" AS application
         SET "status" = 'APPROVED'::"VerifierApplicationStatus",
             "approvalAcknowledgedAt" = COALESCE(application."approvalAcknowledgedAt", ${reviewedAt})
         WHERE application."status" = 'SUSPENDED'::"VerifierApplicationStatus"
-          AND EXISTS (
-            SELECT 1 FROM "VerifierReactivationRequest" AS request
-            WHERE request."id" = ${req.params.requestId}
-              AND request."verifierApplicationId" = application."id"
-              AND request."status" = 'APPROVED'::"VerifierReactivationRequestStatus"
-              AND request."reviewerId" = ${userId}
-              AND request."reviewedAt" = ${reviewedAt}
-          )
+          AND application."id" IN (SELECT "verifierApplicationId" FROM updated_request)
         RETURNING application."id"
-      `,
-    ]);
-    if (!requestResult.length || !applicationResult.length) {
+      ), closed_event AS (
+        UPDATE "VerifierSuspensionEvent" AS event
+        SET "reactivatedAt" = ${reviewedAt}
+        WHERE event."id" IN (SELECT "suspensionEventId" FROM updated_request)
+          AND event."reactivatedAt" IS NULL
+        RETURNING event."id"
+      )
+      SELECT "id" FROM updated_application
+    `;
+    if (!updated.length) {
       return next(new HttpError(409, "Only a pending request for a suspended verifier can be approved."));
     }
     const request = await prisma.verifierReactivationRequest.findUnique({

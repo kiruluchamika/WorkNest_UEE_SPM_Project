@@ -77,6 +77,7 @@ model User {
   suspendedVerifierApplications VerifierApplication[] @relation("VerifierSuspender")
   verifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationRequester")
   reviewedVerifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationReviewer")
+  createdVerifierSuspensions VerifierSuspensionEvent[] @relation("SuspensionEventAdmin")
 }
 
 model VerifierApplication {
@@ -91,17 +92,18 @@ model VerifierApplication {
   addressInformation        String
   communityReference        String?
   status                    VerifierApplicationStatus @default(PENDING)
-  submittedAt               DateTime                  @default(now())
-  reviewedAt                DateTime?
+  submittedAt               DateTime                  @default(now()) @db.Timestamptz(3)
+  reviewedAt                DateTime?                 @db.Timestamptz(3)
   rejectionReason           String?
   reviewerId                String?
   reviewer                  User?                     @relation("VerifierReviewer", fields: [reviewerId], references: [id])
-  approvalAcknowledgedAt    DateTime?
-  suspendedAt               DateTime?
+  approvalAcknowledgedAt    DateTime?                 @db.Timestamptz(3)
+  suspendedAt               DateTime?                 @db.Timestamptz(3)
   suspensionReason          String?
   suspendedById             String?
   suspendedBy               User?                     @relation("VerifierSuspender", fields: [suspendedById], references: [id])
   reactivationRequests      VerifierReactivationRequest[]
+  suspensionEvents          VerifierSuspensionEvent[]
 
   @@index([applicantId, submittedAt])
   @@index([status, submittedAt])
@@ -117,15 +119,33 @@ model VerifierReactivationRequest {
   attachmentReference   String?
   attachmentMetadata    Json?
   status                VerifierReactivationRequestStatus   @default(PENDING)
-  createdAt             DateTime                            @default(now())
-  reviewedAt            DateTime?
+  createdAt             DateTime                            @default(now()) @db.Timestamptz(3)
+  reviewedAt            DateTime?                           @db.Timestamptz(3)
   reviewerId            String?
   reviewer              User?                               @relation("ReactivationReviewer", fields: [reviewerId], references: [id])
   reviewReason          String?
+  suspensionEventId     String?
+  suspensionEvent       VerifierSuspensionEvent?              @relation(fields: [suspensionEventId], references: [id])
 
   @@index([verifierId, createdAt])
   @@index([verifierApplicationId, createdAt])
   @@index([status, createdAt])
+  @@index([suspensionEventId, createdAt])
+}
+
+model VerifierSuspensionEvent {
+  id                    String                         @id @default(uuid())
+  verifierApplicationId String
+  verifierApplication   VerifierApplication            @relation(fields: [verifierApplicationId], references: [id])
+  reason                String
+  suspendedAt           DateTime                       @default(now()) @db.Timestamptz(3)
+  suspendedById         String?
+  suspendedBy           User?                          @relation("SuspensionEventAdmin", fields: [suspendedById], references: [id])
+  reactivatedAt         DateTime?                      @db.Timestamptz(3)
+  reactivationRequests  VerifierReactivationRequest[]
+
+  @@index([verifierApplicationId, suspendedAt])
+  @@index([suspendedById])
 }
 
 model Category {
