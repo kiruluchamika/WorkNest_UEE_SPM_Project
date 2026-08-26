@@ -167,8 +167,17 @@ export async function createVerifierReapplication(req: Request<unknown, unknown,
 export async function getLatestReactivationRequest(req: Request, res: Response, next: NextFunction) {
   try {
     const { userId } = req as AuthedRequest;
+    const activeSuspension = await prisma.verifierSuspensionEvent.findFirst({
+      where: {
+        reactivatedAt: null,
+        verifierApplication: { applicantId: userId, status: "SUSPENDED" },
+      },
+      orderBy: { suspendedAt: "desc" },
+      select: { id: true },
+    });
+    if (!activeSuspension) return res.json({ request: null });
     const request = await prisma.verifierReactivationRequest.findFirst({
-      where: { verifierId: userId }, orderBy: { createdAt: "desc" },
+      where: { verifierId: userId, suspensionEventId: activeSuspension.id }, orderBy: { createdAt: "desc" },
       include: { reviewer: { select: { id: true, name: true, email: true } } },
     });
     res.json({ request });

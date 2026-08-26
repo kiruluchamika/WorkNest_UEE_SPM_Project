@@ -14,6 +14,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
+  refreshCurrentUser: () => Promise<void>;
   acknowledgeVerifierApproval: () => Promise<void>;
   submitVerifierReapplication: (payload: VerifierApplicationPayload) => Promise<void>;
 }
@@ -125,6 +126,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [user]
   );
 
+  const refreshCurrentUser = useCallback(async () => {
+    const freshUser = await authApi.fetchCurrentUser();
+    setUser(freshUser);
+    const session = await loadSession();
+    if (session) await saveSession({ ...session, user: freshUser });
+  }, []);
+
   const persistVerifierApplication = useCallback(async (application: NonNullable<User["verifierApplication"]>) => {
     setUser((current) => current ? { ...current, verifierApplication: application } : current);
     const session = await loadSession();
@@ -147,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser, acknowledgeVerifierApproval, submitVerifierReapplication }}
+      value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser, refreshCurrentUser, acknowledgeVerifierApproval, submitVerifierReapplication }}
     >
       {children}
     </AuthContext.Provider>
