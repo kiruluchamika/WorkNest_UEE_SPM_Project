@@ -7,6 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import * as applicationsApi from "../../api/applicationsApi";
 import * as applicationSettingsApi from "../../api/applicationSettingsApi";
+import * as gigPostApi from "../../api/gigPostApi";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
@@ -25,7 +26,7 @@ import {
   validateApplicationForm,
   type ApplicationFormValues,
 } from "../../utils/applicationValidation";
-import type { ApplicantGigSummary, ApplicationQuestion, ApplicationSettings, JobApplicationStatus } from "../../types";
+import type { ApplicationQuestion, ApplicationSettings, GigPost, JobApplicationStatus } from "../../types";
 
 function paymentTypeLabel(value: string): string {
   return GIG_PAYMENT_TYPES.find((pt) => pt.value === value)?.label ?? value;
@@ -43,7 +44,7 @@ export const ApplyToGigScreen: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [gig, setGig] = useState<ApplicantGigSummary | null>(null);
+  const [gig, setGig] = useState<GigPost | null>(null);
   const [settings, setSettings] = useState<ApplicationSettings | null>(null);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [existingStatus, setExistingStatus] = useState<JobApplicationStatus | null>(null);
@@ -64,7 +65,7 @@ export const ApplyToGigScreen: React.FC = () => {
     setLoadError(null);
     try {
       const [gigData, settingsData] = await Promise.all([
-        applicationsApi.getGigForApplicant(gigId),
+        gigPostApi.getPublicGigPost(gigId),
         applicationSettingsApi.getPublicApplicationSettings(gigId),
       ]);
       setGig(gigData);
@@ -118,7 +119,7 @@ export const ApplyToGigScreen: React.FC = () => {
       const payload = buildApplicationPayload(gigId, customQuestions, values);
       await applicationsApi.submitApplication(payload);
       Alert.alert("Application submitted successfully!", undefined, [
-        { text: "OK", onPress: () => navigation.goBack() },
+        { text: "OK", onPress: () => navigation.getParent()?.navigate("MyApplicationsTab" as never) },
       ]);
     } catch (err) {
       Alert.alert("Could not submit", err instanceof Error ? err.message : "Please try again.");
@@ -165,6 +166,8 @@ export const ApplyToGigScreen: React.FC = () => {
   const schedule = [formatDate(gig.startDate), gig.endDate ? `- ${formatDate(gig.endDate)}` : null]
     .filter(Boolean)
     .join(" ");
+  const remainingWorkers = Math.max(gig.workersNeeded - (gig.filledPositions ?? 0), 0);
+  const capacityFull = remainingWorkers === 0;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
@@ -187,12 +190,14 @@ export const ApplyToGigScreen: React.FC = () => {
           </Text>
         </Card>
 
-        {gig.status !== "ACTIVE" ? (
+        {gig.status !== "ACTIVE" || capacityFull ? (
           <Card style={styles.blockedCard}>
             <Feather name="lock" size={18} color={colors.warning} />
             <Text style={styles.blockedTitle}>Not accepting applications</Text>
             <Text style={styles.blockedText}>
-              This gig is not currently active, so it can&apos;t accept new applications.
+              {capacityFull
+                ? "All available positions have been filled."
+                : "This gig is not currently active, so it can't accept new applications."}
             </Text>
           </Card>
         ) : alreadyApplied ? (
@@ -200,7 +205,11 @@ export const ApplyToGigScreen: React.FC = () => {
             <Feather name="check-circle" size={22} color={colors.success} />
             <Text style={styles.appliedTitle}>You have already applied for this gig.</Text>
             <Text style={styles.appliedStatus}>Application Status: {existingStatus ?? "PENDING"}</Text>
-            <Button title="Go Back" variant="outline" onPress={() => navigation.goBack()} />
+            <Button
+              title="View My Applications"
+              variant="outline"
+              onPress={() => navigation.getParent()?.navigate("MyApplicationsTab" as never)}
+            />
           </Card>
         ) : (
           <>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,38 +7,104 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
-import { useGigs } from "../../context/GigContext";
+import * as gigPostApi from "../../api/gigPostApi";
+import * as applicationsApi from "../../api/applicationsApi";
 import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { TrustBadge } from "../../components/trust/TrustBadge";
 import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
-import { formatCurrency, formatDate } from "../../utils/formatters";
-import type { Gig } from "../../types";
+import { formatCurrency, formatDate, gigStatusBadge } from "../../utils/formatters";
+import { GIG_PAYMENT_TYPES } from "../../utils/constants";
+import type { GigPost, JobApplicationStatus } from "../../types";
+
+function paymentTypeLabel(value: string): string {
+  return GIG_PAYMENT_TYPES.find((pt) => pt.value === value)?.label ?? value;
+}
 
 export const GigDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { gigs } = useGigs();
   const { gigId } = route.params as { gigId: string };
+  const [gig, setGig] = useState<GigPost | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [applied, setApplied] = useState(false);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState<JobApplicationStatus | null>(null);
 
-  const gig = gigs.find((g) => g.id === gigId);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [gigData, check] = await Promise.all([
+        gigPostApi.getPublicGigPost(gigId),
+        user?.role === "jobseeker"
+          ? applicationsApi.checkExistingApplication(gigId)
+          : Promise.resolve({ applied: false, application: null }),
+      ]);
+      setGig(gigData);
+      setApplied(check.applied);
+      setApplicationId(check.application?.id ?? null);
+      setApplicationStatus(check.application?.status ?? null);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load this gig.");
+    } finally {
+      setLoading(false);
+    }
+  }, [gigId, user?.role]);
 
-  if (!gig) {
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const schedule = useMemo(() => {
+    if (!gig) return "";
+    return [
+      formatDate(gig.startDate),
+      gig.startTime ? gig.startTime : null,
+      gig.endDate ? `to ${formatDate(gig.endDate)}` : null,
+      gig.endTime ? gig.endTime : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }, [gig]);
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <LoadingSpinner message="Loading gig..." />
       </SafeAreaView>
     );
   }
+
+  if (loadError || !gig) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
+        <View style={styles.centerState}>
+          <Feather name="alert-triangle" size={22} color={colors.danger} />
+          <Text style={styles.centerTitle}>Can&apos;t load this gig</Text>
+          <Text style={styles.centerText}>{loadError ?? "This gig could not be found."}</Text>
+          <Button title="Go Back" variant="outline" onPress={() => navigation.goBack()} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const badge = gigStatusBadge(gig.status);
+  const isJobseeker = user?.role === "jobseeker";
+  const remainingWorkers = Math.max(gig.workersNeeded - (gig.filledPositions ?? 0), 0);
+  const capacityFull = remainingWorkers === 0;
+  const canApply = isJobseeker && gig.status === "ACTIVE" && !applied && !capacityFull;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
@@ -49,11 +115,11 @@ export const GigDetailScreen: React.FC = () => {
 
         <Card style={styles.heroCard}>
           <View style={styles.header}>
-            <Text style={styles.category}>{gig.category.toUpperCase()}</Text>
-            <TrustBadge label={gig.status} variant={gig.status === "open" ? "success" : "muted"} />
+            <Text style={styles.category}>{gig.category?.name ?? "Uncategorized"}</Text>
+            <TrustBadge label={badge.label} variant={badge.variant} />
           </View>
           <Text style={styles.title}>{gig.title}</Text>
-          <Text style={styles.shop}>{gig.shopOwnerName}</Text>
+          <Text style={styles.shop}>{gig.business?.name ?? "WorkNest business"}</Text>
         </Card>
 
         <Card style={styles.section}>
@@ -66,12 +132,18 @@ export const GigDetailScreen: React.FC = () => {
           </View>
           <View style={styles.metaRow}>
             <Feather name="calendar" size={16} color={colors.textMuted} />
-            <Text style={styles.metaText}>Starts {formatDate(gig.startDate)}</Text>
+            <Text style={styles.metaText}>{schedule || "Schedule not specified"}</Text>
           </View>
           <View style={styles.metaRow}>
             <Feather name="dollar-sign" size={16} color={colors.textMuted} />
             <Text style={styles.metaText}>
-              {formatCurrency(gig.wage)} / {gig.wageType}
+              {formatCurrency(gig.paymentAmount)} / {paymentTypeLabel(gig.paymentType)}
+            </Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Feather name="users" size={16} color={colors.textMuted} />
+            <Text style={styles.metaText}>
+              Workers needed: {gig.workersNeeded} | Remaining: {remainingWorkers}
             </Text>
           </View>
         </Card>
@@ -87,21 +159,44 @@ export const GigDetailScreen: React.FC = () => {
           </View>
         </Card>
 
-        {user?.role === "jobseeker" && gig.status === "open" && !applied ? (
+        {canApply ? (
           <Button
-            title="Apply now"
+            title="Apply Now"
             onPress={() =>
-              (navigation as any).navigate("ApplyGig", { gigId: gig.id })
+              (navigation as any).navigate("ApplyToGig", { gigId: gig.id })
             }
             size="lg"
             style={{ marginTop: spacing.md }}
           />
-
-
-        ) : applied ? (
-          <View style={styles.appliedBanner}>
-            <Text style={styles.appliedText}>Application sent!</Text>
-          </View>
+        ) : isJobseeker && applied ? (
+          <Card style={styles.appliedCard}>
+            <Feather name="check-circle" size={22} color={colors.success} />
+            <Text style={styles.appliedText}>Applied</Text>
+            <Text style={styles.appliedMeta}>Status: {applicationStatus ?? "PENDING"}</Text>
+            {applicationId ? (
+              <Button
+                title="View My Application"
+                variant="outline"
+                onPress={() =>
+                  (navigation as any).getParent()?.navigate("MyApplicationsTab", {
+                    screen: "ApplicationDetails",
+                    params: { applicationId },
+                  })
+                }
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
+          </Card>
+        ) : isJobseeker ? (
+          <Card style={styles.appliedCard}>
+            <Feather name="lock" size={20} color={colors.warning} />
+            <Text style={styles.appliedText}>Not accepting applications</Text>
+            <Text style={styles.appliedMeta}>
+              {capacityFull
+                ? "All available positions have been filled."
+                : `This gig is currently ${badge.label.toLowerCase()}.`}
+            </Text>
+          </Card>
         ) : null}
 
         <View style={{ height: spacing.xxl }} />
@@ -114,6 +209,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  centerTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: "800",
+    color: colors.text,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  centerText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    textAlign: "center",
+    marginBottom: spacing.lg,
   },
   scroll: {
     padding: spacing.lg,
@@ -189,13 +303,24 @@ const styles = StyleSheet.create({
   },
   appliedBanner: {
     backgroundColor: colors.successLight,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.md,
+  },
+  appliedCard: {
     alignItems: "center",
     marginTop: spacing.md,
   },
   appliedText: {
     color: colors.success,
     fontWeight: "700",
+    fontSize: typography.sizes.base,
+    marginTop: spacing.xs,
+  },
+  appliedMeta: {
+    color: colors.textMuted,
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.xs,
   },
 });

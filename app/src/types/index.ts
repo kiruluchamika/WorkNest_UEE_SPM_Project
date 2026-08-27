@@ -48,6 +48,7 @@ export interface GigPost {
   endDate?: string;
   endTime?: string;
   workersNeeded: number;
+  filledPositions?: number;
   requiredSkills: string[];
   contactInfo?: string;
   imageUrl?: string;
@@ -153,8 +154,46 @@ export interface JobApplication {
   portfolioUrl?: string;
   expectedSalary?: number;
   answers: ApplicationAnswer[];
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ApplicationGigSummary {
+  id: string;
+  title: string;
+  location: string;
+  category?: Category;
+  paymentAmount: number;
+  paymentType: GigPaymentType;
+  startDate: string;
+  endDate?: string;
+  status: GigPostStatus;
+  workersNeeded?: number;
+  filledPositions?: number;
+}
+
+export interface ApplicantSummary {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  location?: string;
+  trustScore: number;
+}
+
+export interface MyApplicationListItem extends JobApplication {
+  gig: ApplicationGigSummary;
+}
+
+export interface GigApplicantListItem extends JobApplication {
+  applicant: ApplicantSummary;
+}
+
+export interface ApplicationDetail extends JobApplication {
+  gig: ApplicationGigSummary;
+  applicant?: ApplicantSummary;
 }
 
 export interface SubmitApplicationPayload {
@@ -168,23 +207,6 @@ export interface SubmitApplicationPayload {
   portfolioUrl?: string;
   expectedSalary?: number;
   answers: ApplicationAnswer[];
-}
-
-export interface ApplicantGigSummary {
-  id: string;
-  title: string;
-  description: string;
-  category?: Category;
-  location: string;
-  paymentAmount: number;
-  paymentType: GigPaymentType;
-  startDate: string;
-  startTime?: string;
-  endDate?: string;
-  endTime?: string;
-  workersNeeded: number;
-  requiredSkills: string[];
-  status: GigPostStatus;
 }
 
 export interface Endorsement {

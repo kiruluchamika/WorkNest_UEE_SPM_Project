@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {
   createGig,
+  listActiveGigs,
   listMyGigs,
+  getPublicGig,
   getMyGig,
   updateGig,
   deleteGig,
@@ -19,7 +21,9 @@ import { createReviewSchema } from "../validators/review.validator";
 export const gigRoutes = Router();
 
 gigRoutes.post("/", requireAuth, requireRole("shopowner"), validateBody(createGigPostSchema), createGig);
+gigRoutes.get("/", requireAuth, listActiveGigs);
 gigRoutes.get("/my", requireAuth, requireRole("shopowner"), listMyGigs);
+gigRoutes.get("/public/:id", requireAuth, getPublicGig);
 gigRoutes.get("/:id", requireAuth, requireRole("shopowner"), getMyGig);
 gigRoutes.put(
   "/:id",
