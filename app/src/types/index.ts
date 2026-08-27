@@ -217,18 +217,23 @@ export type NotificationType =
   | "REVIEW_RECEIVED"
   | "REVIEW_REPORTED"
   | "REVIEW_REMOVED"
+  | "REPORT_RESOLVED"
   | "REPORT_DISMISSED"
   | "ACCOUNT_WARNING";
 
+export type EmailStatus = "NOT_REQUIRED" | "PENDING" | "SENT" | "FAILED";
+
 export interface Notification {
   id: string;
-  userId: string;
+  recipientId: string;
   type: NotificationType;
   title: string;
-  body: string;
-  linkType?: string;
-  linkId?: string;
+  message: string;
+  link?: string;
+  relatedEntityId?: string;
   isRead: boolean;
+  readAt?: string;
+  emailStatus: EmailStatus;
   createdAt: string;
 }
 

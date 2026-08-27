@@ -77,6 +77,7 @@ const NOTIFICATION_ICONS: Record<string, string> = {
   REVIEW_RECEIVED: "star",
   REVIEW_REPORTED: "flag",
   REVIEW_REMOVED: "trash-2",
+  REPORT_RESOLVED: "check-square",
   REPORT_DISMISSED: "shield",
   ACCOUNT_WARNING: "alert-triangle",
 };
