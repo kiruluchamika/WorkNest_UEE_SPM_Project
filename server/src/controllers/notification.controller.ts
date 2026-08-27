@@ -1,25 +1,35 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "../config/db";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
+import * as notificationService from "../services/notification.service";
+
+function parseFilter(value: unknown): "all" | "unread" | "read" {
+  return value === "unread" || value === "read" ? value : "all";
+}
 
 export async function listNotifications(req: Request, res: Response, next: NextFunction) {
   try {
     const { userId } = req as AuthedRequest;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const filter = parseFilter(req.query.filter);
 
-    const [notifications, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.notification.count({ where: { userId, isRead: false } }),
-    ]);
+    const { notifications, unreadCount, total } = await notificationService.getNotificationsForUser(
+      userId,
+      { page, limit, filter }
+    );
 
-    res.json({ notifications, unreadCount, page, limit });
+    res.json({ success: true, unreadCount, total, notifications });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getUnreadCount(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req as AuthedRequest;
+    const unreadCount = await notificationService.getUnreadCount(userId);
+    res.json({ success: true, unreadCount });
   } catch (err) {
     next(err);
   }
@@ -34,17 +44,12 @@ export async function markNotificationRead(
     const { userId } = req as unknown as AuthedRequest;
     const { notificationId } = req.params;
 
-    const existing = await prisma.notification.findFirst({ where: { id: notificationId, userId } });
-    if (!existing) {
+    const notification = await notificationService.markNotificationRead(userId, notificationId);
+    if (!notification) {
       return next(new HttpError(404, "Notification not found"));
     }
 
-    const notification = await prisma.notification.update({
-      where: { id: notificationId },
-      data: { isRead: true },
-    });
-
-    res.json({ notification });
+    res.json({ success: true, notification });
   } catch (err) {
     next(err);
   }
@@ -53,13 +58,8 @@ export async function markNotificationRead(
 export async function markAllNotificationsRead(req: Request, res: Response, next: NextFunction) {
   try {
     const { userId } = req as AuthedRequest;
-
-    await prisma.notification.updateMany({
-      where: { userId, isRead: false },
-      data: { isRead: true },
-    });
-
-    res.status(204).send();
+    await notificationService.markAllNotificationsRead(userId);
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }
