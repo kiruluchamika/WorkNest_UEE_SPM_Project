@@ -10,3 +10,14 @@ export const transporter = nodemailer.createTransport({
     pass: env.SMTP_PASS,
   },
 });
+
+export async function verifySmtpConnection(): Promise<boolean> {
+  try {
+    await transporter.verify();
+    console.log("SMTP connection verified");
+    return true;
+  } catch (err) {
+    console.error("SMTP connection verification failed:", err);
+    return false;
+  }
+}
