@@ -82,3 +82,12 @@ export async function resubmitGigPost(id: string): Promise<GigPost> {
     throw new Error(extractErrorMessage(err, "Could not resubmit this gig."));
   }
 }
+
+export async function completeGigPost(id: string): Promise<GigPost> {
+  try {
+    const { data } = await http.patch(`/gigs/${id}/complete`);
+    return data.gig;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not mark this gig as completed."));
+  }
+}

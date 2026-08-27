@@ -21,6 +21,7 @@ interface GigPostContextValue {
   removeGig: (id: string) => Promise<void>;
   closeGig: (id: string) => Promise<GigPost>;
   resubmitGig: (id: string) => Promise<GigPost>;
+  completeGig: (id: string) => Promise<GigPost>;
 }
 
 const GigPostContext = createContext<GigPostContextValue | undefined>(undefined);
@@ -68,6 +69,12 @@ export const GigPostProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return gig;
   }, []);
 
+  const completeGig = useCallback(async (id: string) => {
+    const gig = await gigPostApi.completeGigPost(id);
+    setGigPosts((prev) => prev.map((g) => (g.id === id ? gig : g)));
+    return gig;
+  }, []);
+
   const stats = useMemo<GigPostStats>(
     () => ({
       total: gigPosts.length,
@@ -79,13 +86,23 @@ export const GigPostProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [gigPosts]
   );
 
-  return (
-    <GigPostContext.Provider
-      value={{ gigPosts, isLoading, stats, refresh, addGig, editGig, removeGig, closeGig, resubmitGig }}
-    >
-      {children}
-    </GigPostContext.Provider>
+  const value = useMemo(
+    () => ({
+      gigPosts,
+      isLoading,
+      stats,
+      refresh,
+      addGig,
+      editGig,
+      removeGig,
+      closeGig,
+      resubmitGig,
+      completeGig,
+    }),
+    [gigPosts, isLoading, stats, refresh, addGig, editGig, removeGig, closeGig, resubmitGig, completeGig]
   );
+
+  return <GigPostContext.Provider value={value}>{children}</GigPostContext.Provider>;
 };
 
 export function useGigPosts(): GigPostContextValue {

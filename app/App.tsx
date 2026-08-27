@@ -10,6 +10,7 @@ import { CategoryProvider } from "./src/context/CategoryContext";
 import { GigPostProvider } from "./src/context/GigPostContext";
 import { AdminGigProvider } from "./src/context/AdminGigContext";
 import { OnboardingProvider } from "./src/context/OnboardingContext";
+import { NotificationProvider } from "./src/context/NotificationContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { colors } from "./src/theme/colors";
 
@@ -38,16 +39,18 @@ export default function App() {
       <SafeAreaProvider>
         <OnboardingProvider>
           <AuthProvider>
-            <GigProvider>
-              <CategoryProvider>
-                <GigPostProvider>
-                  <AdminGigProvider>
-                    <StatusBar style="dark" />
-                    <RootNavigator />
-                  </AdminGigProvider>
-                </GigPostProvider>
-              </CategoryProvider>
-            </GigProvider>
+            <NotificationProvider>
+              <GigProvider>
+                <CategoryProvider>
+                  <GigPostProvider>
+                    <AdminGigProvider>
+                      <StatusBar style="dark" />
+                      <RootNavigator />
+                    </AdminGigProvider>
+                  </GigPostProvider>
+                </CategoryProvider>
+              </GigProvider>
+            </NotificationProvider>
           </AuthProvider>
         </OnboardingProvider>
       </SafeAreaProvider>

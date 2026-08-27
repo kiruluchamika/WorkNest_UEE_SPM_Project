@@ -56,6 +56,35 @@ export function gigStatusBadge(
   }
 }
 
+export function reviewStatusBadge(
+  status: string
+): { label: string; variant: "success" | "warning" | "danger" | "muted" | "primary" } {
+  switch (status) {
+    case "PUBLISHED":
+      return { label: "Published", variant: "success" };
+    case "FLAGGED":
+      return { label: "Flagged", variant: "warning" };
+    case "REMOVED":
+      return { label: "Removed", variant: "danger" };
+    default:
+      return { label: status, variant: "muted" };
+  }
+}
+
+const NOTIFICATION_ICONS: Record<string, string> = {
+  GIG_COMPLETED: "check-circle",
+  REVIEW_REQUESTED: "edit-3",
+  REVIEW_RECEIVED: "star",
+  REVIEW_REPORTED: "flag",
+  REVIEW_REMOVED: "trash-2",
+  REPORT_DISMISSED: "shield",
+  ACCOUNT_WARNING: "alert-triangle",
+};
+
+export function notificationMeta(type: string): { icon: string } {
+  return { icon: NOTIFICATION_ICONS[type] ?? "bell" };
+}
+
 export function trustLevel(score: number): { label: string; color: string } {
   if (score >= 90) return { label: "Top rated", color: "#2A9D8F" };
   if (score >= 70) return { label: "Trusted", color: "#2A9D8F" };
