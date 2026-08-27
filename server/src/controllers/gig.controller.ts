@@ -66,6 +66,18 @@ async function toPublicGigWithFilledPositions<T extends { id: string; paymentAmo
   return { ...toPublicGig(gig), filledPositions };
 }
 
+// The Neon HTTP adapter doesn't support Prisma's interactive transactions,
+// which Prisma uses internally whenever `include` is combined with
+// `create`/`update`. So writes here never use `include` — instead we do
+// the write, then a separate plain read to fetch the enriched shape.
+async function fetchGigWithCategory(id: string) {
+  return prisma.gigPost.findUniqueOrThrow({ where: { id }, include: { category: true } });
+}
+
+async function fetchAdminGig(id: string) {
+  return prisma.gigPost.findUniqueOrThrow({ where: { id }, include: ADMIN_GIG_INCLUDE });
+}
+
 export async function createGig(
   req: Request<unknown, unknown, CreateGigPostInput>,
   res: Response,
@@ -77,7 +89,7 @@ export async function createGig(
 
     await assertActiveCategory(data.categoryId);
 
-    const gig = await prisma.gigPost.create({
+    const created = await prisma.gigPost.create({
       data: {
         title: data.title,
         description: data.description,
@@ -96,8 +108,8 @@ export async function createGig(
         imageUrl: data.imageUrl,
         status: "PENDING",
       },
-      include: { category: true },
     });
+    const gig = await fetchGigWithCategory(created.id);
 
     res.status(201).json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -229,14 +241,14 @@ export async function updateGig(
     const important = hasImportantChange(existing, updates);
     const shouldResetToPending = important && (existing.status === "ACTIVE" || existing.status === "REJECTED");
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: {
         ...updates,
         ...(shouldResetToPending ? { status: "PENDING", rejectionReason: null } : {}),
       },
-      include: { category: true },
     });
+    const gig = await fetchGigWithCategory(id);
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -286,11 +298,8 @@ export async function closeGig(req: Request<{ id: string }>, res: Response, next
       return next(new HttpError(409, "Only active gigs can be closed."));
     }
 
-    const gig = await prisma.gigPost.update({
-      where: { id },
-      data: { status: "CLOSED" },
-      include: { category: true },
-    });
+    await prisma.gigPost.update({ where: { id }, data: { status: "CLOSED" } });
+    const gig = await fetchGigWithCategory(id);
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -315,11 +324,11 @@ export async function resubmitGig(req: Request<{ id: string }>, res: Response, n
       return next(new HttpError(409, "Only rejected gigs can be resubmitted."));
     }
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: { status: "PENDING", rejectionReason: null },
-      include: { category: true },
     });
+    const gig = await fetchGigWithCategory(id);
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -383,11 +392,11 @@ export async function approveGig(req: Request<{ id: string }>, res: Response, ne
       return next(new HttpError(409, "Only pending gigs can be approved."));
     }
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: { status: "ACTIVE", rejectionReason: null },
-      include: ADMIN_GIG_INCLUDE,
     });
+    const gig = await fetchAdminGig(id);
 
     res.json({ message: "Gig approved successfully.", gig: toPublicGig(gig) });
   } catch (err) {
@@ -412,11 +421,11 @@ export async function rejectGig(
       return next(new HttpError(409, "Only pending gigs can be rejected."));
     }
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: { status: "REJECTED", rejectionReason: reason },
-      include: ADMIN_GIG_INCLUDE,
     });
+    const gig = await fetchAdminGig(id);
 
     res.json({ message: "Gig rejected.", gig: toPublicGig(gig) });
   } catch (err) {

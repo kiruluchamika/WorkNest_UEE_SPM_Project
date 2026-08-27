@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -207,6 +207,10 @@ export const GigPostDetailScreen: React.FC = () => {
           <TrustBadge label={badge.label} variant={badge.variant} />
         </View>
 
+        {gig.imageUrl ? (
+          <Image source={{ uri: gig.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+        ) : null}
+
         <Text style={styles.title}>{gig.title}</Text>
         <Text style={styles.category}>{gig.category?.name ?? "Uncategorized"}</Text>
 
@@ -367,6 +371,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
     alignItems: "center",
     justifyContent: "center",
+  },
+  heroImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: radius.lg,
+    backgroundColor: colors.cream,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: typography.sizes.xl,
