@@ -3,6 +3,7 @@ import net from "net";
 import { app } from "./app";
 import { env } from "./config/env";
 import { prisma } from "./config/db";
+import { printBanner } from "./config/banner";
 
 // Prefer IPv4 when resolving hosts: some networks advertise IPv6 routes to
 // Neon that don't actually work, causing connections to hang and time out
@@ -14,6 +15,8 @@ dns.setDefaultResultOrder("ipv4first");
 net.setDefaultAutoSelectFamily(false);
 
 async function main() {
+  printBanner();
+
   await prisma.$connect();
   console.log("Database connected successfully");
 
