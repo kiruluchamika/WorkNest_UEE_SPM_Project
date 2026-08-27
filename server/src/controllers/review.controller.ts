@@ -20,10 +20,12 @@ export async function createReview(
     if (!gig) {
       return next(new HttpError(404, "Gig not found"));
     }
-    if (gig.status !== "COMPLETED") {
-      return next(new HttpError(400, "Reviews can only be submitted after the gig is completed."));
-    }
 
+    // Review eligibility is decided per-pair by Application.status, not by
+    // GigPost.status: a hired worker's engagement can be individually
+    // completed (via PATCH /applications/:id/complete) while the gig itself
+    // stays ACTIVE for other hires, and that worker/business pair is
+    // review-eligible the moment their own application reaches COMPLETED.
     let revieweeId: string;
 
     if (userId === gig.businessId) {

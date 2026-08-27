@@ -5,6 +5,7 @@ import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
 import { SubmitApplicationInput } from "../validators/application.validator";
 import { canTransitionApplicationStatus, getStatusesThatCanTransitionTo } from "../utils/applicationStatus";
+import { createCompletionWorkHistory, notifyGigParticipantOfCompletion } from "../services/gigCompletion.service";
 
 interface RequirementsShape {
   requireCV: boolean;
@@ -107,6 +108,13 @@ const APPLICANT_SELECT = {
   avatarUrl: true,
   location: true,
   trustScore: true,
+} as const;
+
+const BUSINESS_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
 } as const;
 
 async function getOwnedGigForApplications(gigId: string, userId: string) {
@@ -393,7 +401,7 @@ export async function getApplicationById(
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
       include: {
-        gigPost: { include: { category: true } },
+        gigPost: { include: { category: true, business: { select: BUSINESS_SELECT } } },
         applicant: { select: APPLICANT_SELECT },
       },
     });
@@ -489,7 +497,10 @@ async function transitionApplicationAsGigOwner(
 ) {
   const application = await client.application.findUnique({
     where: { id: applicationId },
-    include: { gigPost: true },
+    include: {
+      gigPost: { include: { business: { select: BUSINESS_SELECT } } },
+      applicant: { select: { id: true, name: true } },
+    },
   });
 
   if (!application) {
@@ -621,12 +632,42 @@ export async function completeApplication(
     const { userId } = req as unknown as AuthedRequest;
     const { applicationId } = req.params;
 
-    await transitionApplicationAsGigOwner(applicationId, userId, ApplicationStatus.COMPLETED);
+    const application = await transitionApplicationAsGigOwner(applicationId, userId, ApplicationStatus.COMPLETED);
 
+    const completedAt = new Date();
     const updated = await prisma.application.update({
       where: { id: applicationId },
-      data: { status: "COMPLETED", completedAt: new Date() },
+      data: { status: "COMPLETED", completedAt },
     });
+
+    await createCompletionWorkHistory({
+      applicationId,
+      gigId: application.gigPostId,
+      businessId: application.gigPost.business.id,
+      applicantId: application.applicantId,
+      completedAt,
+      gigStatus: application.gigPost.status,
+    });
+
+    // Completing one hire is a standalone event for both sides (unlike the
+    // gig-level bulk complete, which dedupes GIG_COMPLETED across multiple
+    // hires) — each party gets the full completion + review-request pair.
+    await Promise.all([
+      notifyGigParticipantOfCompletion({
+        recipientId: application.applicantId,
+        counterpartName: application.gigPost.business.name,
+        gigId: application.gigPostId,
+        gigTitle: application.gigPost.title,
+        includeGigCompletedNotice: true,
+      }),
+      notifyGigParticipantOfCompletion({
+        recipientId: application.gigPost.business.id,
+        counterpartName: application.applicant.name,
+        gigId: application.gigPostId,
+        gigTitle: application.gigPost.title,
+        includeGigCompletedNotice: true,
+      }),
+    ]);
 
     res.json({ message: "Application marked as completed.", application: toPublicApplication(updated) });
   } catch (err) {
