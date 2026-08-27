@@ -75,7 +75,10 @@ export const GigManagementScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <AppHeader subtitle="Gig management" />
+      <AppHeader
+        subtitle="Gig management"
+        onBellPress={() => navigation.getParent()?.navigate("NotificationsTab" as never)}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
 import * as endorsementApi from "../../api/endorsementApi";
-import * as ratingApi from "../../api/ratingApi";
 import * as applicationApi from "../../api/applicationApi";
+import * as reputationApi from "../../api/reputationApi";
 import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -21,25 +22,26 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { initials, trustLevel } from "../../utils/formatters";
-import type { Endorsement, Rating, Application } from "../../types";
+import type { Endorsement, Application, ReputationSummary } from "../../types";
 
 export const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { user, logout } = useAuth();
   const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
-  const [ratings, setRatings] = useState<Rating[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     Promise.all([
       endorsementApi.listEndorsementsForJobSeeker(user.id),
-      ratingApi.listRatingsForUser(user.id),
       applicationApi.listApplicationsByJobSeeker(user.id),
-    ]).then(([e, r, a]) => {
+      reputationApi.getUserReputation(user.id),
+    ]).then(([e, a, rep]) => {
       setEndorsements(e);
-      setRatings(r);
       setApplications(a);
+      setReputation(rep);
       setLoading(false);
     });
   }, [user]);
@@ -119,19 +121,35 @@ export const ProfileScreen: React.FC = () => {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Ratings</Text>
+          <Text style={styles.sectionTitle}>Reputation</Text>
           {loading ? (
-            <LoadingSpinner message="Loading ratings..." />
-          ) : ratings.length > 0 ? (
-            ratings.map((r) => (
-              <View key={r.id} style={styles.ratingRow}>
-                <Text style={styles.ratingStars}>{"★".repeat(r.score)}{"☆".repeat(5 - r.score)}</Text>
-                <Text style={styles.ratingComment}>&ldquo;{r.comment}&rdquo;</Text>
-                <Text style={styles.ratingBy}>— {r.fromUserName}</Text>
-              </View>
-            ))
+            <LoadingSpinner message="Loading reputation..." />
           ) : (
-            <Text style={styles.empty}>No ratings yet.</Text>
+            <>
+              <View style={styles.reputationRow}>
+                <Text style={styles.reputationAverage}>
+                  {reputation?.averageRating !== null && reputation?.averageRating !== undefined
+                    ? reputation.averageRating.toFixed(1)
+                    : "—"}
+                </Text>
+                <Text style={styles.reputationCount}>
+                  {reputation?.totalReviews ?? 0} review{reputation?.totalReviews === 1 ? "" : "s"}
+                </Text>
+              </View>
+              <Button
+                title="View Reputation & Reviews"
+                variant="outline"
+                onPress={() =>
+                  (navigation as any).navigate("Reputation", { userId: user.id, userName: user.name })
+                }
+                style={{ marginBottom: spacing.sm }}
+              />
+              <Button
+                title="Work History"
+                variant="outline"
+                onPress={() => (navigation as any).navigate("WorkHistory", { userId: user.id })}
+              />
+            </>
           )}
         </Card>
 
@@ -249,25 +267,19 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: "700",
   },
-  ratingRow: {
+  reputationRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
     marginBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.md,
   },
-  ratingStars: {
-    fontSize: typography.sizes.base,
-    color: colors.warning,
-    marginBottom: spacing.xs,
+  reputationAverage: {
+    fontSize: typography.sizes.xl,
+    fontWeight: "800",
+    color: colors.primaryDark,
+    marginRight: spacing.sm,
   },
-  ratingComment: {
+  reputationCount: {
     fontSize: typography.sizes.sm,
-    color: colors.text,
-    fontStyle: "italic",
-  },
-  ratingBy: {
-    fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    marginTop: spacing.xs,
   },
 });

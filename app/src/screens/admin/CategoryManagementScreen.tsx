@@ -52,7 +52,10 @@ export const CategoryManagementScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <AppHeader subtitle="Category management" />
+      <AppHeader
+        subtitle="Category management"
+        onBellPress={() => navigation.getParent()?.navigate("NotificationsTab" as never)}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

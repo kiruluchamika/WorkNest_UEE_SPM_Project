@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 
-import { colors } from "../theme/colors";
 import { BrowseGigsScreen } from "../screens/jobseeker/BrowseGigsScreen";
 import { GigDetailScreen } from "../screens/jobseeker/GigDetailScreen";
 import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
@@ -12,6 +11,10 @@ import { MyApplicationsScreen } from "../screens/jobseeker/MyApplicationsScreen"
 import { ApplicationDetailsScreen } from "../screens/jobseeker/ApplicationDetailsScreen";
 import { ProfileScreen } from "../screens/jobseeker/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
+import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
+import { ReputationScreen } from "../screens/shared/ReputationScreen";
+import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
+import { GlassTabBar } from "./GlassTabBar";
 
 export type JobSeekerStackParamList = {
   BrowseGigs: undefined;
@@ -23,6 +26,14 @@ export type JobSeekerStackParamList = {
 export type MyApplicationsStackParamList = {
   MyApplications: undefined;
   ApplicationDetails: { applicationId: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
+};
+
+export type JobSeekerProfileStackParamList = {
+  ProfileHome: undefined;
+  WorkHistory: { userId: string };
+  Reputation: { userId: string; userName?: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type JobSeekerTabParamList = {
@@ -34,6 +45,7 @@ export type JobSeekerTabParamList = {
 
 const Stack = createNativeStackNavigator<JobSeekerStackParamList>();
 const MyApplicationsStack = createNativeStackNavigator<MyApplicationsStackParamList>();
+const ProfileStack = createNativeStackNavigator<JobSeekerProfileStackParamList>();
 const Tab = createBottomTabNavigator<JobSeekerTabParamList>();
 
 function JobSeekerStack() {
@@ -52,13 +64,26 @@ function MyApplicationsStackNavigator() {
     <MyApplicationsStack.Navigator screenOptions={{ headerShown: false }}>
       <MyApplicationsStack.Screen name="MyApplications" component={MyApplicationsScreen} />
       <MyApplicationsStack.Screen name="ApplicationDetails" component={ApplicationDetailsScreen} />
+      <MyApplicationsStack.Screen name="ReviewForm" component={ReviewFormScreen} />
     </MyApplicationsStack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="WorkHistory" component={WorkHistoryScreen} />
+      <ProfileStack.Screen name="Reputation" component={ReputationScreen} />
+      <ProfileStack.Screen name="ReviewForm" component={ReviewFormScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
 export const JobSeekerTabs: React.FC = () => {
   return (
     <Tab.Navigator
+      tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
@@ -68,12 +93,6 @@ export const JobSeekerTabs: React.FC = () => {
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#5D6D7E",
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-        },
       })}
     >
       <Tab.Screen name="Browse" component={JobSeekerStack} options={{ title: "Gigs" }} />
@@ -82,7 +101,7 @@ export const JobSeekerTabs: React.FC = () => {
         component={MyApplicationsStackNavigator}
         options={{ title: "Applications" }}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} options={{ title: "Profile" }} />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}

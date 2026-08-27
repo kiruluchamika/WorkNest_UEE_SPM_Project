@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 
-import { colors } from "../theme/colors";
 import { DashboardScreen } from "../screens/shopowner/DashboardScreen";
 import { ApplicantsScreen } from "../screens/shopowner/ApplicantsScreen";
 import { MyGigsScreen } from "../screens/shopowner/MyGigsScreen";
@@ -14,11 +13,18 @@ import { GigApplicantsScreen } from "../screens/shopowner/GigApplicantsScreen";
 import { ApplicantDetailsScreen } from "../screens/shopowner/ApplicantDetailsScreen";
 import { ProfileScreen } from "../screens/shopowner/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
+import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
+import { ReputationScreen } from "../screens/shared/ReputationScreen";
+import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
+import { GlassTabBar } from "./GlassTabBar";
 
 export type ShopOwnerStackParamList = {
   DashboardHome: undefined;
   Applicants: { gigId: string };
   Profile: undefined;
+  WorkHistory: { userId: string };
+  Reputation: { userId: string; userName?: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type MyGigsStackParamList = {
@@ -28,6 +34,7 @@ export type MyGigsStackParamList = {
   ApplicationSettings: { gigId: string };
   GigApplicants: { gigId: string };
   ApplicantDetails: { applicationId: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type ShopOwnerTabParamList = {
@@ -47,6 +54,9 @@ function ShopOwnerStack() {
       <Stack.Screen name="DashboardHome" component={DashboardScreen} />
       <Stack.Screen name="Applicants" component={ApplicantsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="WorkHistory" component={WorkHistoryScreen} />
+      <Stack.Screen name="Reputation" component={ReputationScreen} />
+      <Stack.Screen name="ReviewForm" component={ReviewFormScreen} />
     </Stack.Navigator>
   );
 }
@@ -60,6 +70,7 @@ function MyGigsStackNavigator() {
       <MyGigsStack.Screen name="ApplicationSettings" component={ApplicationSettingsScreen} />
       <MyGigsStack.Screen name="GigApplicants" component={GigApplicantsScreen} />
       <MyGigsStack.Screen name="ApplicantDetails" component={ApplicantDetailsScreen} />
+      <MyGigsStack.Screen name="ReviewForm" component={ReviewFormScreen} />
     </MyGigsStack.Navigator>
   );
 }
@@ -67,6 +78,7 @@ function MyGigsStackNavigator() {
 export const ShopOwnerTabs: React.FC = () => {
   return (
     <Tab.Navigator
+      tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
@@ -75,12 +87,6 @@ export const ShopOwnerTabs: React.FC = () => {
           if (route.name === "PostGig") iconName = "plus-circle";
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#5D6D7E",
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
         },
       })}
     >

@@ -4,6 +4,8 @@ import { prisma } from "../config/db";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
 import { CreateGigPostInput, UpdateGigPostInput, RejectGigInput } from "../validators/gig.validator";
+import { markGigComplete } from "../services/gigCompletion.service";
+import { fetchGigWithCategory } from "../services/gig.service";
 
 const ADMIN_GIG_INCLUDE = {
   category: true,
@@ -64,14 +66,6 @@ async function toPublicGigWithFilledPositions<T extends { id: string; paymentAmo
   });
 
   return { ...toPublicGig(gig), filledPositions };
-}
-
-// The Neon HTTP adapter doesn't support Prisma's interactive transactions,
-// which Prisma uses internally whenever `include` is combined with
-// `create`/`update`. So writes here never use `include` — instead we do
-// the write, then a separate plain read to fetch the enriched shape.
-async function fetchGigWithCategory(id: string) {
-  return prisma.gigPost.findUniqueOrThrow({ where: { id }, include: { category: true } });
 }
 
 async function fetchAdminGig(id: string) {
@@ -332,6 +326,20 @@ export async function resubmitGig(req: Request<{ id: string }>, res: Response, n
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
+    next(err);
+  }
+}
+
+export async function completeGig(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req as unknown as AuthedRequest;
+    const { id } = req.params;
+
+    const gig = await markGigComplete(id, userId);
+
+    res.json({ gig: toPublicGig(gig) });
+  } catch (err) {
+    if (err instanceof HttpError) return next(err);
     next(err);
   }
 }

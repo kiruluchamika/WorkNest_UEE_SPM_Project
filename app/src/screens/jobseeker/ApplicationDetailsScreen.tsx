@@ -203,6 +203,18 @@ export const ApplicationDetailsScreen: React.FC = () => {
             loading={withdrawing}
             style={{ marginTop: spacing.md }}
           />
+        ) : application.status === "COMPLETED" && application.gig.business ? (
+          <Button
+            title="Leave a Review"
+            onPress={() =>
+              (navigation as any).navigate("ReviewForm", {
+                gigId: application.gig.id,
+                revieweeId: application.gig.business!.id,
+                revieweeName: application.gig.business!.name,
+              })
+            }
+            style={{ marginTop: spacing.md }}
+          />
         ) : null}
 
         <View style={{ height: spacing.xxl }} />

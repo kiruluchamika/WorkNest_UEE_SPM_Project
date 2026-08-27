@@ -49,7 +49,7 @@ export const GigPostDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { gigId } = (route.params as { gigId: string }) || {};
-  const { gigPosts, refresh, closeGig, removeGig, resubmitGig } = useGigPosts();
+  const { gigPosts, refresh, closeGig, removeGig, resubmitGig, completeGig } = useGigPosts();
   const [busy, setBusy] = useState(false);
   const [settingsMode, setSettingsMode] = useState<ApplicationMode | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -159,6 +159,32 @@ export const GigPostDetailScreen: React.FC = () => {
         },
       },
     ]);
+  };
+
+  const handleComplete = () => {
+    Alert.alert(
+      "Mark this gig as completed?",
+      "Hired workers and this business will be able to review each other.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Mark Completed",
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await completeGig(gig.id);
+            } catch (err) {
+              Alert.alert(
+                "Something went wrong",
+                err instanceof Error ? err.message : "Could not mark this gig as completed."
+              );
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleResubmit = () => {
@@ -319,6 +345,15 @@ export const GigPostDetailScreen: React.FC = () => {
             title="Edit Gig"
             variant="outline"
             onPress={() => (navigation as any).navigate("GigForm", { gigId: gig.id })}
+            style={{ marginBottom: spacing.md }}
+          />
+        ) : null}
+
+        {gig.status === "ACTIVE" ? (
+          <Button
+            title="Mark Gig Complete"
+            onPress={handleComplete}
+            disabled={busy}
             style={{ marginBottom: spacing.md }}
           />
         ) : null}

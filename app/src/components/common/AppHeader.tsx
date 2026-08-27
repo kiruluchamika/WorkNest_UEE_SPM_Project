@@ -6,6 +6,7 @@ import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { useAuth } from "../../context/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 interface AppHeaderProps {
   subtitle?: string;
@@ -41,9 +42,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onP
         </View>
       </View>
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.8} onPress={onBellPress}>
-          <Feather name="bell" size={14} color={colors.primaryDark} />
-        </TouchableOpacity>
+        <NotificationBell onPress={onBellPress} />
         <TouchableOpacity
           style={styles.avatar}
           activeOpacity={0.8}
@@ -142,15 +141,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  iconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.full,
-    backgroundColor: colors.cream,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.sm,
   },
   avatar: {
     width: 28,

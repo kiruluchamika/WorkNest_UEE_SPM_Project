@@ -3,6 +3,8 @@ import net from "net";
 import { app } from "./app";
 import { env } from "./config/env";
 import { prisma } from "./config/db";
+import { printBanner } from "./config/banner";
+import { verifySmtpConnection } from "./config/mailer";
 
 // Prefer IPv4 when resolving hosts: some networks advertise IPv6 routes to
 // Neon that don't actually work, causing connections to hang and time out
@@ -14,8 +16,14 @@ dns.setDefaultResultOrder("ipv4first");
 net.setDefaultAutoSelectFamily(false);
 
 async function main() {
+  printBanner();
+
   await prisma.$connect();
   console.log("Database connected successfully");
+
+  // Non-blocking: a broken SMTP config shouldn't stop the API from serving
+  // requests, it just means notification emails will fail until it's fixed.
+  void verifySmtpConnection();
 
   app.listen(env.PORT, () => {
     console.log(`WorkNest API listening on http://localhost:${env.PORT}`);
