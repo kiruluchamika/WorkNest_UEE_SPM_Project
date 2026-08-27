@@ -4,7 +4,7 @@ import { prisma } from "../config/db";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
 import { SubmitApplicationInput } from "../validators/application.validator";
-import { canTransitionApplicationStatus } from "../utils/applicationStatus";
+import { canTransitionApplicationStatus, getStatusesThatCanTransitionTo } from "../utils/applicationStatus";
 
 interface RequirementsShape {
   requireCV: boolean;
@@ -563,27 +563,43 @@ export async function hireApplication(
     const { userId } = req as unknown as AuthedRequest;
     const { applicationId } = req.params;
 
-    const updated = await prisma.$transaction(
-      async (tx) => {
-        const application = await transitionApplicationAsGigOwner(
-          applicationId,
-          userId,
-          ApplicationStatus.HIRED,
-          tx
-        );
-
-        const filledPositions = await countFilledPositions(tx, application.gigPostId);
-        if (filledPositions >= application.gigPost.workersNeeded) {
-          throw new HttpError(400, "All positions for this gig have already been filled.");
-        }
-
-        return tx.application.update({
-          where: { id: applicationId },
-          data: { status: "HIRED" },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    const application = await transitionApplicationAsGigOwner(
+      applicationId,
+      userId,
+      ApplicationStatus.HIRED
     );
+
+    const filledPositions = await countFilledPositions(prisma, application.gigPostId);
+    if (filledPositions >= application.gigPost.workersNeeded) {
+      return next(new HttpError(400, "All positions for this gig have already been filled."));
+    }
+
+    // The Neon HTTP adapter (see config/db.ts) has no session support, so this
+    // can't run inside an interactive prisma.$transaction(). Instead, close
+    // the race window between the check above and this write with a single
+    // conditional UPDATE that re-verifies the status transition and the
+    // filled-position count against the live row in one atomic statement.
+    const sourceStatuses = getStatusesThatCanTransitionTo(ApplicationStatus.HIRED);
+    const affected = await prisma.$executeRaw`
+      UPDATE "Application" AS a
+      SET status = 'HIRED', "updatedAt" = now()
+      WHERE a.id = ${applicationId}
+        AND a.status::text IN (${Prisma.join(sourceStatuses)})
+        AND (
+          SELECT COUNT(*) FROM "Application" a2
+          WHERE a2."gigPostId" = a."gigPostId"
+            AND a2.status IN ('HIRED', 'COMPLETED')
+        ) < (SELECT "workersNeeded" FROM "GigPost" WHERE id = a."gigPostId")
+    `;
+
+    if (affected === 0) {
+      return next(new HttpError(400, "All positions for this gig have already been filled."));
+    }
+
+    const updated = await prisma.application.findUnique({ where: { id: applicationId } });
+    if (!updated) {
+      return next(new HttpError(404, "Application not found"));
+    }
 
     // Note: GigPost.status has no "FILLED"/"OPEN" equivalent in the current
     // schema (PENDING/ACTIVE/REJECTED/CLOSED/COMPLETED), so hiring does not
@@ -592,9 +608,6 @@ export async function hireApplication(
     res.json({ message: "Applicant hired.", application: toPublicApplication(updated) });
   } catch (err) {
     if (err instanceof HttpError) return next(err);
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
-      return next(new HttpError(400, "All positions for this gig have already been filled."));
-    }
     next(err);
   }
 }

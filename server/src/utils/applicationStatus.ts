@@ -18,3 +18,9 @@ export function canTransitionApplicationStatus(
 ): boolean {
   return APPLICATION_STATUS_TRANSITIONS[current]?.includes(next) ?? false;
 }
+
+export function getStatusesThatCanTransitionTo(target: ApplicationStatus): ApplicationStatus[] {
+  return (Object.keys(APPLICATION_STATUS_TRANSITIONS) as ApplicationStatus[]).filter((status) =>
+    APPLICATION_STATUS_TRANSITIONS[status].includes(target)
+  );
+}
