@@ -24,18 +24,20 @@ export async function markGigComplete(gigId: string, businessUserId: string) {
   });
 
   const completedAt = new Date();
+  const gigLink = `/gigs/${gigId}`;
 
   // Fires once for the business regardless of how many workers were hired —
   // unlike REVIEW_REQUESTED below, this notification's content doesn't vary
   // per applicant, so it must live outside the loop to avoid duplicates.
+  // Its email is skipped (NOT_REQUIRED) since gig-completion + review-request
+  // are sent as a single combined email, carried by REVIEW_REQUESTED instead.
   await createNotification({
-    userId: gig.business.id,
+    recipientId: gig.business.id,
     type: "GIG_COMPLETED",
-    title: "Gig completed",
-    body: `"${gig.title}" has been marked as completed.`,
-    linkType: "GIG",
-    linkId: gigId,
-    emailParams: { gigTitle: gig.title },
+    title: "Gig Completed",
+    message: "Your gig has been completed successfully.",
+    link: gigLink,
+    relatedEntityId: gigId,
   });
 
   for (const application of hiredApplications) {
@@ -69,30 +71,29 @@ export async function markGigComplete(gigId: string, businessUserId: string) {
 
     await Promise.all([
       createNotification({
-        userId: application.applicant.id,
+        recipientId: application.applicant.id,
         type: "GIG_COMPLETED",
-        title: "Gig completed",
-        body: `"${gig.title}" has been marked as completed.`,
-        linkType: "GIG",
-        linkId: gigId,
-        emailParams: { gigTitle: gig.title },
+        title: "Gig Completed",
+        message: "Your gig has been completed successfully.",
+        link: gigLink,
+        relatedEntityId: gigId,
       }),
       createNotification({
-        userId: application.applicant.id,
+        recipientId: application.applicant.id,
         type: "REVIEW_REQUESTED",
-        title: "Leave a review",
-        body: `Review ${gig.business.name} for "${gig.title}".`,
-        linkType: "GIG",
-        linkId: gigId,
+        title: "Submit Your Review",
+        message: "You can now review the person or business you worked with.",
+        link: gigLink,
+        relatedEntityId: gigId,
         emailParams: { counterpartName: gig.business.name, gigTitle: gig.title },
       }),
       createNotification({
-        userId: gig.business.id,
+        recipientId: gig.business.id,
         type: "REVIEW_REQUESTED",
-        title: "Leave a review",
-        body: `Review ${application.applicant.name} for "${gig.title}".`,
-        linkType: "GIG",
-        linkId: gigId,
+        title: "Submit Your Review",
+        message: "You can now review the person or business you worked with.",
+        link: gigLink,
+        relatedEntityId: gigId,
         emailParams: { counterpartName: application.applicant.name, gigTitle: gig.title },
       }),
     ]);

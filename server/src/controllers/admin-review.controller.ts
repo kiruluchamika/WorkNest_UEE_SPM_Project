@@ -66,52 +66,68 @@ export async function moderateReview(
     const pendingReports = await prisma.reviewReport.findMany({
       where: { reviewId, status: "PENDING" },
     });
-    await prisma.reviewReport.updateMany({
-      where: { reviewId, status: "PENDING" },
-      data: { status: reportStatus },
-    });
+    // updateMany is avoided: the Neon HTTP adapter implicitly wraps it in an
+    // interactive transaction, which isn't supported in HTTP mode.
+    await Promise.all(
+      pendingReports.map((report) =>
+        prisma.reviewReport.update({ where: { id: report.id }, data: { status: reportStatus } })
+      )
+    );
 
     await prisma.moderationAudit.create({
       data: { reviewId, adminId, action, previousStatus, newStatus, reason },
     });
 
+    const reviewLink = `/reviews/${review.id}`;
+
+    // The author only hears about REMOVE_REVIEW/WARN_AUTHOR — a dismissed
+    // report took no action against them, so they aren't notified.
     if (action === "REMOVE_REVIEW") {
       await createNotification({
-        userId: review.reviewerId,
+        recipientId: review.reviewerId,
         type: "REVIEW_REMOVED",
-        title: "Your review was removed",
-        body: `Your review for "${review.gig.title}" was removed by a moderator.`,
-        linkType: "REVIEW",
-        linkId: review.id,
+        title: "Review Removed",
+        message: "Your review was removed by an administrator.",
+        link: reviewLink,
+        relatedEntityId: review.id,
         emailParams: { gigTitle: review.gig.title, reason },
       });
     } else if (action === "WARN_AUTHOR") {
       await createNotification({
-        userId: review.reviewerId,
+        recipientId: review.reviewerId,
         type: "ACCOUNT_WARNING",
-        title: "Account warning",
-        body: `You received a warning regarding your review for "${review.gig.title}".`,
-        linkType: "REVIEW",
-        linkId: review.id,
+        // Deviates slightly from the spec's generic placeholder text — there's
+        // no separate "notification detail" screen to view the reason on, so
+        // it's included directly here instead.
+        title: "Account Warning",
+        message: `You received an account warning. Reason: ${reason}`,
         emailParams: { reason },
       });
     }
 
-    if (action === "DISMISS_REPORT" || action === "WARN_AUTHOR") {
-      await Promise.all(
-        pendingReports.map((report) =>
-          createNotification({
-            userId: report.reporterId,
-            type: "REPORT_DISMISSED",
-            title: "Your report was reviewed",
-            body: `Your report on a review for "${review.gig.title}" was reviewed. The review remains published.`,
-            linkType: "REVIEW",
-            linkId: review.id,
-            emailParams: { reason },
-          })
-        )
-      );
-    }
+    // REMOVE_REVIEW and WARN_AUTHOR both took action on the report, so the
+    // reporter is told it was RESOLVED; DISMISS_REPORT took no action, so
+    // they're told it was DISMISSED.
+    const reporterNotificationType = action === "DISMISS_REPORT" ? "REPORT_DISMISSED" : "REPORT_RESOLVED";
+    const reporterTitle = action === "DISMISS_REPORT" ? "Report Dismissed" : "Report Resolved";
+    const reporterMessage =
+      action === "DISMISS_REPORT"
+        ? "Your review report was dismissed by an administrator."
+        : "An administrator reviewed your reported review.";
+
+    await Promise.all(
+      pendingReports.map((report) =>
+        createNotification({
+          recipientId: report.reporterId,
+          type: reporterNotificationType,
+          title: reporterTitle,
+          message: reporterMessage,
+          link: reviewLink,
+          relatedEntityId: review.id,
+          emailParams: { reason },
+        })
+      )
+    );
 
     const updated = await prisma.review.findUniqueOrThrow({ where: { id: reviewId } });
     res.json({ review: updated });

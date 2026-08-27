@@ -66,12 +66,12 @@ export async function createReview(
     });
 
     await createNotification({
-      userId: revieweeId,
+      recipientId: revieweeId,
       type: "REVIEW_RECEIVED",
-      title: "New review received",
-      body: `${reviewer?.name ?? "Someone"} left you a ${rating}-star review for "${gig.title}".`,
-      linkType: "REVIEW",
-      linkId: review.id,
+      title: "New Review Received",
+      message: `You received a new ${rating}-star review for "${gig.title}".`,
+      link: `/reviews/${review.id}`,
+      relatedEntityId: review.id,
       emailParams: { raterName: reviewer?.name ?? "Someone", rating, gigTitle: gig.title },
     });
 
@@ -119,19 +119,17 @@ export async function reportReview(
       await prisma.review.update({ where: { id: reviewId }, data: { status: "FLAGGED" } });
     }
 
-    const admins = await prisma.user.findMany({ where: { role: "admin" }, select: { id: true } });
-    await Promise.all(
-      admins.map((admin) =>
-        createNotification({
-          userId: admin.id,
-          type: "REVIEW_REPORTED",
-          title: "Review reported",
-          body: "A review was reported and needs moderation.",
-          linkType: "REVIEW",
-          linkId: reviewId,
-        })
-      )
-    );
+    // Confirms receipt to the reporter; the report itself is already visible
+    // to admins via GET /admin/reviews/flagged, so no separate admin
+    // notification is created here.
+    await createNotification({
+      recipientId: userId,
+      type: "REVIEW_REPORTED",
+      title: "Report Submitted",
+      message: "Your review report was submitted successfully.",
+      link: `/reviews/${reviewId}`,
+      relatedEntityId: reviewId,
+    });
 
     res.status(201).json({ message: "Review reported." });
   } catch (err) {
