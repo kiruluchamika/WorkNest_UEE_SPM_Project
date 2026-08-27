@@ -68,11 +68,13 @@ enum NotificationType {
   REVIEW_RECEIVED
   REVIEW_REPORTED
   REVIEW_REMOVED
+  REPORT_RESOLVED
   REPORT_DISMISSED
   ACCOUNT_WARNING
 }
 
 enum EmailStatus {
+  NOT_REQUIRED
   PENDING
   SENT
   FAILED
@@ -234,20 +236,22 @@ model WorkHistoryEntry {
 }
 
 model Notification {
-  id          String           @id @default(uuid())
-  userId      String
-  user        User             @relation(fields: [userId], references: [id])
-  type        NotificationType
-  title       String
-  body        String
-  linkType    String?
-  linkId      String?
-  isRead      Boolean          @default(false)
-  emailStatus EmailStatus      @default(PENDING)
-  createdAt   DateTime         @default(now())
+  id              String           @id @default(uuid())
+  recipientId     String
+  recipient       User             @relation(fields: [recipientId], references: [id])
+  type            NotificationType
+  title           String
+  message         String
+  link            String?
+  relatedEntityId String?
+  isRead          Boolean          @default(false)
+  readAt          DateTime?
+  emailStatus     EmailStatus      @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
+  @@index([recipientId, isRead])
+  @@index([recipientId, createdAt])
 }
 
 model ReviewReport {
