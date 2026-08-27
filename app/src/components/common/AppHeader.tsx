@@ -6,6 +6,7 @@ import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 
 interface AppHeaderProps {
   subtitle?: string;
@@ -15,6 +16,7 @@ interface AppHeaderProps {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onProfilePress }) => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [menuVisible, setMenuVisible] = useState(false);
 
   const handleProfile = () => {
@@ -43,6 +45,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onP
       <View style={styles.actions}>
         <TouchableOpacity style={styles.iconButton} activeOpacity={0.8} onPress={onBellPress}>
           <Feather name="bell" size={14} color={colors.primaryDark} />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+            </View>
+          ) : null}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.avatar}
@@ -151,6 +158,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
+  },
+  badge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 14,
+    height: 14,
+    paddingHorizontal: 2,
+    borderRadius: 7,
+    backgroundColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.surface,
+  },
+  badgeText: {
+    color: colors.textInverse,
+    fontSize: 9,
+    fontWeight: "800",
   },
   avatar: {
     width: 28,

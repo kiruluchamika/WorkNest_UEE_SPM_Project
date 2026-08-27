@@ -1,64 +1,34 @@
-import React, { useState } from "react";
+import React, { useCallback } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
-import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { Card } from "../../components/common/Card";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
-import { formatRelativeDate } from "../../utils/formatters";
+import { formatRelativeDate, notificationMeta } from "../../utils/formatters";
 import type { Notification } from "../../types";
 
-const DEMO_NOTIFICATIONS: Notification[] = [
-  {
-    id: "n1",
-    userId: "user-1",
-    title: "Application viewed",
-    body: "Savi's Café reviewed your application for Weekend Café Assistant.",
-    read: false,
-    createdAt: "2026-08-07T10:00:00Z",
-  },
-  {
-    id: "n2",
-    userId: "user-1",
-    title: "New gig match",
-    body: "A new delivery gig was posted near Colombo 03.",
-    read: false,
-    createdAt: "2026-08-07T08:00:00Z",
-  },
-  {
-    id: "n3",
-    userId: "user-2",
-    title: "New applicant",
-    body: "Amal Perera applied for Weekend Café Assistant.",
-    read: true,
-    createdAt: "2026-08-06T14:00:00Z",
-  },
-];
-
 export const NotificationsScreen: React.FC = () => {
-  const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>(
-    DEMO_NOTIFICATIONS.filter((n) => n.userId === user?.id || n.userId === "user-1" || n.userId === "user-2")
+  const { notifications, unreadCount, isLoading, refresh, markRead, markAllRead } = useNotifications();
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
   );
-
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const markRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
-        {notifications.some((n) => !n.read) ? (
+        {unreadCount > 0 ? (
           <TouchableOpacity
-            onPress={markAllRead}
+            onPress={() => markAllRead().catch(() => {})}
             activeOpacity={0.75}
             style={styles.markAllButton}
           >
@@ -67,37 +37,46 @@ export const NotificationsScreen: React.FC = () => {
         ) : null}
       </View>
 
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => markRead(item.id)}>
-            <View style={[!item.read && styles.unreadIndicator]}>
-              <Card style={styles.card}>
-                <View style={styles.row}>
-                  <Feather
-                    name="bell"
-                    size={18}
-                    color={item.read ? colors.textMuted : colors.primary}
-                  />
-                  <View style={styles.content}>
-                    <Text style={[styles.titleText, !item.read && { fontWeight: "700" }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={styles.body}>{item.body}</Text>
-                    <Text style={styles.time}>{formatRelativeDate(item.createdAt)}</Text>
-                  </View>
+      {isLoading && notifications.length === 0 ? (
+        <LoadingSpinner message="Loading notifications..." />
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }: { item: Notification }) => {
+            const meta = notificationMeta(item.type);
+            return (
+              <TouchableOpacity
+                onPress={() => {
+                  if (!item.isRead) markRead(item.id).catch(() => {});
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={[!item.isRead && styles.unreadIndicator]}>
+                  <Card style={styles.card}>
+                    <View style={styles.row}>
+                      <Feather
+                        name={meta.icon as keyof typeof Feather.glyphMap}
+                        size={18}
+                        color={item.isRead ? colors.textMuted : colors.primary}
+                      />
+                      <View style={styles.content}>
+                        <Text style={[styles.titleText, !item.isRead && { fontWeight: "700" }]}>
+                          {item.title}
+                        </Text>
+                        <Text style={styles.body}>{item.body}</Text>
+                        <Text style={styles.time}>{formatRelativeDate(item.createdAt)}</Text>
+                      </View>
+                    </View>
+                  </Card>
                 </View>
-              </Card>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        ListEmptyComponent={
-          <Text style={styles.empty}>No notifications yet.</Text>
-        }
-      />
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={<Text style={styles.empty}>No notifications yet.</Text>}
+        />
+      )}
     </SafeAreaView>
   );
 };

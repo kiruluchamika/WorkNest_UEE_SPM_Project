@@ -12,6 +12,10 @@ interface RejectionModalProps {
   onCancel: () => void;
   onSubmit: (reason: string) => void;
   submitting?: boolean;
+  title?: string;
+  subtitle?: string;
+  placeholder?: string;
+  submitLabel?: string;
 }
 
 const MIN_REASON_LENGTH = 5;
@@ -21,6 +25,10 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
   onCancel,
   onSubmit,
   submitting = false,
+  title = "Reject Gig",
+  subtitle = "Please tell the business why this gig cannot be approved.",
+  placeholder = "Rejection reason...",
+  submitLabel = "Reject Gig",
 }) => {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
@@ -52,10 +60,8 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
           <View style={styles.iconCircle}>
             <Feather name="x-circle" size={20} color={colors.danger} />
           </View>
-          <Text style={styles.title}>Reject Gig</Text>
-          <Text style={styles.subtitle}>
-            Please tell the business why this gig cannot be approved.
-          </Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
 
           <TextInput
             style={[styles.input, error ? { borderColor: colors.danger } : null]}
@@ -64,7 +70,7 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
               setReason(v);
               if (error) setError("");
             }}
-            placeholder="Rejection reason..."
+            placeholder={placeholder}
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={4}
@@ -78,7 +84,7 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                title="Reject Gig"
+                title={submitLabel}
                 variant="danger"
                 onPress={handleSubmit}
                 loading={submitting}

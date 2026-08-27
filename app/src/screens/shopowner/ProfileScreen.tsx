@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
+import * as reputationApi from "../../api/reputationApi";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
@@ -25,6 +26,7 @@ import { typography } from "../../theme/typography";
 import { profileFormSchema } from "../../utils/validators";
 import { pickImageFromLibrary, captureImageFromCamera } from "../../utils/imagePicker";
 import { initials } from "../../utils/formatters";
+import type { ReputationSummary } from "../../types";
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -39,6 +41,12 @@ export const ProfileScreen: React.FC = () => {
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    reputationApi.getUserReputation(user.id).then(setReputation);
+  }, [user]);
 
   if (!user) {
     return (
@@ -245,6 +253,32 @@ export const ProfileScreen: React.FC = () => {
                   </View>
                 </View>
               </Card>
+
+              <Card style={styles.card}>
+                <View style={styles.reputationRow}>
+                  <Text style={styles.reputationAverage}>
+                    {reputation?.averageRating !== null && reputation?.averageRating !== undefined
+                      ? reputation.averageRating.toFixed(1)
+                      : "—"}
+                  </Text>
+                  <Text style={styles.reputationCount}>
+                    {reputation?.totalReviews ?? 0} review{reputation?.totalReviews === 1 ? "" : "s"}
+                  </Text>
+                </View>
+                <Button
+                  title="View Reputation & Reviews"
+                  variant="outline"
+                  onPress={() =>
+                    (navigation as any).navigate("Reputation", { userId: user.id, userName: user.name })
+                  }
+                  style={{ marginBottom: spacing.sm }}
+                />
+                <Button
+                  title="Work History"
+                  variant="outline"
+                  onPress={() => (navigation as any).navigate("WorkHistory", { userId: user.id })}
+                />
+              </Card>
             </>
           )}
 
@@ -393,5 +427,20 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.danger,
     marginBottom: spacing.md,
+  },
+  reputationRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
+  },
+  reputationAverage: {
+    fontSize: typography.sizes.xl,
+    fontWeight: "800",
+    color: colors.primaryDark,
+    marginRight: spacing.sm,
+  },
+  reputationCount: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
   },
 });
