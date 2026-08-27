@@ -164,6 +164,7 @@ export interface ApplicationGigSummary {
   title: string;
   location: string;
   category?: Category;
+  business?: GigPostBusiness;
   paymentAmount: number;
   paymentType: GigPaymentType;
   startDate: string;

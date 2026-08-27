@@ -251,6 +251,18 @@ export const ApplicantDetailsScreen: React.FC = () => {
             loading={actionInFlight === "complete"}
             style={{ marginTop: spacing.md }}
           />
+        ) : application.status === "COMPLETED" && applicant ? (
+          <Button
+            title="Leave a Review"
+            onPress={() =>
+              (navigation as any).navigate("ReviewForm", {
+                gigId: application.gig.id,
+                revieweeId: applicant.id,
+                revieweeName: applicant.name,
+              })
+            }
+            style={{ marginTop: spacing.md }}
+          />
         ) : null}
 
         <View style={{ height: spacing.xxl }} />

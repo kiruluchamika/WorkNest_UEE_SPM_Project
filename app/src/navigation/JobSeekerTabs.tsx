@@ -26,6 +26,7 @@ export type JobSeekerStackParamList = {
 export type MyApplicationsStackParamList = {
   MyApplications: undefined;
   ApplicationDetails: { applicationId: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type JobSeekerProfileStackParamList = {
@@ -63,6 +64,7 @@ function MyApplicationsStackNavigator() {
     <MyApplicationsStack.Navigator screenOptions={{ headerShown: false }}>
       <MyApplicationsStack.Screen name="MyApplications" component={MyApplicationsScreen} />
       <MyApplicationsStack.Screen name="ApplicationDetails" component={ApplicationDetailsScreen} />
+      <MyApplicationsStack.Screen name="ReviewForm" component={ReviewFormScreen} />
     </MyApplicationsStack.Navigator>
   );
 }

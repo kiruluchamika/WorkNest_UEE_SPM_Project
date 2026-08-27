@@ -34,6 +34,7 @@ export type MyGigsStackParamList = {
   ApplicationSettings: { gigId: string };
   GigApplicants: { gigId: string };
   ApplicantDetails: { applicationId: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type ShopOwnerTabParamList = {
@@ -69,6 +70,7 @@ function MyGigsStackNavigator() {
       <MyGigsStack.Screen name="ApplicationSettings" component={ApplicationSettingsScreen} />
       <MyGigsStack.Screen name="GigApplicants" component={GigApplicantsScreen} />
       <MyGigsStack.Screen name="ApplicantDetails" component={ApplicantDetailsScreen} />
+      <MyGigsStack.Screen name="ReviewForm" component={ReviewFormScreen} />
     </MyGigsStack.Navigator>
   );
 }
