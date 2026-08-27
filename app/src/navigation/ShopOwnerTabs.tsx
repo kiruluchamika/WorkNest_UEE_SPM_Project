@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 
-import { colors } from "../theme/colors";
 import { DashboardScreen } from "../screens/shopowner/DashboardScreen";
 import { ApplicantsScreen } from "../screens/shopowner/ApplicantsScreen";
 import { MyGigsScreen } from "../screens/shopowner/MyGigsScreen";
@@ -17,6 +16,7 @@ import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
 import { ReputationScreen } from "../screens/shared/ReputationScreen";
 import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
+import { GlassTabBar } from "./GlassTabBar";
 
 export type ShopOwnerStackParamList = {
   DashboardHome: undefined;
@@ -78,6 +78,7 @@ function MyGigsStackNavigator() {
 export const ShopOwnerTabs: React.FC = () => {
   return (
     <Tab.Navigator
+      tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
@@ -86,12 +87,6 @@ export const ShopOwnerTabs: React.FC = () => {
           if (route.name === "PostGig") iconName = "plus-circle";
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#5D6D7E",
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
         },
       })}
     >

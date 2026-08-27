@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 
-import { colors } from "../theme/colors";
 import { BrowseGigsScreen } from "../screens/jobseeker/BrowseGigsScreen";
 import { GigDetailScreen } from "../screens/jobseeker/GigDetailScreen";
 import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
@@ -15,6 +14,7 @@ import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
 import { ReputationScreen } from "../screens/shared/ReputationScreen";
 import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
+import { GlassTabBar } from "./GlassTabBar";
 
 export type JobSeekerStackParamList = {
   BrowseGigs: undefined;
@@ -83,6 +83,7 @@ function ProfileStackNavigator() {
 export const JobSeekerTabs: React.FC = () => {
   return (
     <Tab.Navigator
+      tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
@@ -91,12 +92,6 @@ export const JobSeekerTabs: React.FC = () => {
           if (route.name === "Profile") iconName = "user";
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#5D6D7E",
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
         },
       })}
     >
