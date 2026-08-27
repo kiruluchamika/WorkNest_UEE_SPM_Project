@@ -5,6 +5,8 @@ import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/nativ
 import { Feather } from "@expo/vector-icons";
 
 import { useGigPosts } from "../../context/GigPostContext";
+import * as applicationsApi from "../../api/applicationsApi";
+import * as applicationSettingsApi from "../../api/applicationSettingsApi";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -14,9 +16,15 @@ import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatCurrency, formatDate, gigStatusBadge } from "../../utils/formatters";
 import { GIG_PAYMENT_TYPES } from "../../utils/constants";
+import { APPLICATION_MODE_OPTIONS } from "../../utils/applicationSettings";
+import type { ApplicationMode, JobApplicationStatus } from "../../types";
 
 function paymentTypeLabel(value: string): string {
   return GIG_PAYMENT_TYPES.find((pt) => pt.value === value)?.label ?? value;
+}
+
+function applicationModeLabel(value: ApplicationMode): string {
+  return APPLICATION_MODE_OPTIONS.find((mode) => mode.value === value)?.label ?? value;
 }
 
 interface DetailRowProps {
@@ -43,13 +51,56 @@ export const GigPostDetailScreen: React.FC = () => {
   const { gigId } = (route.params as { gigId: string }) || {};
   const { gigPosts, refresh, closeGig, removeGig, resubmitGig } = useGigPosts();
   const [busy, setBusy] = useState(false);
+  const [settingsMode, setSettingsMode] = useState<ApplicationMode | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [applicationCounts, setApplicationCounts] = useState<Record<JobApplicationStatus, number>>({
+    PENDING: 0,
+    SHORTLISTED: 0,
+    HIRED: 0,
+    REJECTED: 0,
+    WITHDRAWN: 0,
+    COMPLETED: 0,
+  });
 
   const gig = gigPosts.find((g) => g.id === gigId);
+
+  const loadApplicationSummary = useCallback(async () => {
+    if (!gigId) return;
+
+    try {
+      const [settings, applicants] = await Promise.all([
+        applicationSettingsApi.getApplicationSettings(gigId),
+        applicationsApi.getGigApplicants(gigId),
+      ]);
+
+      setSettingsMode(settings?.applicationMode ?? null);
+      setSettingsLoaded(true);
+      setApplicationCounts(
+        applicants.reduce<Record<JobApplicationStatus, number>>(
+          (counts, application) => ({
+            ...counts,
+            [application.status]: counts[application.status] + 1,
+          }),
+          {
+            PENDING: 0,
+            SHORTLISTED: 0,
+            HIRED: 0,
+            REJECTED: 0,
+            WITHDRAWN: 0,
+            COMPLETED: 0,
+          }
+        )
+      );
+    } catch {
+      setSettingsLoaded(false);
+    }
+  }, [gigId]);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+      loadApplicationSummary();
+    }, [loadApplicationSummary, refresh])
   );
 
   if (!gig) {
@@ -61,6 +112,8 @@ export const GigPostDetailScreen: React.FC = () => {
   }
 
   const badge = gigStatusBadge(gig.status);
+  const filledPositions = applicationCounts.HIRED + applicationCounts.COMPLETED;
+  const remainingWorkers = Math.max(gig.workersNeeded - filledPositions, 0);
 
   const handleClose = () => {
     Alert.alert("Close this gig?", "Workers will no longer be able to see this opportunity.", [
@@ -204,6 +257,63 @@ export const GigPostDetailScreen: React.FC = () => {
           <DetailRow icon="clock" label="Created" value={formatDate(gig.createdAt)} />
         </Card>
 
+        <Card style={styles.card}>
+          <View style={styles.manageHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Manage Applications</Text>
+              <Text style={styles.manageSubtext}>
+                {settingsLoaded
+                  ? settingsMode
+                    ? `${applicationModeLabel(settingsMode)} configured`
+                    : "Application settings not configured"
+                  : "Application summary unavailable"}
+              </Text>
+            </View>
+            <View style={styles.countPill}>
+              <Feather name="users" size={14} color={colors.primaryDark} />
+              <Text style={styles.countPillText}>
+                {applicationCounts.PENDING +
+                  applicationCounts.SHORTLISTED +
+                  applicationCounts.HIRED +
+                  applicationCounts.REJECTED +
+                  applicationCounts.WITHDRAWN +
+                  applicationCounts.COMPLETED}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.progressGrid}>
+            <View style={styles.progressItem}>
+              <Text style={styles.progressValue}>{gig.workersNeeded}</Text>
+              <Text style={styles.progressLabel}>Workers Needed</Text>
+            </View>
+            <View style={styles.progressItem}>
+              <Text style={styles.progressValue}>{filledPositions}</Text>
+              <Text style={styles.progressLabel}>Filled</Text>
+            </View>
+            <View style={styles.progressItem}>
+              <Text style={styles.progressValue}>{remainingWorkers}</Text>
+              <Text style={styles.progressLabel}>Remaining</Text>
+            </View>
+          </View>
+          {remainingWorkers === 0 ? (
+            <Text style={styles.capacityMessage}>All available positions have been filled.</Text>
+          ) : null}
+
+          <Button
+            title="Application Settings"
+            variant="secondary"
+            onPress={() => (navigation as any).navigate("ApplicationSettings", { gigId: gig.id })}
+            style={{ marginBottom: spacing.sm }}
+          />
+
+          <Button
+            title="View Applicants"
+            variant="secondary"
+            onPress={() => (navigation as any).navigate("GigApplicants", { gigId: gig.id })}
+          />
+        </Card>
+
         {gig.status !== "CLOSED" ? (
           <Button
             title="Edit Gig"
@@ -212,13 +322,6 @@ export const GigPostDetailScreen: React.FC = () => {
             style={{ marginBottom: spacing.md }}
           />
         ) : null}
-
-        <Button
-          title="Application Settings"
-          variant="secondary"
-          onPress={() => (navigation as any).navigate("ApplicationSettings", { gigId: gig.id })}
-          style={{ marginBottom: spacing.md }}
-        />
 
         {gig.status === "ACTIVE" ? (
           <Button
@@ -335,6 +438,59 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
     lineHeight: 20,
+  },
+  manageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  manageSubtext: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+  },
+  countPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  countPillText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
+    color: colors.primaryDark,
+    marginLeft: spacing.xs,
+  },
+  progressGrid: {
+    flexDirection: "row",
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  progressItem: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  progressValue: {
+    fontSize: typography.sizes.md,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  progressLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  capacityMessage: {
+    fontSize: typography.sizes.sm,
+    fontWeight: "700",
+    color: colors.success,
+    marginBottom: spacing.md,
   },
   row: {
     flexDirection: "row",

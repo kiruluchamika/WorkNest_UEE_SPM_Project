@@ -28,8 +28,8 @@ export function createEmptyFormValues(): ApplicationFormValues {
 
 function isValidUrl(value: string): boolean {
   try {
-    new URL(value);
-    return true;
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
@@ -65,10 +65,10 @@ export function validateApplicationForm(
     errors.cvUrl = "Please provide your CV.";
   }
   if (values.cvUrl.trim() && !isValidUrl(values.cvUrl.trim())) {
-    errors.cvUrl = "Enter a valid URL.";
+    errors.cvUrl = "Enter a valid http:// or https:// URL.";
   }
   if (values.portfolioUrl.trim() && !isValidUrl(values.portfolioUrl.trim())) {
-    errors.portfolioUrl = "Enter a valid URL.";
+    errors.portfolioUrl = "Enter a valid http:// or https:// URL.";
   }
 
   const trimmedSalary = values.expectedSalary.trim();

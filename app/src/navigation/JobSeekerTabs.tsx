@@ -8,6 +8,8 @@ import { BrowseGigsScreen } from "../screens/jobseeker/BrowseGigsScreen";
 import { GigDetailScreen } from "../screens/jobseeker/GigDetailScreen";
 import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
 import { ApplyToGigScreen } from "../screens/jobseeker/ApplyToGigScreen";
+import { MyApplicationsScreen } from "../screens/jobseeker/MyApplicationsScreen";
+import { ApplicationDetailsScreen } from "../screens/jobseeker/ApplicationDetailsScreen";
 import { ProfileScreen } from "../screens/jobseeker/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
@@ -18,13 +20,20 @@ export type JobSeekerStackParamList = {
   ApplyToGig: { gigId: string };
 };
 
+export type MyApplicationsStackParamList = {
+  MyApplications: undefined;
+  ApplicationDetails: { applicationId: string };
+};
+
 export type JobSeekerTabParamList = {
   Browse: undefined;
+  MyApplicationsTab: undefined;
   Profile: undefined;
   Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<JobSeekerStackParamList>();
+const MyApplicationsStack = createNativeStackNavigator<MyApplicationsStackParamList>();
 const Tab = createBottomTabNavigator<JobSeekerTabParamList>();
 
 function JobSeekerStack() {
@@ -38,6 +47,15 @@ function JobSeekerStack() {
   );
 }
 
+function MyApplicationsStackNavigator() {
+  return (
+    <MyApplicationsStack.Navigator screenOptions={{ headerShown: false }}>
+      <MyApplicationsStack.Screen name="MyApplications" component={MyApplicationsScreen} />
+      <MyApplicationsStack.Screen name="ApplicationDetails" component={ApplicationDetailsScreen} />
+    </MyApplicationsStack.Navigator>
+  );
+}
+
 export const JobSeekerTabs: React.FC = () => {
   return (
     <Tab.Navigator
@@ -45,6 +63,7 @@ export const JobSeekerTabs: React.FC = () => {
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Feather.glyphMap = "search";
+          if (route.name === "MyApplicationsTab") iconName = "file-text";
           if (route.name === "Profile") iconName = "user";
           if (route.name === "Notifications") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
@@ -58,6 +77,11 @@ export const JobSeekerTabs: React.FC = () => {
       })}
     >
       <Tab.Screen name="Browse" component={JobSeekerStack} options={{ title: "Gigs" }} />
+      <Tab.Screen
+        name="MyApplicationsTab"
+        component={MyApplicationsStackNavigator}
+        options={{ title: "Applications" }}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
       <Tab.Screen
         name="Notifications"

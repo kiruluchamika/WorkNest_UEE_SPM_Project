@@ -55,6 +55,17 @@ function toPublicGig<T extends { paymentAmount: Prisma.Decimal }>(gig: T) {
   return { ...gig, paymentAmount: Number(gig.paymentAmount) };
 }
 
+async function toPublicGigWithFilledPositions<T extends { id: string; paymentAmount: Prisma.Decimal }>(gig: T) {
+  const filledPositions = await prisma.application.count({
+    where: {
+      gigPostId: gig.id,
+      status: { in: ["HIRED", "COMPLETED"] },
+    },
+  });
+
+  return { ...toPublicGig(gig), filledPositions };
+}
+
 // The Neon HTTP adapter doesn't support Prisma's interactive transactions,
 // which Prisma uses internally whenever `include` is combined with
 // `create`/`update`. So writes here never use `include` — instead we do
@@ -127,6 +138,55 @@ export async function listMyGigs(req: Request, res: Response, next: NextFunction
     });
 
     res.json({ gigs: gigs.map(toPublicGig) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listActiveGigs(req: Request, res: Response, next: NextFunction) {
+  try {
+    const categoryId = req.query.categoryId as string | undefined;
+    const location = req.query.location as string | undefined;
+
+    const gigs = await prisma.gigPost.findMany({
+      where: {
+        status: "ACTIVE",
+        isDeleted: false,
+        ...(categoryId ? { categoryId } : {}),
+        ...(location
+          ? { location: { contains: location, mode: "insensitive" } }
+          : {}),
+      },
+      include: {
+        category: true,
+        business: { select: { id: true, name: true, email: true, phone: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json({ gigs: await Promise.all(gigs.map(toPublicGigWithFilledPositions)) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPublicGig(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+
+    const gig = await prisma.gigPost.findFirst({
+      where: { id, isDeleted: false },
+      include: {
+        category: true,
+        business: { select: { id: true, name: true, email: true, phone: true } },
+      },
+    });
+
+    if (!gig) {
+      return next(new HttpError(404, "Gig not found"));
+    }
+
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     next(err);
   }
