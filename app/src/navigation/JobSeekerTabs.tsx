@@ -10,12 +10,22 @@ import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
 import { ApplyToGigScreen } from "../screens/jobseeker/ApplyToGigScreen";
 import { ProfileScreen } from "../screens/jobseeker/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
+import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
+import { ReputationScreen } from "../screens/shared/ReputationScreen";
+import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
 
 export type JobSeekerStackParamList = {
   BrowseGigs: undefined;
   GigDetail: { gigId: string };
   ApplyGig: { gigId: string };
   ApplyToGig: { gigId: string };
+};
+
+export type JobSeekerProfileStackParamList = {
+  ProfileHome: undefined;
+  WorkHistory: { userId: string };
+  Reputation: { userId: string; userName?: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type JobSeekerTabParamList = {
@@ -25,6 +35,7 @@ export type JobSeekerTabParamList = {
 };
 
 const Stack = createNativeStackNavigator<JobSeekerStackParamList>();
+const ProfileStack = createNativeStackNavigator<JobSeekerProfileStackParamList>();
 const Tab = createBottomTabNavigator<JobSeekerTabParamList>();
 
 function JobSeekerStack() {
@@ -35,6 +46,17 @@ function JobSeekerStack() {
       <Stack.Screen name="ApplyGig" component={ApplyGigScreen} />
       <Stack.Screen name="ApplyToGig" component={ApplyToGigScreen} />
     </Stack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="WorkHistory" component={WorkHistoryScreen} />
+      <ProfileStack.Screen name="Reputation" component={ReputationScreen} />
+      <ProfileStack.Screen name="ReviewForm" component={ReviewFormScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -58,7 +80,7 @@ export const JobSeekerTabs: React.FC = () => {
       })}
     >
       <Tab.Screen name="Browse" component={JobSeekerStack} options={{ title: "Gigs" }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} options={{ title: "Profile" }} />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}

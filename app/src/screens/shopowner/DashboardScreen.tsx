@@ -51,6 +51,7 @@ export const DashboardScreen: React.FC = () => {
       <AppHeader
         subtitle="Shop dashboard"
         onProfilePress={() => navigation.navigate("Profile" as never)}
+        onBellPress={() => navigation.getParent()?.navigate("Notifications" as never)}
       />
       <ScrollView
         contentContainerStyle={styles.scroll}

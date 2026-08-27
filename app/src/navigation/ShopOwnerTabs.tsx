@@ -12,11 +12,17 @@ import { GigPostFormScreen } from "../screens/shopowner/GigPostFormScreen";
 import { ApplicationSettingsScreen } from "../screens/shopowner/ApplicationSettingsScreen";
 import { ProfileScreen } from "../screens/shopowner/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
+import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
+import { ReputationScreen } from "../screens/shared/ReputationScreen";
+import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
 
 export type ShopOwnerStackParamList = {
   DashboardHome: undefined;
   Applicants: { gigId: string };
   Profile: undefined;
+  WorkHistory: { userId: string };
+  Reputation: { userId: string; userName?: string };
+  ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
 };
 
 export type MyGigsStackParamList = {
@@ -43,6 +49,9 @@ function ShopOwnerStack() {
       <Stack.Screen name="DashboardHome" component={DashboardScreen} />
       <Stack.Screen name="Applicants" component={ApplicantsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="WorkHistory" component={WorkHistoryScreen} />
+      <Stack.Screen name="Reputation" component={ReputationScreen} />
+      <Stack.Screen name="ReviewForm" component={ReviewFormScreen} />
     </Stack.Navigator>
   );
 }

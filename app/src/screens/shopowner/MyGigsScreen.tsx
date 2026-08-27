@@ -94,6 +94,7 @@ export const MyGigsScreen: React.FC = () => {
         onProfilePress={() =>
           (navigation as any).getParent()?.navigate("Dashboard", { screen: "Profile" })
         }
+        onBellPress={() => (navigation as any).getParent()?.navigate("Notifications")}
       />
       <ScrollView
         contentContainerStyle={styles.scroll}

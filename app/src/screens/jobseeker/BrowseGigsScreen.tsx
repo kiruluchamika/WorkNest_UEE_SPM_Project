@@ -55,7 +55,10 @@ export const BrowseGigsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <AppHeader subtitle="Find gigs near you" />
+      <AppHeader
+        subtitle="Find gigs near you"
+        onBellPress={() => navigation.getParent()?.navigate("Notifications" as never)}
+      />
       <View style={styles.header}>
         <Text style={styles.title}>Browse Gigs</Text>
         <View style={styles.searchRow}>

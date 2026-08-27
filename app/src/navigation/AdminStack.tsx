@@ -8,6 +8,8 @@ import { CategoryManagementScreen } from "../screens/admin/CategoryManagementScr
 import { CategoryFormScreen } from "../screens/admin/CategoryFormScreen";
 import { GigManagementScreen } from "../screens/admin/GigManagementScreen";
 import { GigReviewScreen } from "../screens/admin/GigReviewScreen";
+import { ReviewModerationScreen } from "../screens/admin/ReviewModerationScreen";
+import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 
 export type CategoryStackParamList = {
   CategoryManagement: undefined;
@@ -22,6 +24,8 @@ export type AdminGigStackParamList = {
 export type AdminTabParamList = {
   CategoriesTab: undefined;
   GigsTab: undefined;
+  ReviewsTab: undefined;
+  NotificationsTab: undefined;
 };
 
 const CategoryStack = createNativeStackNavigator<CategoryStackParamList>();
@@ -52,8 +56,10 @@ export const AdminStack: React.FC = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
-          const iconName: keyof typeof Feather.glyphMap =
-            route.name === "GigsTab" ? "briefcase" : "grid";
+          let iconName: keyof typeof Feather.glyphMap = "grid";
+          if (route.name === "GigsTab") iconName = "briefcase";
+          if (route.name === "ReviewsTab") iconName = "flag";
+          if (route.name === "NotificationsTab") iconName = "bell";
           return <Feather name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
@@ -69,6 +75,12 @@ export const AdminStack: React.FC = () => {
         name="CategoriesTab"
         component={CategoryStackNavigator}
         options={{ title: "Categories" }}
+      />
+      <Tab.Screen name="ReviewsTab" component={ReviewModerationScreen} options={{ title: "Reviews" }} />
+      <Tab.Screen
+        name="NotificationsTab"
+        component={NotificationsScreen}
+        options={{ title: "Alerts" }}
       />
     </Tab.Navigator>
   );
