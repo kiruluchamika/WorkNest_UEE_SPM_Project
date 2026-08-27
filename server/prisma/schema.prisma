@@ -44,6 +44,45 @@ enum ApplicationStatus {
   COMPLETED
 }
 
+enum ReviewStatus {
+  PUBLISHED
+  FLAGGED
+  REMOVED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationAction {
+  REMOVE_REVIEW
+  DISMISS_REPORT
+  WARN_AUTHOR
+}
+
+enum NotificationType {
+  GIG_COMPLETED
+  REVIEW_REQUESTED
+  REVIEW_RECEIVED
+  REVIEW_REPORTED
+  REVIEW_REMOVED
+  REPORT_DISMISSED
+  ACCOUNT_WARNING
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum WorkHistoryRole {
+  YOUTH
+  BUSINESS
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -59,6 +98,15 @@ model User {
   updatedAt    DateTime  @updatedAt
   gigPosts     GigPost[]
   applications Application[]
+
+  reviewsWritten         Review[]           @relation("ReviewsWritten")
+  reviewsReceived        Review[]           @relation("ReviewsReceived")
+  workHistoryEntries     WorkHistoryEntry[]
+  notifications          Notification[]
+  reviewReports          ReviewReport[]
+  moderationAudits       ModerationAudit[]  @relation("AdminModerationAudits")
+  reputationAudits       ReputationAudit[]  @relation("ReputationAudits")
+  adminReputationAudits  ReputationAudit[]  @relation("AdminReputationAudits")
 }
 
 model Category {
@@ -99,6 +147,8 @@ model GigPost {
 
   applicationSettings ApplicationSettings?
   applications        Application[]
+  reviews             Review[]
+  workHistoryEntries  WorkHistoryEntry[]
 }
 
 model ApplicationSettings {
@@ -136,8 +186,103 @@ model Application {
   portfolioUrl     String?
   expectedSalary   Decimal?
   answers          Json              @default("[]")
+  completedAt      DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
+  workHistoryEntries WorkHistoryEntry[]
+
   @@unique([gigPostId, applicantId], name: "gigPostId_applicantId")
+}
+
+model Review {
+  id          String       @id @default(uuid())
+  gigId       String
+  gig         GigPost      @relation(fields: [gigId], references: [id])
+  reviewerId  String
+  reviewer    User         @relation("ReviewsWritten", fields: [reviewerId], references: [id])
+  revieweeId  String
+  reviewee    User         @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  rating      Int
+  comment     String?
+  status      ReviewStatus @default(PUBLISHED)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  reports          ReviewReport[]
+  moderationAudits ModerationAudit[]
+
+  @@unique([gigId, reviewerId, revieweeId])
+  @@index([revieweeId, status])
+}
+
+model WorkHistoryEntry {
+  id            String          @id @default(uuid())
+  applicationId String
+  application   Application     @relation(fields: [applicationId], references: [id])
+  gigId         String
+  gig           GigPost         @relation(fields: [gigId], references: [id])
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  role          WorkHistoryRole
+  completedAt   DateTime
+  gigStatus     GigStatus
+  createdAt     DateTime        @default(now())
+
+  @@unique([applicationId, role])
+  @@index([userId])
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  type        NotificationType
+  title       String
+  body        String
+  linkType    String?
+  linkId      String?
+  isRead      Boolean          @default(false)
+  emailStatus EmailStatus      @default(PENDING)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model ReviewReport {
+  id         String       @id @default(uuid())
+  reviewId   String
+  review     Review       @relation(fields: [reviewId], references: [id])
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  reason     String
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model ModerationAudit {
+  id             String           @id @default(uuid())
+  reviewId       String
+  review         Review           @relation(fields: [reviewId], references: [id])
+  adminId        String
+  admin          User             @relation("AdminModerationAudits", fields: [adminId], references: [id])
+  action         ModerationAction
+  previousStatus ReviewStatus
+  newStatus      ReviewStatus
+  reason         String
+  createdAt      DateTime         @default(now())
+}
+
+model ReputationAudit {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation("ReputationAudits", fields: [userId], references: [id])
+  adminId       String
+  admin         User     @relation("AdminReputationAudits", fields: [adminId], references: [id])
+  reason        String
+  previousScore Int?
+  newScore      Int?
+  createdAt     DateTime @default(now())
 }
