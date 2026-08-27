@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
-    "test:email": "ts-node --transpile-only src/scripts/testEmail.ts"
+    "test:email": "ts-node --transpile-only src/scripts/testEmail.ts",
+    "hire": "ts-node --transpile-only src/scripts/hireApplicant.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
