@@ -6,15 +6,22 @@ import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { useAuth } from "../../context/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 interface AppHeaderProps {
   subtitle?: string;
   onBellPress?: () => void;
+  onProfilePress?: () => void;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onProfilePress }) => {
   const { user, logout } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleProfile = () => {
+    setMenuVisible(false);
+    onProfilePress?.();
+  };
 
   const handleSignOut = async () => {
     setMenuVisible(false);
@@ -35,15 +42,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress }) =
         </View>
       </View>
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.8} onPress={onBellPress}>
-          <Feather name="bell" size={14} color={colors.primaryDark} />
-        </TouchableOpacity>
+        <NotificationBell onPress={onBellPress} />
         <TouchableOpacity
           style={styles.avatar}
           activeOpacity={0.8}
           onPress={() => setMenuVisible(true)}
         >
-          <Feather name="user" size={13} color={colors.textInverse} />
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <Feather name="user" size={13} color={colors.textInverse} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -57,7 +66,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress }) =
           <Pressable style={styles.menuCard} onPress={() => {}}>
             <View style={styles.menuHeader}>
               <View style={styles.menuAvatar}>
-                <Feather name="user" size={16} color={colors.textInverse} />
+                {user?.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={styles.menuAvatarImage} />
+                ) : (
+                  <Feather name="user" size={16} color={colors.textInverse} />
+                )}
               </View>
               <View style={styles.menuIdentity}>
                 <Text style={styles.menuName} numberOfLines={1}>
@@ -72,6 +85,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress }) =
             </View>
 
             <View style={styles.menuDivider} />
+
+            {onProfilePress ? (
+              <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleProfile}>
+                <Feather name="user" size={14} color={colors.text} />
+                <Text style={styles.menuItemTextDefault}>My Profile</Text>
+              </TouchableOpacity>
+            ) : null}
 
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleSignOut}>
               <Feather name="log-out" size={14} color={colors.danger} />
@@ -122,15 +142,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  iconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.full,
-    backgroundColor: colors.cream,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.sm,
-  },
   avatar: {
     width: 28,
     height: 28,
@@ -138,6 +149,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryDark,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   backdrop: {
     flex: 1,
@@ -168,6 +184,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
+    overflow: "hidden",
+  },
+  menuAvatarImage: {
+    width: "100%",
+    height: "100%",
   },
   menuIdentity: {
     flex: 1,
@@ -191,6 +212,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
+  },
+  menuItemTextDefault: {
+    fontSize: typography.sizes.sm,
+    fontWeight: "700",
+    color: colors.text,
+    marginLeft: spacing.sm,
   },
   menuItemText: {
     fontSize: typography.sizes.sm,

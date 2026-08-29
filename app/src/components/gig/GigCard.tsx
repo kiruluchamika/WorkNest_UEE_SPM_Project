@@ -7,28 +7,35 @@ import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatCurrency, formatRelativeDate } from "../../utils/formatters";
-import type { Gig } from "../../types";
+import { GIG_PAYMENT_TYPES } from "../../utils/constants";
+import type { GigPost } from "../../types";
 import { TrustBadge } from "../trust/TrustBadge";
 
 interface GigCardProps {
-  gig: Gig;
-  onPress: (gig: Gig) => void;
+  gig: GigPost;
+  onPress: (gig: GigPost) => void;
+}
+
+function paymentTypeLabel(value: string): string {
+  return GIG_PAYMENT_TYPES.find((pt) => pt.value === value)?.label ?? value;
 }
 
 export const GigCard: React.FC<GigCardProps> = ({ gig, onPress }) => {
+  const businessName = gig.business?.name ?? "WorkNest business";
+
   return (
     <TouchableOpacity onPress={() => onPress(gig)} activeOpacity={0.8}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{gig.shopOwnerName.slice(0, 1)}</Text>
+            <Text style={styles.avatarText}>{businessName.slice(0, 1)}</Text>
           </View>
           <View style={styles.headerText}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{gig.title}</Text>
               <TrustBadge label="Verified" variant="success" />
             </View>
-            <Text style={styles.shop}>{gig.shopOwnerName}</Text>
+            <Text style={styles.shop}>{businessName}</Text>
           </View>
         </View>
 
@@ -38,7 +45,7 @@ export const GigCard: React.FC<GigCardProps> = ({ gig, onPress }) => {
             <Text style={styles.meta}>{gig.location}</Text>
           </View>
           <View style={styles.categoryPill}>
-            <Text style={styles.category}>{gig.category}</Text>
+            <Text style={styles.category}>{gig.category?.name ?? "Uncategorized"}</Text>
           </View>
         </View>
         <View style={styles.row}>
@@ -48,8 +55,8 @@ export const GigCard: React.FC<GigCardProps> = ({ gig, onPress }) => {
 
         <View style={styles.footer}>
           <View style={styles.wageWrap}>
-            <Text style={styles.wage}>{formatCurrency(gig.wage)}</Text>
-            <Text style={styles.wageType}>/{gig.wageType}</Text>
+            <Text style={styles.wage}>{formatCurrency(gig.paymentAmount)}</Text>
+            <Text style={styles.wageType}>/{paymentTypeLabel(gig.paymentType)}</Text>
           </View>
           <View style={styles.cta}>
             <Text style={styles.ctaText}>View Details</Text>

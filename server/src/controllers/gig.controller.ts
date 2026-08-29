@@ -4,6 +4,8 @@ import { prisma } from "../config/db";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
 import { CreateGigPostInput, UpdateGigPostInput, RejectGigInput } from "../validators/gig.validator";
+import { markGigComplete } from "../services/gigCompletion.service";
+import { fetchGigWithCategory } from "../services/gig.service";
 
 const ADMIN_GIG_INCLUDE = {
   category: true,
@@ -55,6 +57,21 @@ function toPublicGig<T extends { paymentAmount: Prisma.Decimal }>(gig: T) {
   return { ...gig, paymentAmount: Number(gig.paymentAmount) };
 }
 
+async function toPublicGigWithFilledPositions<T extends { id: string; paymentAmount: Prisma.Decimal }>(gig: T) {
+  const filledPositions = await prisma.application.count({
+    where: {
+      gigPostId: gig.id,
+      status: { in: ["HIRED", "COMPLETED"] },
+    },
+  });
+
+  return { ...toPublicGig(gig), filledPositions };
+}
+
+async function fetchAdminGig(id: string) {
+  return prisma.gigPost.findUniqueOrThrow({ where: { id }, include: ADMIN_GIG_INCLUDE });
+}
+
 export async function createGig(
   req: Request<unknown, unknown, CreateGigPostInput>,
   res: Response,
@@ -66,7 +83,7 @@ export async function createGig(
 
     await assertActiveCategory(data.categoryId);
 
-    const gig = await prisma.gigPost.create({
+    const created = await prisma.gigPost.create({
       data: {
         title: data.title,
         description: data.description,
@@ -85,8 +102,8 @@ export async function createGig(
         imageUrl: data.imageUrl,
         status: "PENDING",
       },
-      include: { category: true },
     });
+    const gig = await fetchGigWithCategory(created.id);
 
     res.status(201).json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -115,6 +132,55 @@ export async function listMyGigs(req: Request, res: Response, next: NextFunction
     });
 
     res.json({ gigs: gigs.map(toPublicGig) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listActiveGigs(req: Request, res: Response, next: NextFunction) {
+  try {
+    const categoryId = req.query.categoryId as string | undefined;
+    const location = req.query.location as string | undefined;
+
+    const gigs = await prisma.gigPost.findMany({
+      where: {
+        status: "ACTIVE",
+        isDeleted: false,
+        ...(categoryId ? { categoryId } : {}),
+        ...(location
+          ? { location: { contains: location, mode: "insensitive" } }
+          : {}),
+      },
+      include: {
+        category: true,
+        business: { select: { id: true, name: true, email: true, phone: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json({ gigs: await Promise.all(gigs.map(toPublicGigWithFilledPositions)) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPublicGig(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+
+    const gig = await prisma.gigPost.findFirst({
+      where: { id, isDeleted: false },
+      include: {
+        category: true,
+        business: { select: { id: true, name: true, email: true, phone: true } },
+      },
+    });
+
+    if (!gig) {
+      return next(new HttpError(404, "Gig not found"));
+    }
+
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     next(err);
   }
@@ -169,14 +235,14 @@ export async function updateGig(
     const important = hasImportantChange(existing, updates);
     const shouldResetToPending = important && (existing.status === "ACTIVE" || existing.status === "REJECTED");
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: {
         ...updates,
         ...(shouldResetToPending ? { status: "PENDING", rejectionReason: null } : {}),
       },
-      include: { category: true },
     });
+    const gig = await fetchGigWithCategory(id);
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -226,11 +292,8 @@ export async function closeGig(req: Request<{ id: string }>, res: Response, next
       return next(new HttpError(409, "Only active gigs can be closed."));
     }
 
-    const gig = await prisma.gigPost.update({
-      where: { id },
-      data: { status: "CLOSED" },
-      include: { category: true },
-    });
+    await prisma.gigPost.update({ where: { id }, data: { status: "CLOSED" } });
+    const gig = await fetchGigWithCategory(id);
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
@@ -255,14 +318,28 @@ export async function resubmitGig(req: Request<{ id: string }>, res: Response, n
       return next(new HttpError(409, "Only rejected gigs can be resubmitted."));
     }
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: { status: "PENDING", rejectionReason: null },
-      include: { category: true },
     });
+    const gig = await fetchGigWithCategory(id);
 
     res.json({ gig: toPublicGig(gig) });
   } catch (err) {
+    next(err);
+  }
+}
+
+export async function completeGig(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const { userId } = req as unknown as AuthedRequest;
+    const { id } = req.params;
+
+    const gig = await markGigComplete(id, userId);
+
+    res.json({ gig: toPublicGig(gig) });
+  } catch (err) {
+    if (err instanceof HttpError) return next(err);
     next(err);
   }
 }
@@ -323,11 +400,11 @@ export async function approveGig(req: Request<{ id: string }>, res: Response, ne
       return next(new HttpError(409, "Only pending gigs can be approved."));
     }
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: { status: "ACTIVE", rejectionReason: null },
-      include: ADMIN_GIG_INCLUDE,
     });
+    const gig = await fetchAdminGig(id);
 
     res.json({ message: "Gig approved successfully.", gig: toPublicGig(gig) });
   } catch (err) {
@@ -352,11 +429,11 @@ export async function rejectGig(
       return next(new HttpError(409, "Only pending gigs can be rejected."));
     }
 
-    const gig = await prisma.gigPost.update({
+    await prisma.gigPost.update({
       where: { id },
       data: { status: "REJECTED", rejectionReason: reason },
-      include: ADMIN_GIG_INCLUDE,
     });
+    const gig = await fetchAdminGig(id);
 
     res.json({ message: "Gig rejected.", gig: toPublicGig(gig) });
   } catch (err) {

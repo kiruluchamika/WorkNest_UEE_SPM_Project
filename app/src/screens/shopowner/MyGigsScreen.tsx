@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -89,7 +89,13 @@ export const MyGigsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <AppHeader subtitle="My Gigs" />
+      <AppHeader
+        subtitle="My Gigs"
+        onProfilePress={() =>
+          (navigation as any).getParent()?.navigate("Dashboard", { screen: "Profile" })
+        }
+        onBellPress={() => (navigation as any).getParent()?.navigate("Notifications")}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -145,21 +151,32 @@ export const MyGigsScreen: React.FC = () => {
                 activeOpacity={0.85}
                 onPress={() => (navigation as any).navigate("GigDetail", { gigId: gig.id })}
               >
-                <Card style={styles.gigCard}>
-                  <View style={styles.gigHeader}>
-                    <Text style={styles.gigTitle} numberOfLines={1}>
-                      {gig.title}
-                    </Text>
-                    <TrustBadge label={badge.label} variant={badge.variant} />
-                  </View>
-                  <Text style={styles.gigMeta}>
-                    {gig.category?.name ?? "Uncategorized"} • {gig.location}
-                  </Text>
-                  <View style={styles.gigFooter}>
-                    <Text style={styles.gigPayment}>
-                      {formatCurrency(gig.paymentAmount)} / {paymentTypeLabel(gig.paymentType)}
-                    </Text>
-                    <Text style={styles.gigDate}>{formatDate(gig.startDate)}</Text>
+                <Card style={styles.gigCard} noPadding>
+                  <View style={styles.gigRow}>
+                    {gig.imageUrl ? (
+                      <Image source={{ uri: gig.imageUrl }} style={styles.gigThumb} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.gigThumbPlaceholder}>
+                        <Feather name="image" size={18} color={colors.primaryDark} />
+                      </View>
+                    )}
+                    <View style={styles.gigContent}>
+                      <View style={styles.gigHeader}>
+                        <Text style={styles.gigTitle} numberOfLines={1}>
+                          {gig.title}
+                        </Text>
+                        <TrustBadge label={badge.label} variant={badge.variant} />
+                      </View>
+                      <Text style={styles.gigMeta} numberOfLines={1}>
+                        {gig.category?.name ?? "Uncategorized"} • {gig.location}
+                      </Text>
+                      <View style={styles.gigFooter}>
+                        <Text style={styles.gigPayment}>
+                          {formatCurrency(gig.paymentAmount)} / {paymentTypeLabel(gig.paymentType)}
+                        </Text>
+                        <Text style={styles.gigDate}>{formatDate(gig.startDate)}</Text>
+                      </View>
+                    </View>
                   </View>
                 </Card>
               </TouchableOpacity>
@@ -263,6 +280,26 @@ const styles = StyleSheet.create({
   },
   gigCard: {
     marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  gigRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  gigThumb: {
+    width: 84,
+    minHeight: 96,
+    backgroundColor: colors.cream,
+  },
+  gigThumbPlaceholder: {
+    width: 84,
+    minHeight: 96,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gigContent: {
+    flex: 1,
     padding: spacing.md,
   },
   gigHeader: {

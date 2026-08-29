@@ -69,7 +69,18 @@ export async function logout(): Promise<void> {
   // JWT sessions are stateless — nothing to invalidate server-side.
 }
 
-export async function updateProfile(current: User, updates: Partial<User>): Promise<User> {
-  // No backend endpoint for profile updates yet — merge locally for now.
-  return { ...current, ...updates };
+export async function updateProfile(
+  current: User,
+  updates: { name?: string; phone?: string; bio?: string; location?: string; avatarUrl?: string }
+): Promise<User> {
+  if (current.id === GOOGLE_MOCK_USER.id) {
+    // The Google sign-in flow is simulated — no backend account to update.
+    return { ...current, ...updates };
+  }
+  try {
+    const { data } = await http.put("/auth/me", updates);
+    return data.user;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not update your profile."));
+  }
 }
