@@ -17,6 +17,7 @@ import { IncomingReactivationRequestsScreen } from "../screens/admin/IncomingRea
 import { SuspensionHistoryScreen } from "../screens/admin/SuspensionHistoryScreen";
 import { ReactivationRequestHistoryScreen } from "../screens/admin/ReactivationRequestHistoryScreen";
 import { VerificationEmptyStateScreen } from "../screens/admin/VerificationEmptyStateScreen";
+import { FlaggedVerificationCasesScreen } from "../screens/admin/FlaggedVerificationCasesScreen";
 
 export type CategoryStackParamList = { CategoryManagement: undefined; CategoryForm: { categoryId?: string } | undefined };
 export type AdminGigStackParamList = { GigManagement: undefined; GigReview: { gigId: string } };

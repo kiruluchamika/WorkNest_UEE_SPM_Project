@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Alert, Modal, ScrollView, Text, View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { VerificationManagementStackParamList } from "../../navigation/AdminStack";
-import type { VerifierApplication } from "../../types";
+import type { AdminVerifierStatistics, VerifierApplication } from "../../types";
 import { approveReactivationRequest, getApplication, rejectReactivationRequest, suspendApplication } from "../../api/verifierApplicationsApi";
+import { getAdminVerifierStatistics } from "../../api/verificationRequestsApi";
 import { AppHeader } from "../../components/common/AppHeader";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
@@ -20,9 +21,10 @@ export const VerifierDetailsScreen: React.FC = () => {
   const route = useRoute<RouteProp<VerificationManagementStackParamList, "VerifierDetails">>();
   const navigation = useNavigation<NativeStackNavigationProp<VerificationManagementStackParamList>>();
   const [application,setApplication]=useState<VerifierApplication>(); const [suspendModal,setSuspendModal]=useState(false); const [rejectModal,setRejectModal]=useState(false);
+  const [statistics,setStatistics]=useState<AdminVerifierStatistics>();
   const [reason,setReason]=useState(""); const [reviewReason,setReviewReason]=useState(""); const [busy,setBusy]=useState(false);
-  const load=()=>getApplication(route.params.applicationId).then(setApplication).catch((error)=>Alert.alert("Error",error.message));
-  useEffect(()=>{load();},[route.params.applicationId]);
+  const load=useCallback(async()=>{try{const [nextApplication,nextStatistics]=await Promise.all([getApplication(route.params.applicationId),getAdminVerifierStatistics(route.params.applicationId)]);setApplication(nextApplication);setStatistics(nextStatistics);}catch(error){Alert.alert("Error",error instanceof Error?error.message:"Could not load verifier details.");}},[route.params.applicationId]);
+  useFocusEffect(useCallback(()=>{load();},[load]));
   if(!application)return <LoadingSpinner fullScreen message="Loading verifier details..."/>;
   const pendingRequest=(application.reactivationRequests??[]).find((request)=>request.status==="PENDING");
   const field=(label:string,value:string)=><View style={styles.field}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>;
@@ -31,7 +33,7 @@ export const VerifierDetailsScreen: React.FC = () => {
   const reject=async()=>{if(!pendingRequest)return;if(reviewReason.trim().length<5)return Alert.alert("Reason required","Please provide a meaningful rejection reason.");setBusy(true);try{await rejectReactivationRequest(pendingRequest.id,reviewReason.trim());setRejectModal(false);setReviewReason("");await load();Alert.alert("Request rejected","The verifier remains suspended.");}catch(error){Alert.alert("Error",error instanceof Error?error.message:"Could not reject the request.");}finally{setBusy(false);}};
   return <SafeAreaView style={styles.container}><AppHeader subtitle="Verifier details"/><ScrollView contentContainerStyle={styles.scroll}>
     <Text style={styles.title}>VERIFIER DETAILS</Text><Card>{field("Name",application.applicant.name)}{field("Email",application.applicant.email)}{field("District",application.district)}{field("Account Status",application.status==="APPROVED"?"ACTIVE":"SUSPENDED")}{field("Availability","NOT CONFIGURED")}</Card>
-    <Text style={styles.section}>Statistics</Text><Card><Text style={styles.help}>Statistics will be available when verification case assignment and case tracking are enabled.</Text><View style={styles.grid}>{["Assigned","Approved","Rejected","Flagged"].map((label)=><View key={label} style={styles.stat}><Text style={styles.statValue}>Not configured</Text><Text style={styles.label}>{label}</Text></View>)}</View></Card>
+    <Text style={styles.section}>Statistics</Text><Card><View style={styles.grid}>{([['Assigned','assigned'],['Approved','approved'],['Rejected','rejected'],['Flagged','flagged']] as const).map(([label,key])=><View key={label} style={styles.stat}><Text style={styles.statValue}>{statistics?.[key] ?? "—"}</Text><Text style={styles.label}>{label}</Text></View>)}</View></Card>
     {application.suspendedAt?<Card>{field("Suspension reason",application.suspensionReason||"Reason unavailable")}{field("Suspended",formatVerifierDateTime(application.suspendedAt))}{field("Original approval reviewed",formatVerifierDateTime(application.reviewedAt))}</Card>:null}
     {application.status==="SUSPENDED"&&pendingRequest?<Card>{field("Pending reactivation request",pendingRequest.explanation)}<View style={styles.actions}><View style={styles.half}><Button title="Reject Request" variant="danger" onPress={()=>setRejectModal(true)} disabled={busy}/></View><View style={styles.half}><Button title="Approve Reactivation" onPress={approve} loading={busy}/></View></View></Card>:null}
     {application.status==="APPROVED"?<Button title="Suspend Verifier" variant="danger" onPress={()=>setSuspendModal(true)}/>:null}

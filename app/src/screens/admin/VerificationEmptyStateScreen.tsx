@@ -9,6 +9,7 @@ import type { VerificationManagementStackParamList } from "../../navigation/Admi
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
+import { FlaggedVerificationCasesScreen } from "./FlaggedVerificationCasesScreen";
 
 type EmptyRoute = "VerificationRequests" | "FlaggedReturnedCases" | "VerificationHistory" | "SuspendedVerifiers";
 const copy: Record<EmptyRoute, { title: string; message: string }> = {
@@ -19,6 +20,7 @@ const copy: Record<EmptyRoute, { title: string; message: string }> = {
 };
 export const VerificationEmptyStateScreen: React.FC = () => {
   const route = useRoute<RouteProp<VerificationManagementStackParamList, EmptyRoute>>(); const content = copy[route.name];
+  if (route.name === "FlaggedReturnedCases") return <FlaggedVerificationCasesScreen />;
   return <SafeAreaView style={styles.container}><AppHeader subtitle={content.title} /><View style={styles.content}><Card style={styles.card}><View style={styles.icon}><Feather name="inbox" size={24} color={colors.primaryDark} /></View><Text style={styles.title}>Nothing to show yet</Text><Text style={styles.message}>{content.message}</Text></Card></View></SafeAreaView>;
 };
 const styles=StyleSheet.create({container:{flex:1,backgroundColor:colors.background},content:{padding:spacing.md},card:{alignItems:"center",padding:spacing.xl},icon:{width:48,height:48,borderRadius:radius.full,backgroundColor:colors.primarySoft,alignItems:"center",justifyContent:"center",marginBottom:spacing.md},title:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.text},message:{fontSize:typography.sizes.sm,color:colors.textMuted,textAlign:"center",lineHeight:20,marginTop:spacing.sm}});
