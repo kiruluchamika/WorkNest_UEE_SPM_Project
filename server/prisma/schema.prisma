@@ -57,6 +57,17 @@ enum VerifierReactivationRequestStatus {
   REJECTED
 }
 
+enum VerificationRequestStatus {
+  PENDING
+  ASSIGNED
+  UNDER_REVIEW
+  FLAGGED
+  RETURNED_FOR_REVIEW
+  APPROVED
+  REJECTED
+  ADMIN_CONFIRMED
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -78,6 +89,9 @@ model User {
   verifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationRequester")
   reviewedVerifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationReviewer")
   createdVerifierSuspensions VerifierSuspensionEvent[] @relation("SuspensionEventAdmin")
+  submittedVerificationRequests VerificationRequest[] @relation("VerificationApplicant")
+  assignedVerificationRequests VerificationRequest[] @relation("VerificationAssignee")
+  returnedVerificationRequests VerificationRequest[] @relation("VerificationAdminReviewer")
 }
 
 model VerifierApplication {
@@ -104,9 +118,43 @@ model VerifierApplication {
   suspendedBy               User?                     @relation("VerifierSuspender", fields: [suspendedById], references: [id])
   reactivationRequests      VerifierReactivationRequest[]
   suspensionEvents          VerifierSuspensionEvent[]
+  isAvailable               Boolean                   @default(false)
+  lastAssignedAt            DateTime?                 @db.Timestamptz(3)
 
   @@index([applicantId, submittedAt])
   @@index([status, submittedAt])
+}
+
+model VerificationRequest {
+  id                    String                    @id @default(uuid())
+  applicantId           String
+  applicant             User                      @relation("VerificationApplicant", fields: [applicantId], references: [id])
+  district              String
+  personalInformation   String
+  identityDocument      String
+  supportingEvidence    String?
+  communityReferences   String
+  status                VerificationRequestStatus @default(PENDING)
+  assignedVerifierId    String?
+  assignedVerifier      User?                     @relation("VerificationAssignee", fields: [assignedVerifierId], references: [id])
+  submittedAt           DateTime                  @default(now()) @db.Timestamptz(3)
+  assignedAt            DateTime?                 @db.Timestamptz(3)
+  reviewStartedAt       DateTime?                 @db.Timestamptz(3)
+  decidedAt             DateTime?                 @db.Timestamptz(3)
+  verifierNote          String?
+  rejectionReason       String?
+  flagReason            String?
+  flaggedAt             DateTime?                 @db.Timestamptz(3)
+  wasFlagged            Boolean                   @default(false)
+  adminResponse         String?
+  adminReviewedAt       DateTime?                 @db.Timestamptz(3)
+  adminReviewerId       String?
+  adminReviewer         User?                     @relation("VerificationAdminReviewer", fields: [adminReviewerId], references: [id])
+
+  @@index([applicantId, submittedAt])
+  @@index([assignedVerifierId, status, submittedAt])
+  @@index([status, submittedAt])
+  @@index([district, status, submittedAt])
 }
 
 model VerifierReactivationRequest {

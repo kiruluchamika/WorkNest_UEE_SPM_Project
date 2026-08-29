@@ -9,6 +9,7 @@ import { applicationRoutes } from "./routes/applications.routes";
 import { verifierApplicationRoutes, verifierSelfServiceRoutes } from "./routes/verifierApplications.routes";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import { SRI_LANKAN_DISTRICTS } from "./constants/districts";
+import { adminVerificationRoutes, jobSeekerVerificationRoutes, verifierWorkRoutes } from "./routes/verificationRequests.routes";
 
 export const app = express();
 
@@ -31,6 +32,9 @@ app.use("/api/application-settings", applicationSettingsRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/admin/verifier-applications", verifierApplicationRoutes);
 app.use("/api/verifier/applications", verifierSelfServiceRoutes);
+app.use("/api/jobseeker/verification-requests", jobSeekerVerificationRoutes);
+app.use("/api/verifier/work", verifierWorkRoutes);
+app.use("/api/admin/verification-work", adminVerificationRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

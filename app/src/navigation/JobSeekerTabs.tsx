@@ -10,6 +10,7 @@ import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
 import { ApplyToGigScreen } from "../screens/jobseeker/ApplyToGigScreen";
 import { ProfileScreen } from "../screens/jobseeker/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
+import { VerificationRequestScreen } from "../screens/jobseeker/VerificationRequestScreen";
 
 export type JobSeekerStackParamList = {
   BrowseGigs: undefined;
@@ -23,9 +24,12 @@ export type JobSeekerTabParamList = {
   Profile: undefined;
   Notifications: undefined;
 };
+export type JobSeekerProfileStackParamList={ProfileHome:undefined;VerificationRequest:undefined};
 
 const Stack = createNativeStackNavigator<JobSeekerStackParamList>();
 const Tab = createBottomTabNavigator<JobSeekerTabParamList>();
+const ProfileStack=createNativeStackNavigator<JobSeekerProfileStackParamList>();
+function JobSeekerProfileStack(){return <ProfileStack.Navigator><ProfileStack.Screen name="ProfileHome" component={ProfileScreen} options={{headerShown:false}}/><ProfileStack.Screen name="VerificationRequest" component={VerificationRequestScreen} options={{title:"Request Verification"}}/></ProfileStack.Navigator>}
 
 function JobSeekerStack() {
   return (
@@ -58,7 +62,7 @@ export const JobSeekerTabs: React.FC = () => {
       })}
     >
       <Tab.Screen name="Browse" component={JobSeekerStack} options={{ title: "Gigs" }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Tab.Screen name="Profile" component={JobSeekerProfileStack} options={{ title: "Profile" }} />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}

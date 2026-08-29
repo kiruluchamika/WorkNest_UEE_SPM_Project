@@ -125,12 +125,11 @@ export async function register(
       data: {
         name, email, phone, role, passwordHash,
       },
-      include: { verifierApplications: { orderBy: { submittedAt: "desc" } } },
     });
 
     const token = signToken({ userId: user.id, role: user.role });
 
-    res.status(201).json({ token, user: toPublicUser(user) });
+    res.status(201).json({ token, user: toPublicUser({ ...user, verifierApplications: [] }) });
   } catch (err) {
     if ((err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") ||
         (typeof err === "object" && err !== null && "code" in err && err.code === "23505")) {

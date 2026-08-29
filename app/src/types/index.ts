@@ -75,6 +75,18 @@ export interface VerifierApplicationPayload {
   communityReference?: string;
 }
 
+export type VerificationRequestStatus = "PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
+export interface VerificationRequest {
+  id:string; applicantId:string; applicant:{id:string;name:string;email:string;phone?:string;bio?:string;location?:string};
+  district:string; personalInformation:string; identityDocument:string; supportingEvidence?:string; communityReferences:string;
+  status:VerificationRequestStatus; assignedVerifierId?:string; submittedAt:string; assignedAt?:string; reviewStartedAt?:string; decidedAt?:string;
+  verifierNote?:string; rejectionReason?:string; flagReason?:string; flaggedAt?:string; wasFlagged:boolean; adminResponse?:string; adminReviewedAt?:string;
+  assignedVerifier?:{id:string;name:string;email:string}; adminReviewer?:{id:string;name:string;email:string};
+}
+export interface VerifierDashboardData { application?:{district:string;isAvailable:boolean;status:VerifierApplicationStatus};queues:{awaiting:number;underReview:number;returned:number};today:{assigned:number;approved:number;rejected:number;flagged:number};allTime:{assigned:number;approved:number;rejected:number;flagged:number}; }
+export interface AdminVerificationOverview { requestsToday:number;approvedToday:number;rejectedToday:number;flaggedToday:number;awaitingReview:number;underReview:number; }
+export interface AdminVerifierStatistics { assigned:number;approved:number;rejected:number;flagged:number; }
+
 export interface Category {
   id: string;
   name: string;
