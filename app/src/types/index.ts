@@ -11,7 +11,81 @@ export interface User {
   avatarUrl?: string;
   trustScore: number;
   createdAt: string;
+  verifierApplication?: Pick<VerifierApplication, "id" | "status" | "submittedAt" | "reviewedAt" | "rejectionReason" | "approvalAcknowledgedAt" | "suspendedAt" | "suspensionReason">;
 }
+
+export type VerifierApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+export interface VerifierApplication {
+  id: string;
+  applicantId: string;
+  applicant: { id: string; name: string; email: string; phone?: string; createdAt: string };
+  district: string;
+  identityType: string;
+  identityNumber: string;
+  identityDocumentReference: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation: string;
+  communityReference?: string;
+  status: VerifierApplicationStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  approvalAcknowledgedAt?: string;
+  suspendedAt?: string;
+  suspensionReason?: string;
+  reviewer?: { id: string; name: string; email: string };
+  suspendedBy?: { id: string; name: string; email: string };
+  reactivationRequests?: VerifierReactivationRequest[];
+  suspensionEvents?: VerifierSuspensionEvent[];
+}
+
+export interface VerifierSuspensionEvent {
+  id: string;
+  verifierApplicationId: string;
+  reason: string;
+  suspendedAt: string;
+  suspendedBy?: { id: string; name: string; email: string };
+  reactivatedAt?: string;
+  reactivationRequests?: VerifierReactivationRequest[];
+}
+
+export type VerifierReactivationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+export interface VerifierReactivationRequest {
+  id: string;
+  verifierId: string;
+  verifierApplicationId: string;
+  suspensionEventId?: string;
+  explanation: string;
+  attachmentReference?: string;
+  attachmentMetadata?: Record<string, unknown>;
+  status: VerifierReactivationRequestStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewReason?: string;
+  reviewer?: { id: string; name: string; email: string };
+}
+
+export interface VerifierApplicationPayload {
+  district: string;
+  identityType: "NATIONAL_ID" | "PASSPORT" | "DRIVING_LICENCE";
+  identityNumber: string;
+  identityDocumentReference?: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation: string;
+  communityReference?: string;
+}
+
+export type VerificationRequestStatus = "PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
+export interface VerificationRequest {
+  id:string; applicantId:string; applicant:{id:string;name:string;email:string;phone?:string;bio?:string;location?:string};
+  district:string; personalInformation:string; identityDocument:string; supportingEvidence?:string; communityReferences:string;
+  status:VerificationRequestStatus; assignedVerifierId?:string; submittedAt:string; assignedAt?:string; reviewStartedAt?:string; decidedAt?:string;
+  verifierNote?:string; rejectionReason?:string; flagReason?:string; flaggedAt?:string; wasFlagged:boolean; adminResponse?:string; adminReviewedAt?:string;
+  assignedVerifier?:{id:string;name:string;email:string}; adminReviewer?:{id:string;name:string;email:string};
+}
+export interface VerifierDashboardData { application?:{district:string;isAvailable:boolean;status:VerifierApplicationStatus};queues:{awaiting:number;underReview:number;returned:number};today:{assigned:number;approved:number;rejected:number;flagged:number};allTime:{assigned:number;approved:number;rejected:number;flagged:number}; }
+export interface AdminVerificationOverview { requestsToday:number;approvedToday:number;rejectedToday:number;flaggedToday:number;awaitingReview:number;underReview:number; }
+export interface AdminVerifierStatistics { assigned:number;approved:number;rejected:number;flagged:number; }
 
 export interface Category {
   id: string;

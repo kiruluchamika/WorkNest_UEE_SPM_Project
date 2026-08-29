@@ -80,7 +80,13 @@ export const VerifierEndorseScreen: React.FC = () => {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.hero}>
             <View>
-              <Text style={styles.title}>Community Endorsements</Text>
+              <Text
+                style={styles.title}
+                accessibilityLabel="Community Verification"
+                testID="community-verification-heading"
+              >
+                Community Verification
+              </Text>
               <Text style={styles.subtitle}>Build reliable local work trust with verified skill notes.</Text>
             </View>
             <View style={styles.heroIcon}>

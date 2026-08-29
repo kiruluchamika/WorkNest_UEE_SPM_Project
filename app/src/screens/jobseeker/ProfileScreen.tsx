@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import * as endorsementApi from "../../api/endorsementApi";
 import * as applicationApi from "../../api/applicationApi";
+import { getMyVerificationRequests } from "../../api/verificationRequestsApi";
 import * as reputationApi from "../../api/reputationApi";
 import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
@@ -22,15 +23,35 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { initials, trustLevel } from "../../utils/formatters";
-import type { Endorsement, Application, ReputationSummary } from "../../types";
+import type { Endorsement, Application, ReputationSummary, VerificationRequest } from "../../types";
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user, logout } = useAuth();
   const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [verificationRequest, setVerificationRequest] = useState<VerificationRequest>();
+  const [verificationLoading, setVerificationLoading] = useState(true);
+  const [verificationError, setVerificationError] = useState("");
   const [reputation, setReputation] = useState<ReputationSummary | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const loadVerificationStatus = useCallback(async () => {
+    setVerificationLoading(true);
+    setVerificationError("");
+    try {
+      const requests = await getMyVerificationRequests();
+      setVerificationRequest(requests[0]);
+    } catch (error) {
+      setVerificationError(error instanceof Error ? error.message : "Could not load verification status.");
+    } finally {
+      setVerificationLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    loadVerificationStatus();
+  }, [loadVerificationStatus]));
 
   useEffect(() => {
     if (!user) return;
@@ -153,6 +174,38 @@ export const ProfileScreen: React.FC = () => {
           )}
         </Card>
 
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Verification Status</Text>
+          {verificationLoading ? (
+            <LoadingSpinner message="Loading verification status..." />
+          ) : verificationError ? (
+            <>
+              <Text style={styles.verificationMessage}>{verificationError}</Text>
+              <Button title="Retry" variant="outline" onPress={loadVerificationStatus} />
+            </>
+          ) : !verificationRequest ? (
+            <Button title="Request Verification" onPress={() => (navigation as any).navigate("VerificationRequest")} />
+          ) : verificationRequest.status === "REJECTED" ? (
+            <>
+              <Text style={[styles.verificationStatus, { color: colors.danger }]}>REJECTED</Text>
+              <Text style={styles.verificationMessage}>Your verification request was not approved.</Text>
+              {verificationRequest.rejectionReason ? (
+                <Text style={styles.rejectionReason}>Reason: {verificationRequest.rejectionReason}</Text>
+              ) : null}
+              <Button title="Apply Again" onPress={() => (navigation as any).navigate("VerificationRequest")} />
+            </>
+          ) : verificationRequest.status === "APPROVED" || verificationRequest.status === "ADMIN_CONFIRMED" ? (
+            <>
+              <Text style={[styles.verificationStatus, { color: colors.success }]}>VERIFIED</Text>
+              <Text style={styles.verificationMessage}>Your verification request has been approved.</Text>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.verificationStatus, { color: colors.warning }]}>PENDING</Text>
+              <Text style={styles.verificationMessage}>Your verification request has been submitted and is waiting for review.</Text>
+            </>
+          )}
+        </Card>
         <Button title="Sign out" variant="outline" onPress={logout} />
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -226,6 +279,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.text,
     marginBottom: spacing.sm,
+  },
+  verificationStatus: {
+    fontSize: typography.sizes.base,
+    fontWeight: "800",
+    marginBottom: spacing.xs,
+  },
+  verificationMessage: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  rejectionReason: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: spacing.md,
   },
   infoRow: {
     flexDirection: "row",

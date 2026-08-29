@@ -17,7 +17,10 @@ export const GlassTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
   const insets = useSafeAreaInsets();
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrapper, { bottom: insets.bottom + spacing.sm }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrapper, { paddingBottom: insets.bottom + spacing.sm }]}
+    >
       <BlurView intensity={80} tint="light" style={styles.bar}>
         <View style={styles.tint} />
         {state.routes.map((route, index) => {
@@ -68,9 +71,7 @@ export const GlassTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: "absolute",
-    left: spacing.md,
-    right: spacing.md,
+    paddingHorizontal: spacing.md,
     alignItems: "center",
   },
   bar: {

@@ -11,6 +11,7 @@ import { MyApplicationsScreen } from "../screens/jobseeker/MyApplicationsScreen"
 import { ApplicationDetailsScreen } from "../screens/jobseeker/ApplicationDetailsScreen";
 import { ProfileScreen } from "../screens/jobseeker/ProfileScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
+import { VerificationRequestScreen } from "../screens/jobseeker/VerificationRequestScreen";
 import { WorkHistoryScreen } from "../screens/shared/WorkHistoryScreen";
 import { ReputationScreen } from "../screens/shared/ReputationScreen";
 import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
@@ -34,6 +35,7 @@ export type JobSeekerProfileStackParamList = {
   WorkHistory: { userId: string };
   Reputation: { userId: string; userName?: string };
   ReviewForm: { gigId: string; revieweeId: string; revieweeName?: string };
+  VerificationRequest: undefined;
 };
 
 export type JobSeekerTabParamList = {
@@ -76,6 +78,7 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="WorkHistory" component={WorkHistoryScreen} />
       <ProfileStack.Screen name="Reputation" component={ReputationScreen} />
       <ProfileStack.Screen name="ReviewForm" component={ReviewFormScreen} />
+      <ProfileStack.Screen name="VerificationRequest" component={VerificationRequestScreen} options={{ title: "Request Verification" }} />
     </ProfileStack.Navigator>
   );
 }
