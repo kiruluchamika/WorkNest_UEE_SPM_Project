@@ -1,0 +1,9 @@
+export const SRI_LANKAN_DISTRICTS = [
+  "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
+  "Galle", "Gampaha", "Hambantota", "Jaffna", "Kalutara", "Kandy",
+  "Kegalle", "Kilinochchi", "Kurunegala", "Mannar", "Matale", "Matara",
+  "Monaragala", "Mullaitivu", "Nuwara Eliya", "Polonnaruwa", "Puttalam",
+  "Ratnapura", "Trincomalee", "Vavuniya",
+] as const;
+
+export const districtSchemaValues = SRI_LANKAN_DISTRICTS;

@@ -36,9 +36,30 @@ export async function listMyGigPosts(status?: GigPostStatus): Promise<GigPost[]>
   }
 }
 
+export async function listActiveGigPosts(filters?: {
+  categoryId?: string;
+  location?: string;
+}): Promise<GigPost[]> {
+  try {
+    const { data } = await http.get("/gigs", { params: filters });
+    return data.gigs;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not load available gigs."));
+  }
+}
+
 export async function getGigPost(id: string): Promise<GigPost> {
   try {
     const { data } = await http.get(`/gigs/${id}`);
+    return data.gig;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not load this gig."));
+  }
+}
+
+export async function getPublicGigPost(id: string): Promise<GigPost> {
+  try {
+    const { data } = await http.get(`/gigs/public/${id}`);
     return data.gig;
   } catch (err) {
     throw new Error(extractErrorMessage(err, "Could not load this gig."));
@@ -80,5 +101,14 @@ export async function resubmitGigPost(id: string): Promise<GigPost> {
     return data.gig;
   } catch (err) {
     throw new Error(extractErrorMessage(err, "Could not resubmit this gig."));
+  }
+}
+
+export async function completeGigPost(id: string): Promise<GigPost> {
+  try {
+    const { data } = await http.patch(`/gigs/${id}/complete`);
+    return data.gig;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not mark this gig as completed."));
   }
 }

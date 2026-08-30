@@ -9,7 +9,7 @@ import { AuthStack } from "./AuthStack";
 import { JobSeekerTabs } from "./JobSeekerTabs";
 import { ShopOwnerTabs } from "./ShopOwnerTabs";
 import { AdminStack } from "./AdminStack";
-import { VerifierEndorseScreen } from "../screens/trust/VerifierEndorseScreen";
+import { VerifierStack } from "./VerifierStack";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -43,7 +43,7 @@ export const RootNavigator: React.FC = () => {
         ) : user.role === "admin" ? (
           <Stack.Screen name="Admin" component={AdminStack} />
         ) : (
-          <Stack.Screen name="Verifier" component={VerifierEndorseScreen} />
+          <Stack.Screen name="Verifier" component={VerifierStack} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

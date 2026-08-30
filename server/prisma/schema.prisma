@@ -44,6 +44,71 @@ enum ApplicationStatus {
   COMPLETED
 }
 
+enum VerifierApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum VerifierReactivationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationRequestStatus {
+  PENDING
+  ASSIGNED
+  UNDER_REVIEW
+  FLAGGED
+  RETURNED_FOR_REVIEW
+  APPROVED
+  REJECTED
+  ADMIN_CONFIRMED
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  FLAGGED
+  REMOVED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationAction {
+  REMOVE_REVIEW
+  DISMISS_REPORT
+  WARN_AUTHOR
+}
+
+enum NotificationType {
+  GIG_COMPLETED
+  REVIEW_REQUESTED
+  REVIEW_RECEIVED
+  REVIEW_REPORTED
+  REVIEW_REMOVED
+  REPORT_RESOLVED
+  REPORT_DISMISSED
+  ACCOUNT_WARNING
+}
+
+enum EmailStatus {
+  NOT_REQUIRED
+  PENDING
+  SENT
+  FAILED
+}
+
+enum WorkHistoryRole {
+  YOUTH
+  BUSINESS
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -59,6 +124,125 @@ model User {
   updatedAt    DateTime  @updatedAt
   gigPosts     GigPost[]
   applications Application[]
+  verifierApplications VerifierApplication[] @relation("VerifierApplicant")
+  reviewedVerifierApplications VerifierApplication[] @relation("VerifierReviewer")
+  suspendedVerifierApplications VerifierApplication[] @relation("VerifierSuspender")
+  verifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationRequester")
+  reviewedVerifierReactivationRequests VerifierReactivationRequest[] @relation("ReactivationReviewer")
+  createdVerifierSuspensions VerifierSuspensionEvent[] @relation("SuspensionEventAdmin")
+  submittedVerificationRequests VerificationRequest[] @relation("VerificationApplicant")
+  assignedVerificationRequests VerificationRequest[] @relation("VerificationAssignee")
+  returnedVerificationRequests VerificationRequest[] @relation("VerificationAdminReviewer")
+  reviewsWritten         Review[]           @relation("ReviewsWritten")
+  reviewsReceived        Review[]           @relation("ReviewsReceived")
+  workHistoryEntries     WorkHistoryEntry[]
+  notifications          Notification[]
+  reviewReports          ReviewReport[]
+  moderationAudits       ModerationAudit[]  @relation("AdminModerationAudits")
+  reputationAudits       ReputationAudit[]  @relation("ReputationAudits")
+  adminReputationAudits  ReputationAudit[]  @relation("AdminReputationAudits")
+}
+
+model VerifierApplication {
+  id                        String                    @id @default(uuid())
+  applicantId               String
+  applicant                 User                      @relation("VerifierApplicant", fields: [applicantId], references: [id])
+  district                  String
+  identityType              String
+  identityNumber            String
+  identityDocumentReference String
+  identityDocumentMetadata  Json?
+  addressInformation        String
+  communityReference        String?
+  status                    VerifierApplicationStatus @default(PENDING)
+  submittedAt               DateTime                  @default(now()) @db.Timestamptz(3)
+  reviewedAt                DateTime?                 @db.Timestamptz(3)
+  rejectionReason           String?
+  reviewerId                String?
+  reviewer                  User?                     @relation("VerifierReviewer", fields: [reviewerId], references: [id])
+  approvalAcknowledgedAt    DateTime?                 @db.Timestamptz(3)
+  suspendedAt               DateTime?                 @db.Timestamptz(3)
+  suspensionReason          String?
+  suspendedById             String?
+  suspendedBy               User?                     @relation("VerifierSuspender", fields: [suspendedById], references: [id])
+  reactivationRequests      VerifierReactivationRequest[]
+  suspensionEvents          VerifierSuspensionEvent[]
+  isAvailable               Boolean                   @default(false)
+  lastAssignedAt            DateTime?                 @db.Timestamptz(3)
+
+  @@index([applicantId, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model VerificationRequest {
+  id                    String                    @id @default(uuid())
+  applicantId           String
+  applicant             User                      @relation("VerificationApplicant", fields: [applicantId], references: [id])
+  district              String
+  personalInformation   String
+  identityDocument      String
+  supportingEvidence    String?
+  communityReferences   String
+  status                VerificationRequestStatus @default(PENDING)
+  assignedVerifierId    String?
+  assignedVerifier      User?                     @relation("VerificationAssignee", fields: [assignedVerifierId], references: [id])
+  submittedAt           DateTime                  @default(now()) @db.Timestamptz(3)
+  assignedAt            DateTime?                 @db.Timestamptz(3)
+  reviewStartedAt       DateTime?                 @db.Timestamptz(3)
+  decidedAt             DateTime?                 @db.Timestamptz(3)
+  verifierNote          String?
+  rejectionReason       String?
+  flagReason            String?
+  flaggedAt             DateTime?                 @db.Timestamptz(3)
+  wasFlagged            Boolean                   @default(false)
+  adminResponse         String?
+  adminReviewedAt       DateTime?                 @db.Timestamptz(3)
+  adminReviewerId       String?
+  adminReviewer         User?                     @relation("VerificationAdminReviewer", fields: [adminReviewerId], references: [id])
+
+  @@index([applicantId, submittedAt])
+  @@index([assignedVerifierId, status, submittedAt])
+  @@index([status, submittedAt])
+  @@index([district, status, submittedAt])
+}
+
+model VerifierReactivationRequest {
+  id                    String                              @id @default(uuid())
+  verifierId            String
+  verifier              User                                @relation("ReactivationRequester", fields: [verifierId], references: [id])
+  verifierApplicationId String
+  verifierApplication   VerifierApplication                 @relation(fields: [verifierApplicationId], references: [id])
+  explanation           String
+  attachmentReference   String?
+  attachmentMetadata    Json?
+  status                VerifierReactivationRequestStatus   @default(PENDING)
+  createdAt             DateTime                            @default(now()) @db.Timestamptz(3)
+  reviewedAt            DateTime?                           @db.Timestamptz(3)
+  reviewerId            String?
+  reviewer              User?                               @relation("ReactivationReviewer", fields: [reviewerId], references: [id])
+  reviewReason          String?
+  suspensionEventId     String?
+  suspensionEvent       VerifierSuspensionEvent?              @relation(fields: [suspensionEventId], references: [id])
+
+  @@index([verifierId, createdAt])
+  @@index([verifierApplicationId, createdAt])
+  @@index([status, createdAt])
+  @@index([suspensionEventId, createdAt])
+}
+
+model VerifierSuspensionEvent {
+  id                    String                         @id @default(uuid())
+  verifierApplicationId String
+  verifierApplication   VerifierApplication            @relation(fields: [verifierApplicationId], references: [id])
+  reason                String
+  suspendedAt           DateTime                       @default(now()) @db.Timestamptz(3)
+  suspendedById         String?
+  suspendedBy           User?                          @relation("SuspensionEventAdmin", fields: [suspendedById], references: [id])
+  reactivatedAt         DateTime?                      @db.Timestamptz(3)
+  reactivationRequests  VerifierReactivationRequest[]
+
+  @@index([verifierApplicationId, suspendedAt])
+  @@index([suspendedById])
 }
 
 model Category {
@@ -99,6 +283,8 @@ model GigPost {
 
   applicationSettings ApplicationSettings?
   applications        Application[]
+  reviews             Review[]
+  workHistoryEntries  WorkHistoryEntry[]
 }
 
 model ApplicationSettings {
@@ -136,8 +322,105 @@ model Application {
   portfolioUrl     String?
   expectedSalary   Decimal?
   answers          Json              @default("[]")
+  completedAt      DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
+  workHistoryEntries WorkHistoryEntry[]
+
   @@unique([gigPostId, applicantId], name: "gigPostId_applicantId")
+}
+
+model Review {
+  id          String       @id @default(uuid())
+  gigId       String
+  gig         GigPost      @relation(fields: [gigId], references: [id])
+  reviewerId  String
+  reviewer    User         @relation("ReviewsWritten", fields: [reviewerId], references: [id])
+  revieweeId  String
+  reviewee    User         @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  rating      Int
+  comment     String?
+  status      ReviewStatus @default(PUBLISHED)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  reports          ReviewReport[]
+  moderationAudits ModerationAudit[]
+
+  @@unique([gigId, reviewerId, revieweeId])
+  @@index([revieweeId, status])
+}
+
+model WorkHistoryEntry {
+  id            String          @id @default(uuid())
+  applicationId String
+  application   Application     @relation(fields: [applicationId], references: [id])
+  gigId         String
+  gig           GigPost         @relation(fields: [gigId], references: [id])
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  role          WorkHistoryRole
+  completedAt   DateTime
+  gigStatus     GigStatus
+  createdAt     DateTime        @default(now())
+
+  @@unique([applicationId, role])
+  @@index([userId])
+}
+
+model Notification {
+  id              String           @id @default(uuid())
+  recipientId     String
+  recipient       User             @relation(fields: [recipientId], references: [id])
+  type            NotificationType
+  title           String
+  message         String
+  link            String?
+  relatedEntityId String?
+  isRead          Boolean          @default(false)
+  readAt          DateTime?
+  emailStatus     EmailStatus      @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([recipientId, isRead])
+  @@index([recipientId, createdAt])
+}
+
+model ReviewReport {
+  id         String       @id @default(uuid())
+  reviewId   String
+  review     Review       @relation(fields: [reviewId], references: [id])
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  reason     String
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model ModerationAudit {
+  id             String           @id @default(uuid())
+  reviewId       String
+  review         Review           @relation(fields: [reviewId], references: [id])
+  adminId        String
+  admin          User             @relation("AdminModerationAudits", fields: [adminId], references: [id])
+  action         ModerationAction
+  previousStatus ReviewStatus
+  newStatus      ReviewStatus
+  reason         String
+  createdAt      DateTime         @default(now())
+}
+
+model ReputationAudit {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation("ReputationAudits", fields: [userId], references: [id])
+  adminId       String
+  admin         User     @relation("AdminReputationAudits", fields: [adminId], references: [id])
+  reason        String
+  previousScore Int?
+  newScore      Int?
+  createdAt     DateTime @default(now())
 }

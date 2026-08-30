@@ -9,41 +9,74 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
-import { useGigs } from "../../context/GigContext";
+import * as gigPostApi from "../../api/gigPostApi";
 import { GigCard } from "../../components/gig/GigCard";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { AppHeader } from "../../components/common/AppHeader";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
-import { GIG_CATEGORIES } from "../../utils/constants";
-import type { Gig } from "../../types";
+import type { GigPost } from "../../types";
 
 export const BrowseGigsScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { gigs, isLoading, refresh } = useGigs();
+  const [gigs, setGigs] = useState<GigPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [category, setCategory] = useState("all");
   const [locationQuery, setLocationQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await gigPostApi.listActiveGigPosts();
+      setGigs(data);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load available gigs.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
   }, [refresh]);
 
+  const categories = React.useMemo(() => {
+    const byId = new Map<string, string>();
+    gigs.forEach((gig) => {
+      if (gig.category?.id) {
+        byId.set(gig.category.id, gig.category.name);
+      }
+    });
+    return Array.from(byId, ([value, label]) => ({ value, label }));
+  }, [gigs]);
+
   const filtered = gigs.filter((g) => {
-    const matchesCategory = category === "all" || g.category === category;
+    const matchesCategory = category === "all" || g.categoryId === category;
     const matchesLocation =
       locationQuery.trim() === "" ||
       g.location.toLowerCase().includes(locationQuery.toLowerCase());
-    return matchesCategory && matchesLocation && g.status === "open";
+    return matchesCategory && matchesLocation && g.status === "ACTIVE";
   });
 
-  const handlePress = (gig: Gig) => {
+  const handlePress = (gig: GigPost) => {
     (navigation as any).navigate("GigDetail", { gigId: gig.id });
   };
 
@@ -55,7 +88,10 @@ export const BrowseGigsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <AppHeader subtitle="Find gigs near you" />
+      <AppHeader
+        subtitle="Find gigs near you"
+        onBellPress={() => navigation.getParent()?.navigate("Notifications" as never)}
+      />
       <View style={styles.header}>
         <Text style={styles.title}>Browse Gigs</Text>
         <View style={styles.searchRow}>
@@ -71,7 +107,7 @@ export const BrowseGigsScreen: React.FC = () => {
       </View>
 
       <View style={styles.categories}>
-        {[{ value: "all", label: "All" }, ...GIG_CATEGORIES].map((item) => (
+        {[{ value: "all", label: "All" }, ...categories].map((item) => (
           <TouchableOpacity
             key={item.value}
             onPress={() => setCategory(item.value)}
@@ -103,10 +139,18 @@ export const BrowseGigsScreen: React.FC = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No open gigs match your filters.</Text>
-            <TouchableOpacity onPress={() => { setCategory("all"); setLocationQuery(""); }}>
-              <Text style={styles.clear}>Clear filters</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyText}>
+              {loadError ?? "No open gigs match your filters."}
+            </Text>
+            {loadError ? (
+              <TouchableOpacity onPress={refresh}>
+                <Text style={styles.clear}>Try again</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => { setCategory("all"); setLocationQuery(""); }}>
+                <Text style={styles.clear}>Clear filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />

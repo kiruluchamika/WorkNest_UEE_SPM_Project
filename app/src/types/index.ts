@@ -11,7 +11,81 @@ export interface User {
   avatarUrl?: string;
   trustScore: number;
   createdAt: string;
+  verifierApplication?: Pick<VerifierApplication, "id" | "status" | "submittedAt" | "reviewedAt" | "rejectionReason" | "approvalAcknowledgedAt" | "suspendedAt" | "suspensionReason">;
 }
+
+export type VerifierApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+export interface VerifierApplication {
+  id: string;
+  applicantId: string;
+  applicant: { id: string; name: string; email: string; phone?: string; createdAt: string };
+  district: string;
+  identityType: string;
+  identityNumber: string;
+  identityDocumentReference: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation: string;
+  communityReference?: string;
+  status: VerifierApplicationStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  approvalAcknowledgedAt?: string;
+  suspendedAt?: string;
+  suspensionReason?: string;
+  reviewer?: { id: string; name: string; email: string };
+  suspendedBy?: { id: string; name: string; email: string };
+  reactivationRequests?: VerifierReactivationRequest[];
+  suspensionEvents?: VerifierSuspensionEvent[];
+}
+
+export interface VerifierSuspensionEvent {
+  id: string;
+  verifierApplicationId: string;
+  reason: string;
+  suspendedAt: string;
+  suspendedBy?: { id: string; name: string; email: string };
+  reactivatedAt?: string;
+  reactivationRequests?: VerifierReactivationRequest[];
+}
+
+export type VerifierReactivationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+export interface VerifierReactivationRequest {
+  id: string;
+  verifierId: string;
+  verifierApplicationId: string;
+  suspensionEventId?: string;
+  explanation: string;
+  attachmentReference?: string;
+  attachmentMetadata?: Record<string, unknown>;
+  status: VerifierReactivationRequestStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewReason?: string;
+  reviewer?: { id: string; name: string; email: string };
+}
+
+export interface VerifierApplicationPayload {
+  district: string;
+  identityType: "NATIONAL_ID" | "PASSPORT" | "DRIVING_LICENCE";
+  identityNumber: string;
+  identityDocumentReference?: string;
+  identityDocumentMetadata?: Record<string, unknown>;
+  addressInformation: string;
+  communityReference?: string;
+}
+
+export type VerificationRequestStatus = "PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
+export interface VerificationRequest {
+  id:string; applicantId:string; applicant:{id:string;name:string;email:string;phone?:string;bio?:string;location?:string};
+  district:string; personalInformation:string; identityDocument:string; supportingEvidence?:string; communityReferences:string;
+  status:VerificationRequestStatus; assignedVerifierId?:string; submittedAt:string; assignedAt?:string; reviewStartedAt?:string; decidedAt?:string;
+  verifierNote?:string; rejectionReason?:string; flagReason?:string; flaggedAt?:string; wasFlagged:boolean; adminResponse?:string; adminReviewedAt?:string;
+  assignedVerifier?:{id:string;name:string;email:string}; adminReviewer?:{id:string;name:string;email:string};
+}
+export interface VerifierDashboardData { application?:{district:string;isAvailable:boolean;status:VerifierApplicationStatus};queues:{awaiting:number;underReview:number;returned:number};today:{assigned:number;approved:number;rejected:number;flagged:number};allTime:{assigned:number;approved:number;rejected:number;flagged:number}; }
+export interface AdminVerificationOverview { requestsToday:number;approvedToday:number;rejectedToday:number;flaggedToday:number;awaitingReview:number;underReview:number; }
+export interface AdminVerifierStatistics { assigned:number;approved:number;rejected:number;flagged:number; }
 
 export interface Category {
   id: string;
@@ -48,6 +122,7 @@ export interface GigPost {
   endDate?: string;
   endTime?: string;
   workersNeeded: number;
+  filledPositions?: number;
   requiredSkills: string[];
   contactInfo?: string;
   imageUrl?: string;
@@ -153,8 +228,47 @@ export interface JobApplication {
   portfolioUrl?: string;
   expectedSalary?: number;
   answers: ApplicationAnswer[];
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ApplicationGigSummary {
+  id: string;
+  title: string;
+  location: string;
+  category?: Category;
+  business?: GigPostBusiness;
+  paymentAmount: number;
+  paymentType: GigPaymentType;
+  startDate: string;
+  endDate?: string;
+  status: GigPostStatus;
+  workersNeeded?: number;
+  filledPositions?: number;
+}
+
+export interface ApplicantSummary {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  location?: string;
+  trustScore: number;
+}
+
+export interface MyApplicationListItem extends JobApplication {
+  gig: ApplicationGigSummary;
+}
+
+export interface GigApplicantListItem extends JobApplication {
+  applicant: ApplicantSummary;
+}
+
+export interface ApplicationDetail extends JobApplication {
+  gig: ApplicationGigSummary;
+  applicant?: ApplicantSummary;
 }
 
 export interface SubmitApplicationPayload {
@@ -168,23 +282,6 @@ export interface SubmitApplicationPayload {
   portfolioUrl?: string;
   expectedSalary?: number;
   answers: ApplicationAnswer[];
-}
-
-export interface ApplicantGigSummary {
-  id: string;
-  title: string;
-  description: string;
-  category?: Category;
-  location: string;
-  paymentAmount: number;
-  paymentType: GigPaymentType;
-  startDate: string;
-  startTime?: string;
-  endDate?: string;
-  endTime?: string;
-  workersNeeded: number;
-  requiredSkills: string[];
-  status: GigPostStatus;
 }
 
 export interface Endorsement {
@@ -211,11 +308,89 @@ export interface Rating {
   createdAt: string;
 }
 
+export type NotificationType =
+  | "GIG_COMPLETED"
+  | "REVIEW_REQUESTED"
+  | "REVIEW_RECEIVED"
+  | "REVIEW_REPORTED"
+  | "REVIEW_REMOVED"
+  | "REPORT_RESOLVED"
+  | "REPORT_DISMISSED"
+  | "ACCOUNT_WARNING";
+
+export type EmailStatus = "NOT_REQUIRED" | "PENDING" | "SENT" | "FAILED";
+
 export interface Notification {
   id: string;
-  userId: string;
+  recipientId: string;
+  type: NotificationType;
   title: string;
-  body: string;
-  read: boolean;
+  message: string;
+  link?: string;
+  relatedEntityId?: string;
+  isRead: boolean;
+  readAt?: string;
+  emailStatus: EmailStatus;
   createdAt: string;
+}
+
+export type ReviewStatus = "PUBLISHED" | "FLAGGED" | "REMOVED";
+export type ReportStatus = "PENDING" | "RESOLVED" | "DISMISSED";
+export type ModerationAction = "REMOVE_REVIEW" | "DISMISS_REPORT" | "WARN_AUTHOR";
+
+export interface ReviewParty {
+  id: string;
+  name: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+export interface Review {
+  id: string;
+  gigId: string;
+  reviewerId: string;
+  revieweeId: string;
+  rating: number;
+  comment?: string;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
+  reviewer?: ReviewParty;
+  reviewee?: ReviewParty;
+  gig?: { id: string; title: string };
+}
+
+export interface ReputationSummary {
+  userId: string;
+  averageRating: number | null;
+  totalReviews: number;
+  distribution: Record<"1" | "2" | "3" | "4" | "5", number>;
+}
+
+export type WorkHistoryRole = "YOUTH" | "BUSINESS";
+
+export interface WorkHistoryEntry {
+  id: string;
+  gigId: string;
+  gigTitle: string;
+  role: WorkHistoryRole;
+  completedAt: string;
+  gigStatus: GigPostStatus;
+  counterpartId: string;
+  counterpartName: string;
+  hasReviewed?: boolean;
+}
+
+export interface ReviewReport {
+  id: string;
+  reviewId: string;
+  reporterId: string;
+  reason: string;
+  status: ReportStatus;
+  createdAt: string;
+  reporter?: ReviewParty;
+}
+
+export interface FlaggedReview extends Review {
+  reports: ReviewReport[];
 }

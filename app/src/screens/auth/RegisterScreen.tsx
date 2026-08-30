@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
+import { Select } from "../../components/common/Select";
+import { SearchableSelect } from "../../components/common/SearchableSelect";
+import { getDistricts } from "../../api/districtsApi";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { GoogleButton } from "../../components/common/GoogleButton";
 import { colors } from "../../theme/colors";
@@ -38,12 +41,29 @@ export const RegisterScreen: React.FC = () => {
   );
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [district, setDistrict] = useState("");
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [districtLoadError, setDistrictLoadError] = useState("");
+  const [identityType, setIdentityType] = useState("");
+  const [identityNumber, setIdentityNumber] = useState("");
+  const [identityDocumentReference, setIdentityDocumentReference] = useState("");
+  const [addressInformation, setAddressInformation] = useState("");
+  const [communityReference, setCommunityReference] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    getDistricts().then(setDistricts).catch((err) => setDistrictLoadError(err instanceof Error ? err.message : "Could not load districts."));
+  }, []);
 
   const handleRegister = async () => {
     setErrors({});
     setError("");
+
+    if (role === "verifier" && district && !districts.includes(district)) {
+      setErrors({ district: "Please select a supported district" });
+      return;
+    }
 
     const result = registerSchema.safeParse({
       name,
@@ -52,6 +72,7 @@ export const RegisterScreen: React.FC = () => {
       role,
       password,
       confirmPassword,
+      district, identityType, identityNumber, identityDocumentReference, addressInformation, communityReference,
     });
 
     if (!result.success) {
@@ -65,8 +86,12 @@ export const RegisterScreen: React.FC = () => {
     }
 
     try {
-      await register({ name, email, phone, role, password });
-      Alert.alert("Account created!", "Welcome to WorkNest.");
+      await register({ name, email, phone, role, password, ...(role === "verifier" ? {
+        district, identityType, identityNumber, identityDocumentReference,
+        ...(identityDocumentReference ? { identityDocumentMetadata: { storage: "private-reference", originalName: identityDocumentReference } } : {}),
+        addressInformation, communityReference,
+      } : {}) });
+      Alert.alert("Account created!", role === "verifier" ? "Your verifier application is pending review." : "Welcome to WorkNest.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create account. Try again.");
     }
@@ -165,6 +190,22 @@ export const RegisterScreen: React.FC = () => {
             ))}
           </View>
           {errors.role ? <Text style={styles.error}>{errors.role}</Text> : null}
+
+          {role === "verifier" ? (
+            <View style={styles.verifierSection}>
+              <Text style={styles.sectionTitle}>Verifier application</Text>
+              <Text style={styles.sectionHelp}>Provide your identity and local community information for administrator review.</Text>
+              <SearchableSelect label="District" value={district} onChange={setDistrict} placeholder="Select district..." searchPlaceholder="Search districts..." options={districts.map((item) => ({ value: item, label: item }))} error={errors.district || districtLoadError} emptyMessage={districtLoadError || "No districts found"} />
+              <Select label="ID type" value={identityType} onChange={setIdentityType} placeholder="Select ID type" error={errors.identityType} options={[
+                { value: "NATIONAL_ID", label: "National identity card" }, { value: "PASSPORT", label: "Passport" }, { value: "DRIVING_LICENCE", label: "Driving licence" },
+              ]} />
+              <Input label="ID number" value={identityNumber} onChangeText={setIdentityNumber} placeholder="Identity document number" error={errors.identityNumber} />
+              <Input label="Identity document (optional for testing)" value={identityDocumentReference} onChangeText={setIdentityDocumentReference} placeholder="Secure file reference or filename" error={errors.identityDocumentReference} />
+              <Text style={styles.documentNote}>Optional in this development build. When supplied, the document reference is not published by WorkNest.</Text>
+              <Input label="Address / supporting information" value={addressInformation} onChangeText={setAddressInformation} placeholder="Residential address and supporting details" multiline rows={3} error={errors.addressInformation} />
+              <Input label="Community reference (optional)" value={communityReference} onChangeText={setCommunityReference} placeholder="Reference name and contact information" multiline rows={3} error={errors.communityReference} />
+            </View>
+          ) : null}
 
           <Input
             label="Password"
@@ -279,6 +320,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontSize: typography.sizes.sm,
   },
+  verifierSection: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md },
+  sectionTitle: { fontSize: typography.sizes.base, fontWeight: "800", color: colors.primaryDark, marginBottom: spacing.xs },
+  sectionHelp: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 20, marginBottom: spacing.md },
+  documentNote: { fontSize: typography.sizes.xs, color: colors.textMuted, marginTop: -spacing.sm, marginBottom: spacing.md, lineHeight: 17 },
   divider: {
     flexDirection: "row",
     alignItems: "center",

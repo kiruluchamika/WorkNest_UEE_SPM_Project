@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import * as endorsementApi from "../../api/endorsementApi";
-import * as ratingApi from "../../api/ratingApi";
 import * as applicationApi from "../../api/applicationApi";
+import { getMyVerificationRequests } from "../../api/verificationRequestsApi";
+import * as reputationApi from "../../api/reputationApi";
 import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -21,25 +23,46 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { initials, trustLevel } from "../../utils/formatters";
-import type { Endorsement, Rating, Application } from "../../types";
+import type { Endorsement, Application, ReputationSummary, VerificationRequest } from "../../types";
 
 export const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { user, logout } = useAuth();
   const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
-  const [ratings, setRatings] = useState<Rating[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [verificationRequest, setVerificationRequest] = useState<VerificationRequest>();
+  const [verificationLoading, setVerificationLoading] = useState(true);
+  const [verificationError, setVerificationError] = useState("");
+  const [reputation, setReputation] = useState<ReputationSummary | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const loadVerificationStatus = useCallback(async () => {
+    setVerificationLoading(true);
+    setVerificationError("");
+    try {
+      const requests = await getMyVerificationRequests();
+      setVerificationRequest(requests[0]);
+    } catch (error) {
+      setVerificationError(error instanceof Error ? error.message : "Could not load verification status.");
+    } finally {
+      setVerificationLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    loadVerificationStatus();
+  }, [loadVerificationStatus]));
 
   useEffect(() => {
     if (!user) return;
     Promise.all([
       endorsementApi.listEndorsementsForJobSeeker(user.id),
-      ratingApi.listRatingsForUser(user.id),
       applicationApi.listApplicationsByJobSeeker(user.id),
-    ]).then(([e, r, a]) => {
+      reputationApi.getUserReputation(user.id),
+    ]).then(([e, a, rep]) => {
       setEndorsements(e);
-      setRatings(r);
       setApplications(a);
+      setReputation(rep);
       setLoading(false);
     });
   }, [user]);
@@ -119,22 +142,70 @@ export const ProfileScreen: React.FC = () => {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Ratings</Text>
+          <Text style={styles.sectionTitle}>Reputation</Text>
           {loading ? (
-            <LoadingSpinner message="Loading ratings..." />
-          ) : ratings.length > 0 ? (
-            ratings.map((r) => (
-              <View key={r.id} style={styles.ratingRow}>
-                <Text style={styles.ratingStars}>{"★".repeat(r.score)}{"☆".repeat(5 - r.score)}</Text>
-                <Text style={styles.ratingComment}>&ldquo;{r.comment}&rdquo;</Text>
-                <Text style={styles.ratingBy}>— {r.fromUserName}</Text>
-              </View>
-            ))
+            <LoadingSpinner message="Loading reputation..." />
           ) : (
-            <Text style={styles.empty}>No ratings yet.</Text>
+            <>
+              <View style={styles.reputationRow}>
+                <Text style={styles.reputationAverage}>
+                  {reputation?.averageRating !== null && reputation?.averageRating !== undefined
+                    ? reputation.averageRating.toFixed(1)
+                    : "—"}
+                </Text>
+                <Text style={styles.reputationCount}>
+                  {reputation?.totalReviews ?? 0} review{reputation?.totalReviews === 1 ? "" : "s"}
+                </Text>
+              </View>
+              <Button
+                title="View Reputation & Reviews"
+                variant="outline"
+                onPress={() =>
+                  (navigation as any).navigate("Reputation", { userId: user.id, userName: user.name })
+                }
+                style={{ marginBottom: spacing.sm }}
+              />
+              <Button
+                title="Work History"
+                variant="outline"
+                onPress={() => (navigation as any).navigate("WorkHistory", { userId: user.id })}
+              />
+            </>
           )}
         </Card>
 
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Verification Status</Text>
+          {verificationLoading ? (
+            <LoadingSpinner message="Loading verification status..." />
+          ) : verificationError ? (
+            <>
+              <Text style={styles.verificationMessage}>{verificationError}</Text>
+              <Button title="Retry" variant="outline" onPress={loadVerificationStatus} />
+            </>
+          ) : !verificationRequest ? (
+            <Button title="Request Verification" onPress={() => (navigation as any).navigate("VerificationRequest")} />
+          ) : verificationRequest.status === "REJECTED" ? (
+            <>
+              <Text style={[styles.verificationStatus, { color: colors.danger }]}>REJECTED</Text>
+              <Text style={styles.verificationMessage}>Your verification request was not approved.</Text>
+              {verificationRequest.rejectionReason ? (
+                <Text style={styles.rejectionReason}>Reason: {verificationRequest.rejectionReason}</Text>
+              ) : null}
+              <Button title="Apply Again" onPress={() => (navigation as any).navigate("VerificationRequest")} />
+            </>
+          ) : verificationRequest.status === "APPROVED" || verificationRequest.status === "ADMIN_CONFIRMED" ? (
+            <>
+              <Text style={[styles.verificationStatus, { color: colors.success }]}>VERIFIED</Text>
+              <Text style={styles.verificationMessage}>Your verification request has been approved.</Text>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.verificationStatus, { color: colors.warning }]}>PENDING</Text>
+              <Text style={styles.verificationMessage}>Your verification request has been submitted and is waiting for review.</Text>
+            </>
+          )}
+        </Card>
         <Button title="Sign out" variant="outline" onPress={logout} />
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -209,6 +280,23 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.sm,
   },
+  verificationStatus: {
+    fontSize: typography.sizes.base,
+    fontWeight: "800",
+    marginBottom: spacing.xs,
+  },
+  verificationMessage: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  rejectionReason: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -249,25 +337,19 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: "700",
   },
-  ratingRow: {
+  reputationRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
     marginBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.md,
   },
-  ratingStars: {
-    fontSize: typography.sizes.base,
-    color: colors.warning,
-    marginBottom: spacing.xs,
+  reputationAverage: {
+    fontSize: typography.sizes.xl,
+    fontWeight: "800",
+    color: colors.primaryDark,
+    marginRight: spacing.sm,
   },
-  ratingComment: {
+  reputationCount: {
     fontSize: typography.sizes.sm,
-    color: colors.text,
-    fontStyle: "italic",
-  },
-  ratingBy: {
-    fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    marginTop: spacing.xs,
   },
 });

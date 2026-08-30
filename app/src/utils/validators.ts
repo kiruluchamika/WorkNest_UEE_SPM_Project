@@ -13,11 +13,44 @@ export const registerSchema = z
     role: z.enum(["jobseeker", "shopowner", "verifier"]),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(6, "Please confirm your password"),
+    district: z.string().trim().optional(),
+    identityType: z.string().trim().optional(),
+    identityNumber: z.string().trim().optional(),
+    identityDocumentReference: z.string().trim().optional(),
+    addressInformation: z.string().trim().optional(),
+    communityReference: z.string().trim().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  }).superRefine((data, ctx) => {
+    if (data.role !== "verifier") return;
+    const required = [
+      ["district", "District is required"], ["identityType", "ID type is required"],
+      ["identityNumber", "ID number is required"],
+      ["addressInformation", "Address information is required"],
+    ] as const;
+    required.forEach(([field, message]) => { if (!data[field]) ctx.addIssue({ code: "custom", path: [field], message }); });
   });
+
+export const verifierReapplicationSchema = z.object({
+  district: z.string().trim().min(2, "District is required"),
+  identityType: z.enum(["NATIONAL_ID", "PASSPORT", "DRIVING_LICENCE"]),
+  identityNumber: z.string().trim().min(4, "ID number is required"),
+  identityDocumentReference: z.string().trim().optional(),
+  addressInformation: z.string().trim().min(5, "Address information is required"),
+  communityReference: z.string().trim().optional(),
+});
+
+// Accepts either an http(s) URL or a base64 data URI (from the device image picker).
+const imageSourceSchema = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^https?:\/\//.test(v) || /^data:image\//.test(v), {
+    message: "Please attach a valid image.",
+  })
+  .optional()
+  .or(z.literal(""));
 
 export const categorySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -42,7 +75,15 @@ export const gigPostFormSchema = z.object({
   workersNeeded: z.coerce.number().int().min(1, "Workers needed must be at least 1."),
   requiredSkills: z.string().optional(),
   contactInfo: z.string().trim().optional(),
-  imageUrl: z.string().trim().url("Please enter a valid image URL.").optional().or(z.literal("")),
+  imageUrl: imageSourceSchema,
+});
+
+export const profileFormSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters."),
+  phone: z.string().trim().optional().or(z.literal("")),
+  bio: z.string().trim().optional().or(z.literal("")),
+  location: z.string().trim().optional().or(z.literal("")),
+  avatarUrl: imageSourceSchema,
 });
 
 export const applicationSchema = z.object({
