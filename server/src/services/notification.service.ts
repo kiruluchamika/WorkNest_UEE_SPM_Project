@@ -1,6 +1,7 @@
 import { NotificationType, EmailStatus, Prisma } from "@prisma/client";
 import { prisma } from "../config/db";
 import * as emailService from "./email.service";
+import { sendPushNotification } from "./pushNotification.service";
 
 // Notification types that never generate an email: GIG_COMPLETED's email is
 // folded into the REVIEW_REQUESTED email sent alongside it (one combined
@@ -92,6 +93,18 @@ export async function createNotification(input: CreateNotificationInput) {
       select: { email: true, name: true },
     }),
   ]);
+
+  void sendPushNotification({
+    recipientId: input.recipientId,
+    title: input.title,
+    body: input.message,
+    data: {
+      notificationId: notification.id,
+      type: input.type,
+      link: input.link,
+      relatedEntityId: input.relatedEntityId,
+    },
+  });
 
   if (!requiresEmail || !user) {
     return notification;

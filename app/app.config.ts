@@ -1,3 +1,9 @@
+// Set by whoever owns the Expo account, one time: `npx eas-cli login` then
+// `npx eas-cli init` (links/creates the EAS project for slug "worknest" and
+// prints its project ID). Without this, push notifications can't register
+// a device token — Notifications.getExpoPushTokenAsync() requires it.
+const easProjectId = process.env.EAS_PROJECT_ID;
+
 export default {
   name: "WorkNest",
   slug: "worknest",
@@ -39,8 +45,16 @@ export default {
         cameraPermission: "WorkNest needs access to your camera so you can take a gig or profile image.",
       },
     ],
+    [
+      "expo-notifications",
+      {
+        color: "#0F766E",
+        defaultChannel: "default",
+      },
+    ],
   ],
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000",
+    eas: easProjectId ? { projectId: easProjectId } : undefined,
   },
 };
