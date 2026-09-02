@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 
 import { useAuth } from "../../context/AuthContext";
@@ -9,34 +9,13 @@ import { useNotifications } from "../../context/NotificationContext";
 import { NotificationItem } from "../../components/common/NotificationItem";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { Button } from "../../components/common/Button";
+import { navigateToNotificationLink } from "../../navigation/notificationLinks";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import type { Notification } from "../../types";
 
-// Best-effort deep-link resolution: only attempts navigation where the
-// target screen is reliably reachable (and backed by real data) from the
-// current role's navigation tree. Otherwise the tap just marks it read —
-// there's no safe destination to send the user to.
-function navigateToLink(navigation: any, link: string | undefined, role: string | undefined) {
-  if (!link) return;
-
-  const gigMatch = link.match(/^\/gigs\/(.+)$/);
-  const reviewMatch = link.match(/^\/reviews\/(.+)$/);
-
-  try {
-    if (gigMatch && role === "shopowner") {
-      navigation.getParent()?.navigate("MyGigsTab", { screen: "GigDetail", params: { gigId: gigMatch[1] } });
-    } else if (reviewMatch && role === "admin") {
-      navigation.getParent()?.navigate("ReviewsTab");
-    }
-  } catch {
-    // Route not registered in this tree — ignore, notification is still marked read.
-  }
-}
-
 export const NotificationsScreen: React.FC = () => {
-  const navigation = useNavigation();
   const { user } = useAuth();
   const {
     notifications,
@@ -66,7 +45,7 @@ export const NotificationsScreen: React.FC = () => {
 
   const handlePress = (notification: Notification) => {
     if (!notification.isRead) markRead(notification.id).catch(() => {});
-    navigateToLink(navigation, notification.link, user?.role);
+    navigateToNotificationLink(notification.link, user?.role);
   };
 
   return (

@@ -1,8 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import * as authApi from "../api/authApi";
 import * as verifierApplicationsApi from "../api/verifierApplicationsApi";
 import { setAuthToken } from "../api/http";
 import { loadSession, saveSession, clearSession } from "../utils/session";
+import {
+  addPushTokenRefreshListener,
+  registerForPushNotificationsAsync,
+  unregisterPushTokenAsync,
+} from "../utils/pushNotifications";
 import type { User, UserRole, VerifierApplicationPayload } from "../types";
 
 interface AuthContextValue {
@@ -39,6 +44,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pushTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -65,6 +71,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+    registerForPushNotificationsAsync().then((token) => {
+      if (isMounted) pushTokenRef.current = token;
+    });
+
+    const subscription = addPushTokenRefreshListener((token) => {
+      pushTokenRef.current = token;
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -104,6 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     setIsLoading(true);
     try {
+      await unregisterPushTokenAsync(pushTokenRef.current);
+      pushTokenRef.current = null;
       await authApi.logout();
       setAuthToken(null);
       await clearSession();
