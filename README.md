@@ -4,7 +4,7 @@ SDG 01 & 08 — No Poverty & Decent Work and Economic Growth
 Repository: `WorkNest_UEE_SPM_Project` (folders: `app/` = frontend, `server/` = backend)
 SE3080 Assignment 01 deadline: **25 Aug 2026, 1:00 PM**
 
-Mission statement: *Local businesses and youth co-build a trusted community hiring pool.*
+Mission statement: *Local businesses and youth co-build a trusted community hiring pool*
 
 Stakeholders: youth job seekers · local businesses/shop owners · community leaders/verifiers · existing gig workers building reputation · local government/youth employment authorities · platform admins/moderators.
 
