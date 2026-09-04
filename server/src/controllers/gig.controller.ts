@@ -6,6 +6,7 @@ import { AuthedRequest } from "../middleware/auth.middleware";
 import { CreateGigPostInput, UpdateGigPostInput, RejectGigInput } from "../validators/gig.validator";
 import { markGigComplete } from "../services/gigCompletion.service";
 import { fetchGigWithCategory } from "../services/gig.service";
+import { createNotification } from "../services/notification.service";
 
 const ADMIN_GIG_INCLUDE = {
   category: true,
@@ -104,6 +105,22 @@ export async function createGig(
       },
     });
     const gig = await fetchGigWithCategory(created.id);
+
+    await createNotification({
+      recipientId: userId,
+      type: "GIG_POSTED",
+      title: "Gig Submitted",
+      message: `"${gig.title}" has been submitted and is pending review.`,
+      link: `/gigs/${gig.id}`,
+      relatedEntityId: gig.id,
+      emailParams: {
+        gigTitle: gig.title,
+        category: gig.category.name,
+        paymentAmount: Number(gig.paymentAmount),
+        paymentType: gig.paymentType,
+        location: gig.location,
+      },
+    });
 
     res.status(201).json({ gig: toPublicGig(gig) });
   } catch (err) {

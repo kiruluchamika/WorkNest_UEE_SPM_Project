@@ -6,6 +6,7 @@ import { AuthedRequest } from "../middleware/auth.middleware";
 import { SubmitApplicationInput } from "../validators/application.validator";
 import { canTransitionApplicationStatus, getStatusesThatCanTransitionTo } from "../utils/applicationStatus";
 import { createCompletionWorkHistory, notifyGigParticipantOfCompletion } from "../services/gigCompletion.service";
+import { createNotification } from "../services/notification.service";
 
 interface RequirementsShape {
   requireCV: boolean;
@@ -289,7 +290,10 @@ export async function submitApplication(
     const { userId } = req as unknown as AuthedRequest;
     const { gigId, answers, ...fields } = req.body;
 
-    const gig = await prisma.gigPost.findFirst({ where: { id: gigId, isDeleted: false } });
+    const gig = await prisma.gigPost.findFirst({
+      where: { id: gigId, isDeleted: false },
+      include: { business: { select: { name: true } } },
+    });
     if (!gig) {
       return next(new HttpError(404, "Gig not found"));
     }
@@ -350,6 +354,21 @@ export async function submitApplication(
         portfolioUrl: fields.portfolioUrl,
         expectedSalary: fields.expectedSalary,
         answers: normalizedAnswers as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    await createNotification({
+      recipientId: userId,
+      type: "APPLICATION_SUBMITTED",
+      title: "Application Submitted",
+      message: `Your application for "${gig.title}" has been submitted.`,
+      link: `/applications/${application.id}`,
+      relatedEntityId: application.id,
+      emailParams: {
+        gigTitle: gig.title,
+        businessName: gig.business.name,
+        appliedDate: application.createdAt.toISOString(),
+        details: fields.shortMessage ?? fields.coverLetter ?? undefined,
       },
     });
 
@@ -499,7 +518,7 @@ async function transitionApplicationAsGigOwner(
     where: { id: applicationId },
     include: {
       gigPost: { include: { business: { select: BUSINESS_SELECT } } },
-      applicant: { select: { id: true, name: true } },
+      applicant: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -616,6 +635,25 @@ export async function hireApplication(
     // schema (PENDING/ACTIVE/REJECTED/CLOSED/COMPLETED), so hiring does not
     // change the Gig's own status here. See final summary for details.
 
+    await createNotification({
+      recipientId: application.applicantId,
+      type: "APPLICATION_HIRED",
+      title: "You're Hired!",
+      message: `Congratulations! You've been hired for "${application.gigPost.title}".`,
+      link: `/applications/${applicationId}`,
+      relatedEntityId: applicationId,
+      emailParams: {
+        gigTitle: application.gigPost.title,
+        businessName: application.gigPost.business.name,
+        businessContact: application.gigPost.business.phone ?? application.gigPost.business.email,
+        location: application.gigPost.location,
+        startDate: application.gigPost.startDate.toISOString(),
+        startTime: application.gigPost.startTime ?? undefined,
+        paymentAmount: Number(application.gigPost.paymentAmount),
+        paymentType: application.gigPost.paymentType,
+      },
+    });
+
     res.json({ message: "Applicant hired.", application: toPublicApplication(updated) });
   } catch (err) {
     if (err instanceof HttpError) return next(err);
@@ -659,6 +697,8 @@ export async function completeApplication(
         gigId: application.gigPostId,
         gigTitle: application.gigPost.title,
         includeGigCompletedNotice: true,
+        paymentAmount: Number(application.gigPost.paymentAmount),
+        paymentType: application.gigPost.paymentType,
       }),
       notifyGigParticipantOfCompletion({
         recipientId: application.gigPost.business.id,
@@ -666,6 +706,8 @@ export async function completeApplication(
         gigId: application.gigPostId,
         gigTitle: application.gigPost.title,
         includeGigCompletedNotice: true,
+        paymentAmount: Number(application.gigPost.paymentAmount),
+        paymentType: application.gigPost.paymentType,
       }),
     ]);
 
