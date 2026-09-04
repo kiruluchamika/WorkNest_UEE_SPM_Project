@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -118,9 +118,14 @@ export const ApplyToGigScreen: React.FC = () => {
     try {
       const payload = buildApplicationPayload(gigId, customQuestions, values);
       await applicationsApi.submitApplication(payload);
-      Alert.alert("Application submitted successfully!", undefined, [
-        { text: "OK", onPress: () => navigation.getParent()?.navigate("MyApplicationsTab" as never) },
-      ]);
+      const goToMyApplications = () => navigation.getParent()?.navigate("MyApplicationsTab" as never);
+      if (Platform.OS === "web") {
+        // Alert.alert is a no-op on react-native-web, so the confirmation + the
+        // navigation nested in its OK button would otherwise silently never happen.
+        goToMyApplications();
+      } else {
+        Alert.alert("Application submitted successfully!", undefined, [{ text: "OK", onPress: goToMyApplications }]);
+      }
     } catch (err) {
       Alert.alert("Could not submit", err instanceof Error ? err.message : "Please try again.");
     } finally {
