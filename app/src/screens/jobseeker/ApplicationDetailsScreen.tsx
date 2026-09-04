@@ -15,6 +15,7 @@ import { typography } from "../../theme/typography";
 import { formatCurrency, formatDate } from "../../utils/formatters";
 import { formatAnswerValue, formatYesNo } from "../../utils/applicationDisplay";
 import { GIG_PAYMENT_TYPES } from "../../utils/constants";
+import { confirmAction } from "../../utils/confirm";
 import type { ApplicationDetail } from "../../types";
 
 function paymentTypeLabel(value: string): string {
@@ -82,26 +83,24 @@ export const ApplicationDetailsScreen: React.FC = () => {
   );
 
   const handleWithdraw = () => {
-    Alert.alert("Withdraw application?", "Are you sure you want to withdraw this application?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Withdraw",
-        style: "destructive",
-        onPress: async () => {
-          if (!applicationId) return;
-          setWithdrawing(true);
-          try {
-            await applicationsApi.withdrawApplication(applicationId);
-            Alert.alert("Application withdrawn successfully.");
-            await load();
-          } catch (err) {
-            Alert.alert("Could not withdraw", err instanceof Error ? err.message : "Please try again.");
-          } finally {
-            setWithdrawing(false);
-          }
-        },
+    if (!applicationId) return;
+    confirmAction(
+      "Withdraw application?",
+      "Are you sure you want to withdraw this application?",
+      "Withdraw",
+      async () => {
+        setWithdrawing(true);
+        try {
+          await applicationsApi.withdrawApplication(applicationId);
+          await load();
+        } catch (err) {
+          Alert.alert("Could not withdraw", err instanceof Error ? err.message : "Please try again.");
+        } finally {
+          setWithdrawing(false);
+        }
       },
-    ]);
+      { destructive: true }
+    );
   };
 
   if (loading) {

@@ -14,6 +14,7 @@ import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatCurrency, formatDate } from "../../utils/formatters";
 import { formatAnswerValue, formatYesNo } from "../../utils/applicationDisplay";
+import { confirmAction } from "../../utils/confirm";
 import type { ApplicationDetail } from "../../types";
 
 interface FieldRowProps {
@@ -98,30 +99,33 @@ export const ApplicantDetailsScreen: React.FC = () => {
 
   const handleReject = () => {
     if (!applicationId) return;
-    Alert.alert("Reject applicant?", "This applicant will be marked as rejected.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Reject",
-        style: "destructive",
-        onPress: () => runAction("reject", () => applicationsApi.rejectApplication(applicationId)),
-      },
-    ]);
+    confirmAction(
+      "Reject applicant?",
+      "This applicant will be marked as rejected.",
+      "Reject",
+      () => runAction("reject", () => applicationsApi.rejectApplication(applicationId)),
+      { destructive: true }
+    );
   };
 
   const handleHire = () => {
     if (!applicationId) return;
-    Alert.alert("Hire this applicant?", "They will be marked as hired for this gig.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Hire", onPress: () => runAction("hire", () => applicationsApi.hireApplication(applicationId)) },
-    ]);
+    confirmAction(
+      "Hire this applicant?",
+      "They will be marked as hired for this gig.",
+      "Hire",
+      () => runAction("hire", () => applicationsApi.hireApplication(applicationId))
+    );
   };
 
   const handleComplete = () => {
     if (!applicationId) return;
-    Alert.alert("Mark work as completed?", "This confirms the work for this gig is finished.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Mark Completed", onPress: () => runAction("complete", () => applicationsApi.completeApplication(applicationId)) },
-    ]);
+    confirmAction(
+      "Mark work as completed?",
+      "This confirms the work for this gig is finished.",
+      "Mark Completed",
+      () => runAction("complete", () => applicationsApi.completeApplication(applicationId))
+    );
   };
 
   if (loading) {
