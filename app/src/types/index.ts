@@ -99,7 +99,17 @@ export interface Category {
 export type GigPostStatus = "PENDING" | "ACTIVE" | "REJECTED" | "CLOSED" | "COMPLETED";
 export type GigPaymentType = "HOURLY" | "DAILY" | "FIXED";
 
+export interface EmployerSummary {
+ averageRating: number | null;
+ totalReviews: number;
+ completedGigs: number;
+ isVerified: boolean;
+}
+
 export interface GigPostBusiness {
+ bio?: string;
+ location?: string;
+ avatarUrl?: string;
   id: string;
   name: string;
   email: string;
@@ -107,6 +117,7 @@ export interface GigPostBusiness {
 }
 
 export interface GigPost {
+ employerSummary?: EmployerSummary;
   id: string;
   title: string;
   description: string;

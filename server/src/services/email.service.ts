@@ -6,13 +6,69 @@ import {
   reportResolvedTemplate,
   reportDismissedTemplate,
   accountWarningTemplate,
+  gigPostedTemplate,
+  applicationSubmittedTemplate,
+  hiredConfirmationTemplate,
 } from "./email.templates";
 
 export async function sendGigCompletedAndReviewRequestedEmail(
   to: string,
-  params: { recipientName: string; counterpartName: string; gigTitle: string }
+  params: {
+    recipientName: string;
+    counterpartName: string;
+    gigTitle: string;
+    paymentAmount?: number;
+    paymentType?: string;
+  }
 ): Promise<void> {
   const { subject, html, text } = gigCompletedAndReviewRequestedTemplate(params);
+  await sendMail({ to, subject, html, text });
+}
+
+export async function sendGigPostedEmail(
+  to: string,
+  params: {
+    recipientName: string;
+    gigTitle: string;
+    category: string;
+    paymentAmount: number;
+    paymentType: string;
+    location: string;
+  }
+): Promise<void> {
+  const { subject, html, text } = gigPostedTemplate(params);
+  await sendMail({ to, subject, html, text });
+}
+
+export async function sendApplicationSubmittedEmail(
+  to: string,
+  params: {
+    recipientName: string;
+    gigTitle: string;
+    businessName: string;
+    appliedDate: string;
+    details?: string;
+  }
+): Promise<void> {
+  const { subject, html, text } = applicationSubmittedTemplate(params);
+  await sendMail({ to, subject, html, text });
+}
+
+export async function sendHiredConfirmationEmail(
+  to: string,
+  params: {
+    recipientName: string;
+    gigTitle: string;
+    businessName: string;
+    businessContact?: string;
+    location: string;
+    startDate: string;
+    startTime?: string;
+    paymentAmount: number;
+    paymentType: string;
+  }
+): Promise<void> {
+  const { subject, html, text } = hiredConfirmationTemplate(params);
   await sendMail({ to, subject, html, text });
 }
 

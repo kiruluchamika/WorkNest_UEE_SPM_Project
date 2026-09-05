@@ -6,6 +6,7 @@ import { AuthedRequest } from "../middleware/auth.middleware";
 import { CreateGigPostInput, UpdateGigPostInput, RejectGigInput } from "../validators/gig.validator";
 import { markGigComplete } from "../services/gigCompletion.service";
 import { fetchGigWithCategory } from "../services/gig.service";
+import { createNotification } from "../services/notification.service";
 
 const ADMIN_GIG_INCLUDE = {
   category: true,
@@ -105,6 +106,22 @@ export async function createGig(
     });
     const gig = await fetchGigWithCategory(created.id);
 
+    await createNotification({
+      recipientId: userId,
+      type: "GIG_POSTED",
+      title: "Gig Submitted",
+      message: `"${gig.title}" has been submitted and is pending review.`,
+      link: `/gigs/${gig.id}`,
+      relatedEntityId: gig.id,
+      emailParams: {
+        gigTitle: gig.title,
+        category: gig.category.name,
+        paymentAmount: Number(gig.paymentAmount),
+        paymentType: gig.paymentType,
+        location: gig.location,
+      },
+    });
+
     res.status(201).json({ gig: toPublicGig(gig) });
   } catch (err) {
     if (err instanceof HttpError) return next(err);
@@ -153,12 +170,12 @@ export async function listActiveGigs(req: Request, res: Response, next: NextFunc
       },
       include: {
         category: true,
-        business: { select: { id: true, name: true, email: true, phone: true } },
+        business: { select: { id: true, name: true, email: true, phone: true, bio: true, location: true, avatarUrl: true } },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ gigs: await Promise.all(gigs.map(toPublicGigWithFilledPositions)) });
+    res.json({ gigs: await enrichEmployers(await Promise.all(gigs.map(toPublicGigWithFilledPositions))) });
   } catch (err) {
     next(err);
   }
@@ -172,7 +189,7 @@ export async function getPublicGig(req: Request<{ id: string }>, res: Response, 
       where: { id, isDeleted: false },
       include: {
         category: true,
-        business: { select: { id: true, name: true, email: true, phone: true } },
+        business: { select: { id: true, name: true, email: true, phone: true, bio: true, location: true, avatarUrl: true } },
       },
     });
 
@@ -180,7 +197,7 @@ export async function getPublicGig(req: Request<{ id: string }>, res: Response, 
       return next(new HttpError(404, "Gig not found"));
     }
 
-    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
+    res.json({ gig: (await enrichEmployers([await toPublicGigWithFilledPositions(gig)]))[0] });
   } catch (err) {
     next(err);
   }
@@ -439,4 +456,22 @@ export async function rejectGig(
   } catch (err) {
     next(err);
   }
+}
+
+// Batch employer aggregates to avoid one reputation request per card.
+async function enrichEmployers<T extends { businessId: string }>(gigs: T[]) {
+ const ids = [...new Set(gigs.map(g => g.businessId))];
+ if (!ids.length) return gigs;
+ const [ratings, completed] = await Promise.all([
+ prisma.review.groupBy({ by: ["revieweeId"], where: { revieweeId: { in: ids }, status: "PUBLISHED" }, _avg: { rating: true }, _count: { rating: true } }),
+ prisma.gigPost.groupBy({ by: ["businessId"], where: { businessId: { in: ids }, status: "COMPLETED", isDeleted: false }, _count: { id: true } }),
+ ]);
+ const ratingMap = new Map(ratings.map(r => [r.revieweeId, r]));
+ const completedMap = new Map(completed.map(r => [r.businessId, r._count.id]));
+ return gigs.map(g => { const r = ratingMap.get(g.businessId); return { ...g, employerSummary: {
+ averageRating: r?._avg.rating == null ? null : Math.round(r._avg.rating * 10) / 10,
+ totalReviews: r?._count.rating ?? 0, completedGigs: completedMap.get(g.businessId) ?? 0,
+ // Shop-owner verification is not yet backed by a verification workflow.
+ isVerified: false,
+ } }; });
 }

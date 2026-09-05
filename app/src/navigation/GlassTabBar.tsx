@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     }),
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(220, 242, 244, 0.55)",
   },
   tabButton: {

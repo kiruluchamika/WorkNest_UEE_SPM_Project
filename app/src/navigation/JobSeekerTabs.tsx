@@ -1,3 +1,4 @@
+import { EmployerProfileScreen } from "../screens/jobseeker/EmployerProfileScreen";
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -18,6 +19,7 @@ import { ReviewFormScreen } from "../screens/shared/ReviewFormScreen";
 import { GlassTabBar } from "./GlassTabBar";
 
 export type JobSeekerStackParamList = {
+  EmployerProfile: { gigId: string };
   BrowseGigs: undefined;
   GigDetail: { gigId: string };
   ApplyGig: { gigId: string };
@@ -55,6 +57,7 @@ function JobSeekerStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="BrowseGigs" component={BrowseGigsScreen} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} />
+      <Stack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
       <Stack.Screen name="ApplyGig" component={ApplyGigScreen} />
       <Stack.Screen name="ApplyToGig" component={ApplyToGigScreen} />
     </Stack.Navigator>
