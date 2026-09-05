@@ -1,3 +1,6 @@
+import { EmployerSection } from "../../components/gig/EmployerSection";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { JobSeekerStackParamList } from "../../navigation/JobSeekerTabs";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
@@ -30,7 +33,7 @@ function paymentTypeLabel(value: string): string {
 
 export const GigDetailScreen: React.FC = () => {
   const route = useRoute();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<JobSeekerStackParamList>>();
   const { user } = useAuth();
   const { gigId } = route.params as { gigId: string };
   const [gig, setGig] = useState<GigPost | null>(null);
@@ -128,7 +131,7 @@ export const GigDetailScreen: React.FC = () => {
 
           <View style={styles.metaRow}>
             <Feather name="map-pin" size={16} color={colors.textMuted} />
-            <Text style={styles.metaText}>{gig.location}</Text>
+            <Text style={styles.metaText}>Work address: {gig.location}</Text>
           </View>
           <View style={styles.metaRow}>
             <Feather name="calendar" size={16} color={colors.textMuted} />
@@ -149,7 +152,8 @@ export const GigDetailScreen: React.FC = () => {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Skills needed</Text>
+          <Text style={styles.sectionTitle}>Requirements & skills</Text>
+          {!gig.requiredSkills.length && <Text style={styles.description}>No specific skills listed. See the gig description for requirements.</Text>}
           <View style={styles.skills}>
             {gig.requiredSkills.map((skill) => (
               <View key={skill} style={styles.skillChip}>
@@ -158,6 +162,20 @@ export const GigDetailScreen: React.FC = () => {
             ))}
           </View>
         </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Pay breakdown</Text>
+          <Text style={styles.title}>{formatCurrency(gig.paymentAmount)}</Text>
+          <Text style={styles.description}>
+            {gig.paymentType === "FIXED"
+              ? "Fixed payment per worker for this gig."
+              : gig.paymentType === "HOURLY"
+                ? "Per hour, per worker. Total pay depends on the hours agreed with the employer."
+                : "Per day, per worker. Total pay depends on the days agreed with the employer."}
+          </Text>
+        </Card>
+
+        <EmployerSection gig={gig} onViewProfile={() => navigation.navigate("EmployerProfile", { gigId: gig.id })} />
 
         {canApply ? (
           <Button
@@ -281,6 +299,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   metaText: {
+    flex: 1,
     fontSize: typography.sizes.base,
     color: colors.text,
     marginLeft: spacing.sm,

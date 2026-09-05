@@ -27,3 +27,12 @@ export async function getUserWorkHistory(userId: string): Promise<WorkHistoryEnt
     throw new Error(extractErrorMessage(err, "Could not load work history."));
   }
 }
+
+export async function getUserReviewsPage(userId: string, page = 1, limit = 20): Promise<{ reviews: Review[]; total: number }> {
+  try {
+    const { data } = await http.get(`/users/${userId}/reviews`, { params: { page, limit } });
+    return data;
+  } catch (err) {
+    throw new Error(extractErrorMessage(err, "Could not load reviews."));
+  }
+}

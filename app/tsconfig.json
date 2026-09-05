@@ -8,10 +8,9 @@
     "skipLibCheck": true,
     "jsx": "react-native",
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ]
     }
   },
