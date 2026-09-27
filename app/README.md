@@ -30,7 +30,7 @@ app/
 │   ├── screens/      # Role-based screens
 │   ├── theme/        # Colors, spacing, typography
 │   ├── types/        # Shared TypeScript types
-│   └── utils/        # Constants, formatters, validators
+│   └── utils/        # Constants, formatters, validators.
 ├── App.tsx
 ├── app.config.ts
 ├── package.json
