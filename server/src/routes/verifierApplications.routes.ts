@@ -1,3 +1,4 @@
+import { receiveDocuments } from "../services/privateDocuments";
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
@@ -18,7 +19,7 @@ verifierApplicationRoutes.patch("/reactivation-requests/:requestId/reject", vali
 export const verifierSelfServiceRoutes = Router();
 verifierSelfServiceRoutes.use(requireAuth, requireRole("verifier"));
 verifierSelfServiceRoutes.get("/latest", getLatestVerifierApplication);
-verifierSelfServiceRoutes.post("/", validateBody(verifierReapplicationSchema), createVerifierReapplication);
+verifierSelfServiceRoutes.post("/", validateBody(verifierReapplicationSchema), receiveDocuments(["identityDocumentReference"]), createVerifierReapplication);
 verifierSelfServiceRoutes.patch("/:id/acknowledge-approval", acknowledgeVerifierApproval);
 verifierSelfServiceRoutes.get("/reactivation-request/latest", getLatestReactivationRequest);
-verifierSelfServiceRoutes.post("/reactivation-request", validateBody(reactivationRequestSchema), createReactivationRequest);
+verifierSelfServiceRoutes.post("/reactivation-request", validateBody(reactivationRequestSchema), receiveDocuments(["attachmentReference"]), createReactivationRequest);

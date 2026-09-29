@@ -10,6 +10,7 @@ export const registerSchema = z.object({
   district: z.enum(districtSchemaValues, { error: "Please select a supported district" }).optional(),
   identityType: z.string().trim().min(2, "ID type is required").optional(),
   identityNumber: z.string().trim().min(4, "ID number is required").optional(),
+  identityDocumentReferenceUpload: z.unknown().optional(),
   identityDocumentReference: z.string().trim().optional(),
   identityDocumentMetadata: z.record(z.string(), z.unknown()).optional(),
   addressInformation: z.string().trim().min(5, "Address information is required").optional(),

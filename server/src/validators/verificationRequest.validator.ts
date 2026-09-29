@@ -4,7 +4,9 @@ import { districtSchemaValues } from "../constants/districts";
 export const createVerificationRequestSchema = z.object({
   district: z.enum(districtSchemaValues, { error: "Please select a supported district" }),
   personalInformation: z.string().trim().min(10, "Personal information is required"),
+  identityDocumentUpload: z.unknown().optional(),
   identityDocument: z.string().trim().optional().default(""),
+  supportingEvidenceUpload: z.unknown().optional(),
   supportingEvidence: z.string().trim().optional(),
   communityReferences: z.string().trim().min(5, "Community references are required"),
 });
