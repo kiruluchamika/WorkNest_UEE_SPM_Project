@@ -16,3 +16,12 @@ export async function listAdminFlagged(){try{return (await http.get("/admin/veri
 export async function resolveAdminFlag(id:string,response:string,returned:boolean){try{return (await http.patch(`/admin/verification-work/requests/${id}/${returned?"return":"confirm"}`,{response})).data.request as VerificationRequest}catch(e){throw fail(e,"Could not resolve flagged case.")}}
 export async function getAdminVerificationOverview(){try{return (await http.get("/admin/verification-work/overview")).data.overview as AdminVerificationOverview}catch(e){throw fail(e,"Could not load verification overview.")}}
 export async function getAdminVerifierStatistics(applicationId:string){try{return (await http.get(`/admin/verification-work/verifiers/${applicationId}/statistics`)).data.statistics as AdminVerifierStatistics}catch(e){throw fail(e,"Could not load verifier statistics.")}}
+
+export async function listAdminVerificationRequests(status: "ASSIGNED" | "UNDER_REVIEW" | "RETURNED_FOR_REVIEW") {
+  try { return (await http.get("/admin/verification-work/requests", { params: { status } })).data.requests as VerificationRequest[]; }
+  catch (e) { throw fail(e, "Could not load verification requests."); }
+}
+export async function listAdminVerificationHistory(tab: "APPROVED" | "REJECTED" | "FLAGGED") {
+  try { return (await http.get("/admin/verification-work/history", { params: { tab } })).data.requests as VerificationRequest[]; }
+  catch (e) { throw fail(e, "Could not load verification history."); }
+}
