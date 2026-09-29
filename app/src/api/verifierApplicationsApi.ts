@@ -37,8 +37,8 @@ export async function getLatestReactivationRequest(): Promise<VerifierReactivati
   try { const { data } = await http.get("/verifier/applications/reactivation-request/latest"); return data.request; }
   catch (error) { throw new Error(extractErrorMessage(error, "Could not load reactivation request.")); }
 }
-export async function submitReactivationRequest(explanation: string, attachmentReference?: string): Promise<VerifierReactivationRequest> {
-  try { const { data } = await http.post("/verifier/applications/reactivation-request", { explanation, attachmentReference: attachmentReference || undefined, attachmentMetadata: attachmentReference ? { displayName: attachmentReference } : undefined }); return data.request; }
+export async function submitReactivationRequest(explanation: string, attachmentReference?: string, attachmentReferenceUpload?: import("../components/common/DocumentField").DocumentUpload): Promise<VerifierReactivationRequest> {
+  try { const { data } = await http.post("/verifier/applications/reactivation-request", { explanation, attachmentReferenceUpload, attachmentReference: attachmentReference || undefined, attachmentMetadata: attachmentReference ? { displayName: attachmentReference } : undefined }); return data.request; }
   catch (error) { throw new Error(extractErrorMessage(error, "Could not submit reactivation request.")); }
 }
 export async function approveReactivationRequest(id: string): Promise<VerifierReactivationRequest> {

@@ -1,3 +1,4 @@
+import { DocumentField, DocumentUpload } from "../../components/common/DocumentField";
 import React, { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -37,6 +38,8 @@ export const VerificationRequestScreen: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [identityType, setIdentityType] = useState("");
   const [identityNumber, setIdentityNumber] = useState("");
+  const [identityUpload,setIdentityUpload]=useState<DocumentUpload>();
+  const [supportingUpload,setSupportingUpload]=useState<DocumentUpload>();
   const [supportingEvidence, setSupportingEvidence] = useState("");
   const [communityReferences, setCommunityReferences] = useState("");
   const [error, setError] = useState("");
@@ -80,7 +83,7 @@ export const VerificationRequestScreen: React.FC = () => {
       const request = await submitVerificationRequest({
         district,
         personalInformation,
-        identityDocument,
+        identityDocument, identityDocumentUpload: identityUpload, supportingEvidenceUpload: supportingUpload,
         supportingEvidence: supportingEvidence || undefined,
         communityReferences,
       });
@@ -140,6 +143,8 @@ export const VerificationRequestScreen: React.FC = () => {
               placeholder={`Enter ${identityNumberLabels[identityType].toLowerCase()}`}
             />
           ) : null}
+          <DocumentField label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
+          <DocumentField label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
           <Input label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
           <Input label="Community References" value={communityReferences} onChangeText={setCommunityReferences} multiline rows={3} />
           {error ? <Text style={s.error}>{error}</Text> : null}

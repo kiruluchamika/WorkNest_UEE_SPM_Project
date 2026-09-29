@@ -69,6 +69,7 @@ export interface VerifierApplicationPayload {
   district: string;
   identityType: "NATIONAL_ID" | "PASSPORT" | "DRIVING_LICENCE";
   identityNumber: string;
+  identityDocumentReferenceUpload?: import("../components/common/DocumentField").DocumentUpload;
   identityDocumentReference?: string;
   identityDocumentMetadata?: Record<string, unknown>;
   addressInformation: string;

@@ -1,3 +1,4 @@
+import { DocumentField, DocumentUpload } from "../../components/common/DocumentField";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -46,6 +47,7 @@ export const RegisterScreen: React.FC = () => {
   const [districtLoadError, setDistrictLoadError] = useState("");
   const [identityType, setIdentityType] = useState("");
   const [identityNumber, setIdentityNumber] = useState("");
+  const [documentUpload, setDocumentUpload] = useState<DocumentUpload>();
   const [identityDocumentReference, setIdentityDocumentReference] = useState("");
   const [addressInformation, setAddressInformation] = useState("");
   const [communityReference, setCommunityReference] = useState("");
@@ -87,8 +89,7 @@ export const RegisterScreen: React.FC = () => {
 
     try {
       await register({ name, email, phone, role, password, ...(role === "verifier" ? {
-        district, identityType, identityNumber, identityDocumentReference,
-        ...(identityDocumentReference ? { identityDocumentMetadata: { storage: "private-reference", originalName: identityDocumentReference } } : {}),
+        district, identityType, identityNumber, identityDocumentReference, identityDocumentReferenceUpload: documentUpload,
         addressInformation, communityReference,
       } : {}) });
       Alert.alert("Account created!", role === "verifier" ? "Your verifier application is pending review." : "Welcome to WorkNest.");
@@ -200,7 +201,7 @@ export const RegisterScreen: React.FC = () => {
                 { value: "NATIONAL_ID", label: "National identity card" }, { value: "PASSPORT", label: "Passport" }, { value: "DRIVING_LICENCE", label: "Driving licence" },
               ]} />
               <Input label="ID number" value={identityNumber} onChangeText={setIdentityNumber} placeholder="Identity document number" error={errors.identityNumber} />
-              <Input label="Identity document (optional for testing)" value={identityDocumentReference} onChangeText={setIdentityDocumentReference} placeholder="Secure file reference or filename" error={errors.identityDocumentReference} />
+              <DocumentField label="Identity document" value={documentUpload} onChange={setDocumentUpload} disabled={isLoading}/>
               <Text style={styles.documentNote}>Optional in this development build. When supplied, the document reference is not published by WorkNest.</Text>
               <Input label="Address / supporting information" value={addressInformation} onChangeText={setAddressInformation} placeholder="Residential address and supporting details" multiline rows={3} error={errors.addressInformation} />
               <Input label="Community reference (optional)" value={communityReference} onChangeText={setCommunityReference} placeholder="Reference name and contact information" multiline rows={3} error={errors.communityReference} />

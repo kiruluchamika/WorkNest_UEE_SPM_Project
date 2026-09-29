@@ -1,3 +1,4 @@
+import { DocumentEvidence } from "../../components/common/DocumentField";
 import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
@@ -206,6 +207,7 @@ export const ProfileScreen: React.FC = () => {
             </>
           )}
         </Card>
+        {verificationRequest ? <Card><DocumentEvidence label="Identity document" value={verificationRequest.identityDocument}/><DocumentEvidence label="Supporting evidence" value={verificationRequest.supportingEvidence}/></Card> : null}
         <Button title="Sign out" variant="outline" onPress={logout} />
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
