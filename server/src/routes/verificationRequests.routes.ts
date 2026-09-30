@@ -1,3 +1,4 @@
+import * as revocation from "../controllers/verificationRevocation.controller";
 import { receiveDocuments } from "../services/privateDocuments";
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware";
@@ -13,3 +14,12 @@ export const adminVerificationRoutes=Router();adminVerificationRoutes.use(requir
 // Admin read-only lists reuse the existing queue/history queries and role guard.
 adminVerificationRoutes.get("/requests", controller.listVerifierRequests);
 adminVerificationRoutes.get("/history", controller.listHistory);
+
+jobSeekerVerificationRoutes.get("/state", revocation.myVerificationState);
+adminVerificationRoutes.get("/verified-jobseekers", revocation.listVerifiedJobSeekers);
+adminVerificationRoutes.get("/revocations", revocation.listRevocations);
+adminVerificationRoutes.get("/jobseekers/:userId", revocation.jobSeekerVerificationDetails);
+adminVerificationRoutes.post("/requests/:requestId/revoke", validateBody(schemas.badgeReasonSchema), revocation.revokeBadge);
+adminVerificationRoutes.get("/admin-gate", revocation.listGateRequests);
+adminVerificationRoutes.post("/admin-gate/:requestId/allow", revocation.allowGate);
+adminVerificationRoutes.post("/admin-gate/:requestId/deny", validateBody(schemas.badgeReasonSchema), revocation.denyGate);

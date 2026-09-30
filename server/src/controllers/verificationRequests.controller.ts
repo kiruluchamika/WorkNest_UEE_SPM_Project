@@ -10,7 +10,7 @@ const requestInclude = {
   assignedVerifier: { select: { id: true, name: true, email: true } },
   adminReviewer: { select: { id: true, name: true, email: true } },
 } as const;
-const activeStatuses = ["PENDING", "ASSIGNED", "UNDER_REVIEW", "FLAGGED", "RETURNED_FOR_REVIEW"] as VerificationRequestStatus[];
+const activeStatuses = ["ADMIN_REVIEW", "PENDING", "ASSIGNED", "UNDER_REVIEW", "FLAGGED", "RETURNED_FOR_REVIEW"] as VerificationRequestStatus[];
 
 export async function getAdminVerificationOverview(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -59,6 +59,20 @@ export async function createVerificationRequest(req: Request, res: Response, nex
     const { userId } = req as AuthedRequest;
     const existing = await prisma.verificationRequest.findFirst({ where: { applicantId: userId, status: { in: activeStatuses } } });
     if (existing) return next(new HttpError(409, "You already have an active verification request."));
+    const revocation = await prisma.verificationRevocation.findFirst({ where: { verificationRequest: { applicantId: userId } }, orderBy: { revokedAt: "desc" } });
+    if (revocation) {
+      if (!req.body.gateExplanation?.trim()) return next(new HttpError(400, "Explain why you are requesting verification again."));
+      // Including relations during create requires a transaction unsupported by
+      // PrismaNeonHTTP. Write first, then load the normal response separately.
+      const created = await prisma.verificationRequest.create({ data: {
+        applicantId: userId, district: req.body.district, personalInformation: req.body.personalInformation,
+        identityDocument: req.body.identityDocument || "", supportingEvidence: req.body.supportingEvidence || null,
+        communityReferences: req.body.communityReferences, status: "ADMIN_REVIEW", gateStatus: "PENDING",
+        gateExplanation: req.body.gateExplanation, revocationId: revocation.id,
+      } });
+      const request = await prisma.verificationRequest.findUnique({ where: { id: created.id }, include: requestInclude });
+      return res.status(201).json({ request });
+    }
     const id = randomUUID(); const now = new Date();
     const rows = await neonSql`
       WITH eligible AS (
@@ -86,7 +100,10 @@ export async function createVerificationRequest(req: Request, res: Response, nex
     `;
     const request = await prisma.verificationRequest.findUnique({ where: { id: rows[0].id as string }, include: requestInclude });
     res.status(201).json({ request });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if ((error as { code?: string }).code === "P2002") return next(new HttpError(409, "You already have a request waiting for Admin review."));
+    next(error);
+  }
 }
 
 export async function getMyJobSeekerRequests(req: Request, res: Response, next: NextFunction) {
