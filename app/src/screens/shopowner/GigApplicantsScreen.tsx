@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +28,35 @@ const TABS: { value: FilterTab; label: string }[] = [
   { value: "COMPLETED", label: "Completed" },
 ];
 
+type SortOption = "NEWEST" | "OLDEST" | "TRUST" | "PAY";
+
+// NEWEST matches the server's default order (createdAt desc).
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "NEWEST", label: "Newest" },
+  { value: "OLDEST", label: "Oldest" },
+  { value: "TRUST", label: "Trust score" },
+  { value: "PAY", label: "Lowest pay" },
+];
+
+function compareApplicants(a: GigApplicantListItem, b: GigApplicantListItem, sort: SortOption): number {
+  const byNewest = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  switch (sort) {
+    case "OLDEST":
+      return -byNewest;
+    case "TRUST":
+      return (b.applicant.trustScore ?? 0) - (a.applicant.trustScore ?? 0) || byNewest;
+    case "PAY": {
+      // Applicants who didn't state expected pay go last.
+      const aPay = a.expectedSalary ?? Number.POSITIVE_INFINITY;
+      const bPay = b.expectedSalary ?? Number.POSITIVE_INFINITY;
+      if (aPay === bPay) return byNewest;
+      return aPay < bPay ? -1 : 1;
+    }
+    default:
+      return byNewest;
+  }
+}
+
 export const GigApplicantsScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -40,6 +69,8 @@ export const GigApplicantsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<FilterTab>("ALL");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortOption>("NEWEST");
 
   const load = useCallback(async () => {
     if (!gigId) {
@@ -78,10 +109,13 @@ export const GigApplicantsScreen: React.FC = () => {
     return result;
   }, [applicants]);
 
-  const filtered = useMemo(
-    () => (tab === "ALL" ? applicants : applicants.filter((a) => a.status === tab)),
-    [applicants, tab]
-  );
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return applicants
+      .filter((a) => tab === "ALL" || a.status === tab)
+      .filter((a) => !query || a.applicant.name.toLowerCase().includes(query))
+      .sort((a, b) => compareApplicants(a, b, sort));
+  }, [applicants, tab, search, sort]);
 
   if (loading) {
     return (
@@ -134,12 +168,46 @@ export const GigApplicantsScreen: React.FC = () => {
           ))}
         </ScrollView>
 
+        <View style={styles.searchBox}>
+          <Feather name="search" size={16} color={colors.textMuted} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by applicant name"
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+              <Feather name="x" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
+          <Text style={styles.sortLabel}>Sort:</Text>
+          {SORT_OPTIONS.map((s) => (
+            <TouchableOpacity
+              key={s.value}
+              onPress={() => setSort(s.value)}
+              style={[styles.sortChip, sort === s.value && styles.tabActive]}
+            >
+              <Text style={[styles.tabText, sort === s.value && styles.tabTextActive]}>{s.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {filtered.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              {tab === "ALL"
-                ? "No applicants yet."
-                : `No ${TABS.find((t) => t.value === tab)?.label.toLowerCase()} applicants yet.`}
+              {search.trim()
+                ? `No applicants match "${search.trim()}".`
+                : tab === "ALL"
+                  ? "No applicants yet."
+                  : `No ${TABS.find((t) => t.value === tab)?.label.toLowerCase()} applicants yet.`}
             </Text>
           </Card>
         ) : (
@@ -206,6 +274,39 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginRight: spacing.sm,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    marginLeft: spacing.sm,
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+  },
+  sortLabel: {
+    alignSelf: "center",
+    fontSize: typography.sizes.sm,
+    fontWeight: "600",
+    color: colors.textMuted,
+    marginRight: spacing.sm,
+  },
+  sortChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,

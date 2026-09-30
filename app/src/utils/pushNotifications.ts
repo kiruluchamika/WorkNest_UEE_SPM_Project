@@ -1,9 +1,19 @@
 import { Platform } from "react-native";
-import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import type * as NotificationsModule from "expo-notifications";
 import * as pushNotificationApi from "../api/pushNotificationApi";
 
-Notifications.setNotificationHandler({
+// Expo Go on Android (SDK 53+) throws as soon as expo-notifications is
+// imported, so the module is only loaded where push is actually supported.
+// In unsupported environments every export below becomes a no-op.
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const isPushSupported = Platform.OS !== "web" && !(isExpoGo && Platform.OS === "android");
+
+const Notifications: typeof NotificationsModule | null = isPushSupported
+  ? require("expo-notifications")
+  : null;
+
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
     shouldSetBadge: false,
@@ -17,7 +27,7 @@ function getProjectId(): string | undefined {
 }
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (Platform.OS === "web") return null;
+  if (!Notifications) return null;
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -66,7 +76,7 @@ export async function unregisterPushTokenAsync(token: string | null): Promise<vo
 }
 
 export function addPushTokenRefreshListener(onToken: (token: string) => void) {
-  if (Platform.OS === "web") return { remove: () => {} };
+  if (!Notifications) return { remove: () => {} };
 
   return Notifications.addPushTokenListener(async ({ data }) => {
     await pushNotificationApi.registerPushToken(data);
@@ -75,7 +85,7 @@ export function addPushTokenRefreshListener(onToken: (token: string) => void) {
 }
 
 export function addForegroundNotificationListener(onReceive: () => void) {
-  if (Platform.OS === "web") return { remove: () => {} };
+  if (!Notifications) return { remove: () => {} };
 
   return Notifications.addNotificationReceivedListener(() => {
     onReceive();
@@ -89,7 +99,7 @@ export interface PushNotificationData {
   relatedEntityId?: string;
 }
 
-function extractData(notification: Notifications.Notification): PushNotificationData {
+function extractData(notification: NotificationsModule.Notification): PushNotificationData {
   return (notification.request.content.data ?? {}) as PushNotificationData;
 }
 
@@ -97,7 +107,7 @@ function extractData(notification: Notifications.Notification): PushNotification
 // or freshly launched by the tap). Does NOT fire for a true cold start —
 // use getLastNotificationResponseAsync for that case.
 export function addNotificationResponseListener(onResponse: (data: PushNotificationData) => void) {
-  if (Platform.OS === "web") return { remove: () => {} };
+  if (!Notifications) return { remove: () => {} };
 
   return Notifications.addNotificationResponseReceivedListener((response) => {
     onResponse(extractData(response.notification));
@@ -107,7 +117,7 @@ export function addNotificationResponseListener(onResponse: (data: PushNotificat
 // Checks whether the app was launched by tapping a notification (the
 // process was not already running). Resolves to null otherwise.
 export async function getLastNotificationResponseAsync(): Promise<PushNotificationData | null> {
-  if (Platform.OS === "web") return null;
+  if (!Notifications) return null;
 
   const response = await Notifications.getLastNotificationResponseAsync();
   return response ? extractData(response.notification) : null;
