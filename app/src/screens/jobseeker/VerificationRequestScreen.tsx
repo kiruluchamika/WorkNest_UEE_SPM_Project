@@ -10,7 +10,7 @@ import { Input } from "../../components/common/Input";
 import { Button } from "../../components/common/Button";
 import { useAuth } from "../../context/AuthContext";
 import { getDistricts } from "../../api/districtsApi";
-import { submitVerificationRequest } from "../../api/verificationRequestsApi";
+import { submitVerificationRequest, getMyVerificationState } from "../../api/verificationRequestsApi";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -31,6 +31,10 @@ const identityNumberLabels: Record<string, string> = {
 export const VerificationRequestScreen: React.FC = () => {
   const nav = useNavigation();
   const { user, refreshCurrentUser } = useAuth();
+  const [previouslyRevoked,setPreviouslyRevoked]=useState(false);
+  const [stateLoading,setStateLoading]=useState(true);
+  const [stateError, setStateError] = useState("");
+  const [gateExplanation,setGateExplanation]=useState("");
   const [districts, setDistricts] = useState<string[]>([]);
   const [district, setDistrict] = useState("");
   const [fullName, setFullName] = useState(user?.name || "");
@@ -45,7 +49,21 @@ export const VerificationRequestScreen: React.FC = () => {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const loadVerificationState = async () => {
+    setStateLoading(true);
+    setStateError("");
+    try {
+      const state = await getMyVerificationState();
+      setPreviouslyRevoked(!!state.revocation);
+    } catch (e) {
+      setStateError(e instanceof Error ? e.message : "Could not load verification status.");
+    } finally {
+      setStateLoading(false);
+    }
+  };
+
   useEffect(() => {
+    void loadVerificationState();
     getDistricts().then(setDistricts).catch((e) => setError(e.message));
   }, []);
 
@@ -71,6 +89,7 @@ export const VerificationRequestScreen: React.FC = () => {
       return;
     }
 
+    if(previouslyRevoked&&!gateExplanation.trim()){setError("Explain why you are requesting verification again.");return;}
     setBusy(true);
     setError("");
     try {
@@ -81,7 +100,7 @@ export const VerificationRequestScreen: React.FC = () => {
       ].join("\n");
       const identityDocument = identityType ? `${identityType}: ${identityNumber.trim()}` : "";
       const request = await submitVerificationRequest({
-        district,
+        district, gateExplanation: previouslyRevoked ? gateExplanation : undefined,
         personalInformation,
         identityDocument, identityDocumentUpload: identityUpload, supportingEvidenceUpload: supportingUpload,
         supportingEvidence: supportingEvidence || undefined,
@@ -89,7 +108,7 @@ export const VerificationRequestScreen: React.FC = () => {
       });
       Alert.alert(
         "Request submitted",
-        request.status === "ASSIGNED"
+        request.status === "ADMIN_REVIEW" ? "Your request is waiting for Admin approval." : request.status === "ASSIGNED"
           ? "A Community Verifier has been assigned."
           : "Your request is waiting for an eligible verifier.",
       );
@@ -146,9 +165,11 @@ export const VerificationRequestScreen: React.FC = () => {
           <DocumentField label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
           <DocumentField label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
           <Input label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
+          {previouslyRevoked ? <Input label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}
           <Input label="Community References" value={communityReferences} onChangeText={setCommunityReferences} multiline rows={3} />
           {error ? <Text style={s.error}>{error}</Text> : null}
-          <Button title="Submit Verification Request" onPress={submit} loading={busy} />
+          {stateError ? <><Text style={s.error}>{stateError}</Text><Button title="Retry verification status" variant="outline" onPress={loadVerificationState} loading={stateLoading}/></> : null}
+          <Button title="Submit Verification Request" onPress={submit} loading={busy} disabled={stateLoading || !!stateError} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

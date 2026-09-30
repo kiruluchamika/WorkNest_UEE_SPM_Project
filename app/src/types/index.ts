@@ -76,12 +76,13 @@ export interface VerifierApplicationPayload {
   communityReference?: string;
 }
 
-export type VerificationRequestStatus = "PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
+export type VerificationRequestStatus = "ADMIN_REVIEW"|"ADMIN_DENIED"|"PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
 export interface VerificationRequest {
   id:string; applicantId:string; applicant:{id:string;name:string;email:string;phone?:string;bio?:string;location?:string};
   district:string; personalInformation:string; identityDocument:string; supportingEvidence?:string; communityReferences:string;
   status:VerificationRequestStatus; assignedVerifierId?:string; submittedAt:string; assignedAt?:string; reviewStartedAt?:string; decidedAt?:string;
   verifierNote?:string; rejectionReason?:string; flagReason?:string; flaggedAt?:string; wasFlagged:boolean; adminResponse?:string; adminReviewedAt?:string;
+  gateStatus?: "PENDING" | "ALLOWED" | "DENIED"; gateExplanation?:string; gateReason?:string; gateReviewedAt?:string; revocation?: VerificationRevocation; badgeRevocation?: VerificationRevocation;
   assignedVerifier?:{id:string;name:string;email:string}; adminReviewer?:{id:string;name:string;email:string};
 }
 export interface VerifierDashboardData { application?:{district:string;isAvailable:boolean;status:VerifierApplicationStatus};queues:{awaiting:number;underReview:number;returned:number};today:{assigned:number;approved:number;rejected:number;flagged:number};allTime:{assigned:number;approved:number;rejected:number;flagged:number}; }
@@ -406,3 +407,10 @@ export interface ReviewReport {
 export interface FlaggedReview extends Review {
   reports: ReviewReport[];
 }
+
+export interface VerificationRevocation {
+  id: string; verificationRequestId: string; reason: string; revokedAt: string; revokedById: string;
+  revokedBy?: { id: string; name: string }; verificationRequest?: VerificationRequest;
+}
+export interface VerificationState { verified: boolean; revocation?: VerificationRevocation; request?: VerificationRequest }
+export interface JobSeekerVerificationDetails { user: { id: string; name: string; email: string }; verified: boolean; requests: VerificationRequest[]; revocations: VerificationRevocation[] }
