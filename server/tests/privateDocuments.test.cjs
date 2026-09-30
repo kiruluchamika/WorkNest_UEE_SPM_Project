@@ -7,6 +7,7 @@ const path = require('node:path');
 Object.assign(process.env, { DATABASE_URL: 'postgresql://test:test@localhost/test', JWT_SECRET: 'isolated-upload-test-secret', SMTP_HOST: 'localhost', SMTP_USER: 'test', SMTP_PASS: 'test', SMTP_FROM: 'test@example.com' });
 const tables = { verifierApplication: [], verifierReactivationRequest: [], verificationRequest: [] };
 let latestStatus = 'REJECTED'; let failWrite = false; let last;
+let previouslyRevoked = false;
 function matches(row, where = {}) {
   return Object.entries(where).every(([key, value]) => {
     if (key === 'AND') return value.every(x => matches(row, x));
@@ -22,6 +23,12 @@ const prisma = Object.fromEntries(Object.entries(tables).map(([name, rows]) => [
   findFirst: async ({ where, orderBy }) => orderBy && name === 'verifierApplication' ? { id: 'application', status: latestStatus } : rows.find(r => matches(r, where)) || null,
   findUnique: async () => last,
 }]));
+prisma.verificationRevocation = { findFirst: async () => previouslyRevoked ? { id: 'prior-revocation' } : null };
+prisma.verificationRequest.create = async ({ data }) => {
+  last = { ...data, id: 'created', assignedVerifierId: null };
+  tables.verificationRequest.push(last);
+  return last;
+};
 function neonSql(strings, ...values) {
   if (failWrite) throw new Error('simulated persistence failure');
   const sql = strings.join('?');
@@ -50,6 +57,7 @@ const flows = [
   { url: '/api/verifier/applications', role: 'verifier', fields: ['identityDocumentReference'], body: application },
   { url: '/api/verifier/applications/reactivation-request', role: 'verifier', fields: ['attachmentReference'], body: { explanation: 'Please review my supporting evidence.' }, status: 'SUSPENDED' },
   { url: '/api/jobseeker/verification-requests', role: 'jobseeker', fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Test personal information', identityDocument: 'NATIONAL_ID: 1234', supportingEvidence: 'Existing written evidence', communityReferences: 'Community reference' } },
+  { url: '/api/jobseeker/verification-requests', role: 'jobseeker', revoked: true, fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Revoked user information', communityReferences: 'Community reference', gateExplanation: 'Please review my new evidence' } },
 ];
 
 test('optional uploads through actual application endpoints and private downloads', async t => {
@@ -64,9 +72,16 @@ test('optional uploads through actual application endpoints and private download
   try {
     assert.equal((await fetch(base + '/health')).status, 200);
     for (const flow of flows) {
+      previouslyRevoked = !!flow.revoked;
       latestStatus = flow.status || 'REJECTED';
       await t.test(flow.url, async () => {
         reset(); assert.equal((await post(flow, flow.body)).status, 201, 'no attachment');
+        if (flow.revoked) {
+          assert.equal(last.status, 'ADMIN_REVIEW');
+          assert.equal(last.assignedVerifierId, null);
+          assert.equal(last.identityDocument, '');
+          assert.equal(last.supportingEvidence, null);
+        }
         for (const field of flow.fields) {
           reset();
           const body = { ...flow.body, [field + 'Upload']: png };
@@ -81,7 +96,7 @@ test('optional uploads through actual application endpoints and private download
           assert.equal((await fetch(url, { headers: auth('jobseeker', 'stranger') })).status, 404, 'other user denied');
           assert.equal((await fetch(url, { headers: auth('admin', 'admin') })).status, 200, 'admin allowed');
           assert.equal((await fetch(url, { headers: auth('verifier', 'unassigned') })).status, 404, 'unassigned verifier denied');
-          if (flow.role === 'jobseeker') {
+          if (flow.role === 'jobseeker' && !flow.revoked) {
             tables.verifierApplication.push({ id: 'active', applicantId: 'assigned', status: 'APPROVED' });
             assert.equal((await fetch(url, { headers: auth('verifier', 'assigned') })).status, 200);
             tables.verifierApplication[0].status = 'SUSPENDED';
