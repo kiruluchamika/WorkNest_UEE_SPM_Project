@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -15,8 +15,10 @@ import * as applicationApi from "../../api/applicationApi";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
-import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import { EmptyState } from "../../components/common/EmptyState";
+import { StatusBadge } from "../../components/common/StatusBadge";
+import { colors, shadows } from "../../theme/colors";
+import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import type { Application } from "../../types";
 
@@ -46,61 +48,90 @@ export const ApplicantsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
-        </TouchableOpacity>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.navBar}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={18} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Applicants</Text>
+          <View style={{ width: 36 }} />
+        </View>
 
-        <Text style={styles.title}>Applicants</Text>
-        <Text style={styles.gigTitle}>{gig?.title || "Gig"}</Text>
+        {gig ? (
+          <Card style={styles.gigSummaryCard}>
+            <Text style={styles.gigTitle}>{gig.title}</Text>
+            <Text style={styles.gigSubtitle}>Review and manage applicant submissions</Text>
+          </Card>
+        ) : null}
 
         {loading ? (
           <LoadingSpinner message="Loading applicants..." />
         ) : applications.length === 0 ? (
-          <Text style={styles.empty}>No applications yet.</Text>
+          <EmptyState
+            icon="users"
+            title="No applications yet"
+            description="When jobseekers apply to this gig, their submissions will appear here."
+          />
         ) : (
-          applications.map((app) => (
-            <Card key={app.id} style={styles.appCard}>
-              <View style={styles.appHeader}>
-                <Text style={styles.appName}>{app.jobSeekerName}</Text>
-                <Text
-                  style={[
-                    styles.status,
-                    {
-                      color:
-                        app.status === "accepted"
-                          ? colors.success
-                          : app.status === "rejected"
-                          ? colors.danger
-                          : colors.warning,
-                    },
-                  ]}
-                >
-                  {app.status.toUpperCase()}
-                </Text>
-              </View>
-              <Text style={styles.message}>&ldquo;{app.message}&rdquo;</Text>
+          applications.map((app) => {
+            const mappedStatus =
+              app.status === "accepted" ? "HIRED" : app.status === "rejected" ? "REJECTED" : "PENDING";
 
-              {app.status === "pending" ? (
-                <View style={styles.actions}>
-                  <Button
-                    title="Accept"
-                    onPress={() => handleDecision(app.id, "accepted")}
-                    size="sm"
-                    style={styles.actionButton}
-                  />
-                  <Button
-                    title="Reject"
-                    variant="danger"
-                    onPress={() => handleDecision(app.id, "rejected")}
-                    size="sm"
-                    style={styles.actionButton}
-                  />
+            return (
+              <Card key={app.id} style={styles.appCard}>
+                <View style={styles.appHeader}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {app.jobSeekerName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.applicantInfo}>
+                    <Text style={styles.appName}>{app.jobSeekerName}</Text>
+                  </View>
+                  <StatusBadge status={mappedStatus} size="sm" />
                 </View>
-              ) : null}
-            </Card>
-          ))
+
+                {app.message ? (
+                  <View style={styles.messageWrap}>
+                    <Text style={styles.message}>&ldquo;{app.message}&rdquo;</Text>
+                  </View>
+                ) : null}
+
+                {app.status === "pending" ? (
+                  <View style={styles.actionsRow}>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        title="Accept"
+                        icon="check"
+                        onPress={() => handleDecision(app.id, "accepted")}
+                        size="sm"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        title="Reject"
+                        icon="x"
+                        variant="danger"
+                        onPress={() => handleDecision(app.id, "rejected")}
+                        size="sm"
+                      />
+                    </View>
+                  </View>
+                ) : null}
+              </Card>
+            );
+          })
         )}
+
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </SafeAreaView>
@@ -113,57 +144,94 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   scroll: {
-    padding: spacing.lg,
+    padding: spacing.md,
+    maxWidth: 760,
+    width: "100%",
+    alignSelf: "center",
   },
-  back: {
+  navBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.md,
   },
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: "700",
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.subtle,
+  },
+  navTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: "800",
     color: colors.text,
+  },
+  gigSummaryCard: {
+    marginBottom: spacing.md,
   },
   gigTitle: {
     fontSize: typography.sizes.base,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 2,
   },
-  empty: {
-    fontSize: typography.sizes.base,
+  gigSubtitle: {
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    textAlign: "center",
-    marginTop: spacing.md,
   },
   appCard: {
     marginBottom: spacing.md,
+    ...shadows.subtle,
   },
   appHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.sm,
+    gap: spacing.sm,
+    marginBottom: spacing.xs + 2,
   },
-  appName: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
-    color: colors.text,
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  status: {
+  avatarText: {
+    color: colors.primaryDark,
     fontSize: typography.sizes.xs,
     fontWeight: "800",
   },
-  message: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-    lineHeight: 20,
-    fontStyle: "italic",
-    marginBottom: spacing.md,
+  applicantInfo: {
+    flex: 1,
   },
-  actions: {
+  appName: {
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  messageWrap: {
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  message: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
+  actionsRow: {
     flexDirection: "row",
     gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
+    marginTop: spacing.sm,
   },
 });
