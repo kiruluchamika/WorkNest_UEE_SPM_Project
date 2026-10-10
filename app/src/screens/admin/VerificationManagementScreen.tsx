@@ -23,6 +23,7 @@ const areas = [
   { label: "Verification Requests", route: "VerificationRequests", icon: "clipboard" },
   { label: "Flagged / Returned Cases", route: "FlaggedReturnedCases", icon: "flag" },
   { label: "Verifier Management", route: "VerifierManagement", icon: "shield" },
+  { label: "Verified Job Seeker Management", route: "VerifiedJobSeekerManagement", icon: "users" },
   { label: "Verification History", route: "VerificationHistory", icon: "clock" },
 ] as const;
 

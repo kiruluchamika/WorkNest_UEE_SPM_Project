@@ -1,3 +1,5 @@
+import * as revocation from "../controllers/verificationRevocation.controller";
+import { receiveDocuments } from "../services/privateDocuments";
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
@@ -5,6 +7,19 @@ import { validateBody } from "../middleware/validate.middleware";
 import * as controller from "../controllers/verificationRequests.controller";
 import * as schemas from "../validators/verificationRequest.validator";
 
-export const jobSeekerVerificationRoutes=Router();jobSeekerVerificationRoutes.use(requireAuth,requireRole("jobseeker"));jobSeekerVerificationRoutes.post("/",validateBody(schemas.createVerificationRequestSchema),controller.createVerificationRequest);jobSeekerVerificationRoutes.get("/mine",controller.getMyJobSeekerRequests);
+export const jobSeekerVerificationRoutes=Router();jobSeekerVerificationRoutes.use(requireAuth,requireRole("jobseeker"));jobSeekerVerificationRoutes.post("/",validateBody(schemas.createVerificationRequestSchema),receiveDocuments(["identityDocument", "supportingEvidence"]),controller.createVerificationRequest);jobSeekerVerificationRoutes.get("/mine",controller.getMyJobSeekerRequests);
 export const verifierWorkRoutes=Router();verifierWorkRoutes.use(requireAuth,requireRole("verifier"));verifierWorkRoutes.get("/dashboard",controller.getVerifierDashboard);verifierWorkRoutes.patch("/availability",validateBody(schemas.availabilitySchema),controller.setAvailability);verifierWorkRoutes.get("/requests",controller.listVerifierRequests);verifierWorkRoutes.get("/history",controller.listHistory);verifierWorkRoutes.get("/requests/:id",controller.getVerificationRequest);verifierWorkRoutes.patch("/requests/:id/start",controller.startReview);verifierWorkRoutes.patch("/requests/:id/approve",validateBody(schemas.verifierNoteSchema),controller.approveVerification);verifierWorkRoutes.patch("/requests/:id/reject",validateBody(schemas.rejectVerificationSchema),controller.rejectVerification);verifierWorkRoutes.patch("/requests/:id/flag",validateBody(schemas.flagVerificationSchema),controller.flagVerification);
 export const adminVerificationRoutes=Router();adminVerificationRoutes.use(requireAuth,requireRole("admin"));adminVerificationRoutes.get("/overview",controller.getAdminVerificationOverview);adminVerificationRoutes.get("/verifiers/:applicationId/statistics",controller.getAdminVerifierStatistics);adminVerificationRoutes.get("/flagged",controller.listFlagged);adminVerificationRoutes.get("/requests/:id",controller.getVerificationRequest);adminVerificationRoutes.patch("/requests/:id/return",validateBody(schemas.adminFlagOutcomeSchema),controller.returnFlaggedVerification);adminVerificationRoutes.patch("/requests/:id/confirm",validateBody(schemas.adminFlagOutcomeSchema),controller.confirmFlaggedVerification);
+
+// Admin read-only lists reuse the existing queue/history queries and role guard.
+adminVerificationRoutes.get("/requests", controller.listVerifierRequests);
+adminVerificationRoutes.get("/history", controller.listHistory);
+
+jobSeekerVerificationRoutes.get("/state", revocation.myVerificationState);
+adminVerificationRoutes.get("/verified-jobseekers", revocation.listVerifiedJobSeekers);
+adminVerificationRoutes.get("/revocations", revocation.listRevocations);
+adminVerificationRoutes.get("/jobseekers/:userId", revocation.jobSeekerVerificationDetails);
+adminVerificationRoutes.post("/requests/:requestId/revoke", validateBody(schemas.badgeReasonSchema), revocation.revokeBadge);
+adminVerificationRoutes.get("/admin-gate", revocation.listGateRequests);
+adminVerificationRoutes.post("/admin-gate/:requestId/allow", revocation.allowGate);
+adminVerificationRoutes.post("/admin-gate/:requestId/deny", validateBody(schemas.badgeReasonSchema), revocation.denyGate);
