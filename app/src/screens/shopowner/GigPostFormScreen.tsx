@@ -25,7 +25,7 @@ import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { GIG_PAYMENT_TYPES } from "../../utils/constants";
 import { gigPostFormSchema } from "../../utils/validators";
-import { parseDateOnly } from "../../utils/datetime";
+import { parseDateOnly, toDateOnlyString } from "../../utils/datetime";
 import * as categoryApi from "../../api/categoryApi";
 import type { Category, GigPaymentType } from "../../types";
 
@@ -162,13 +162,22 @@ export const GigPostFormScreen: React.FC = () => {
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
-        fieldErrors[issue.path[0].toString()] = issue.message;
+        const field = issue.path[0]?.toString() ?? "form";
+        // Keep the first message per field.
+        if (!fieldErrors[field]) fieldErrors[field] = issue.message;
       });
       setErrors(fieldErrors);
       return;
     }
 
-    const payload = {
+    // An untouched past start date is left alone so older gigs stay editable.
+    const startDateChanged = result.data.startDate !== editingGig?.startDate?.slice(0, 10);
+    if (startDateChanged && result.data.startDate < toDateOnlyString(new Date())) {
+      setErrors({ startDate: "Start date cannot be in the past." });
+      return;
+    }
+
+    const required = {
       title: result.data.title,
       categoryId: result.data.categoryId,
       description: result.data.description,
@@ -176,9 +185,6 @@ export const GigPostFormScreen: React.FC = () => {
       paymentAmount: result.data.paymentAmount,
       paymentType: result.data.paymentType,
       startDate: result.data.startDate,
-      startTime: result.data.startTime || undefined,
-      endDate: result.data.endDate || undefined,
-      endTime: result.data.endTime || undefined,
       workersNeeded: result.data.workersNeeded,
       requiredSkills: result.data.requiredSkills
         ? result.data.requiredSkills
@@ -186,17 +192,30 @@ export const GigPostFormScreen: React.FC = () => {
             .map((s) => s.trim())
             .filter(Boolean)
         : [],
-      contactInfo: result.data.contactInfo || undefined,
-      imageUrl: result.data.imageUrl || undefined,
     };
 
     setSubmitting(true);
     try {
       if (isEditing && gigId) {
-        await editGig(gigId, payload);
+        // null (not undefined) so emptied optional fields are cleared on the server.
+        await editGig(gigId, {
+          ...required,
+          startTime: result.data.startTime || null,
+          endDate: result.data.endDate || null,
+          endTime: result.data.endTime || null,
+          contactInfo: result.data.contactInfo || null,
+          imageUrl: result.data.imageUrl || null,
+        });
         navigation.goBack();
       } else {
-        await addGig(payload);
+        await addGig({
+          ...required,
+          startTime: result.data.startTime || undefined,
+          endDate: result.data.endDate || undefined,
+          endTime: result.data.endTime || undefined,
+          contactInfo: result.data.contactInfo || undefined,
+          imageUrl: result.data.imageUrl || undefined,
+        });
         setSuccess(true);
       }
     } catch (err) {
