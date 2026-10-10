@@ -10,6 +10,8 @@ import { JobSeekerTabs } from "./JobSeekerTabs";
 import { ShopOwnerTabs } from "./ShopOwnerTabs";
 import { AdminStack } from "./AdminStack";
 import { VerifierStack } from "./VerifierStack";
+import { navigationRef } from "./navigationRef";
+import { flushPendingNotificationLink } from "./notificationLinks";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -30,7 +32,7 @@ export const RootNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={() => flushPendingNotificationLink(user?.role)}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
           <Stack.Screen name="Auth">

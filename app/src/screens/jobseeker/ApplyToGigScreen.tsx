@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  KeyboardAvoidingView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -12,9 +21,12 @@ import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { ErrorState } from "../../components/common/ErrorState";
+import { StatusBadge } from "../../components/common/StatusBadge";
+import { SectionHeader } from "../../components/common/SectionHeader";
 import { YesNoToggle } from "../../components/applications/YesNoToggle";
 import { CustomQuestionField } from "../../components/applications/CustomQuestionField";
-import { colors } from "../../theme/colors";
+import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatCurrency, formatDate } from "../../utils/formatters";
@@ -68,49 +80,76 @@ export const ApplyToGigScreen: React.FC = () => {
         gigPostApi.getPublicGigPost(gigId),
         applicationSettingsApi.getPublicApplicationSettings(gigId),
       ]);
+
       setGig(gigData);
       setSettings(settingsData);
 
-      try {
-        const check = await applicationsApi.checkExistingApplication(gigId);
-        setAlreadyApplied(check.applied);
-        setExistingStatus(check.application?.status ?? null);
-      } catch {
-        setAlreadyApplied(false);
+      if (user?.role === "jobseeker") {
+        try {
+          const myApps = await applicationsApi.getMyApplications();
+          const match = myApps.find((a) => a.gigId === gigId);
+          if (match) {
+            setAlreadyApplied(true);
+            setExistingStatus(match.status);
+          }
+        } catch {
+          // non-critical
+        }
       }
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load this gig.");
+      setLoadError(err instanceof Error ? err.message : "Could not load application form.");
     } finally {
       setLoading(false);
     }
-  }, [gigId]);
+  }, [gigId, user]);
 
   useEffect(() => {
     loadAll();
   }, [loadAll]);
 
-  const applicationMode = settings?.applicationMode ?? "STANDARD";
   const requirements = settings?.requirements ?? getDefaultRequirements("STANDARD");
   const customQuestions: ApplicationQuestion[] = settings?.customQuestions ?? [];
+  const mode = settings?.applicationMode ?? "STANDARD";
 
-  const updateField = <K extends keyof ApplicationFormValues>(key: K, value: ApplicationFormValues[K]) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-    if (errors[key as string]) setErrors((prev) => ({ ...prev, [key as string]: "" }));
+  const updateField = <K extends keyof ApplicationFormValues>(
+    field: K,
+    val: ApplicationFormValues[K]
+  ) => {
+    setValues((prev) => ({ ...prev, [field]: val }));
+    if (errors[field as string]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field as string];
+        return next;
+      });
+    }
   };
 
-  const updateAnswer = (questionId: string, value: string | boolean) => {
-    setValues((prev) => ({ ...prev, answers: { ...prev.answers, [questionId]: value } }));
+  const updateAnswer = (questionId: string, answer: string | boolean) => {
+    setValues((prev) => ({
+      ...prev,
+      answers: { ...prev.answers, [questionId]: answer },
+    }));
     const key = `question_${questionId}`;
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
+    if (errors[key]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
 
   const handleSubmit = async () => {
-    if (submitting || !gigId) return;
+    if (!gigId) return;
 
     const validationErrors = validateApplicationForm(requirements, customQuestions, values);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      Alert.alert("Check your application", "Please fill in all required fields before submitting.");
+      Alert.alert(
+        "Missing or Invalid Fields",
+        "Please check the highlighted fields and correct any issues before submitting."
+      );
       return;
     }
 
@@ -118,243 +157,359 @@ export const ApplyToGigScreen: React.FC = () => {
     try {
       const payload = buildApplicationPayload(gigId, customQuestions, values);
       await applicationsApi.submitApplication(payload);
-      Alert.alert("Application submitted successfully!", undefined, [
-        { text: "OK", onPress: () => navigation.getParent()?.navigate("MyApplicationsTab" as never) },
-      ]);
+      Alert.alert(
+        "Application Submitted!",
+        "Your application has been sent to the employer. You can track its status in My Applications.",
+        [
+          {
+            text: "View My Applications",
+            onPress: () => {
+              (navigation as any).getParent()?.navigate("MyApplicationsTab", {
+                screen: "MyApplications",
+              });
+            },
+          },
+        ]
+      );
     } catch (err) {
-      Alert.alert("Could not submit", err instanceof Error ? err.message : "Please try again.");
+      Alert.alert(
+        "Could not submit application",
+        err instanceof Error ? err.message : "Please check your information and try again."
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!isJobseeker) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-        <View style={styles.centerState}>
-          <Text style={styles.centerTitle}>Youth accounts only</Text>
-          <Text style={styles.centerText}>Only Youth job seekers can apply for gigs.</Text>
-          <Button title="Go Back" variant="outline" onPress={() => navigation.goBack()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
 
-  if (loadError) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-        <View style={styles.centerState}>
-          <View style={styles.errorIcon}>
-            <Feather name="alert-triangle" size={22} color={colors.danger} />
-          </View>
-          <Text style={styles.centerTitle}>Can&apos;t open this gig</Text>
-          <Text style={styles.centerText}>{loadError}</Text>
-          <Button title="Go Back" variant="outline" onPress={() => navigation.goBack()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (loading || !gig) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <LoadingSpinner message="Loading application..." fullScreen />
+        <LoadingSpinner message="Preparing application form..." fullScreen />
       </SafeAreaView>
     );
   }
 
-  const schedule = [formatDate(gig.startDate), gig.endDate ? `- ${formatDate(gig.endDate)}` : null]
-    .filter(Boolean)
-    .join(" ");
+  if (loadError || !gig) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
+        <ErrorState
+          title="Can't open application"
+          message={loadError ?? "Something went wrong."}
+          onRetry={loadAll}
+          onGoBack={() => navigation.goBack()}
+          fullScreen
+        />
+      </SafeAreaView>
+    );
+  }
+
   const remainingWorkers = Math.max(gig.workersNeeded - (gig.filledPositions ?? 0), 0);
   const capacityFull = remainingWorkers === 0;
+  const isBlocked = !isJobseeker || gig.status !== "ACTIVE" || capacityFull || alreadyApplied;
+
+  const schedule = [
+    formatDate(gig.startDate),
+    gig.endDate ? `- ${formatDate(gig.endDate)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const hasFormFields =
+    requirements.requireExperience ||
+    requirements.requireAvailability ||
+    requirements.requireTransportation ||
+    requirements.requireExpectedSalary ||
+    requirements.requireShortMessage ||
+    requirements.requireCoverLetter ||
+    requirements.requireCV ||
+    requirements.requirePortfolio ||
+    customQuestions.length > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Feather name="arrow-left" size={16} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Apply for Gig</Text>
-          <View style={{ width: 32 }} />
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Navigation Header */}
+          <View style={styles.navBar}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              activeOpacity={0.8}
+            >
+              <Feather name="arrow-left" size={18} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.navTitle}>Apply to Gig</Text>
+            <View style={{ width: 36 }} />
+          </View>
 
-        <Card style={styles.gigCard}>
-          <Text style={styles.gigTitle}>{gig.title}</Text>
-          <Text style={styles.gigMeta}>{gig.category?.name ?? "Uncategorized"}</Text>
-          <Text style={styles.gigMeta}>{gig.location}</Text>
-          <Text style={styles.gigMeta}>{schedule}</Text>
-          <Text style={styles.gigPayment}>
-            {formatCurrency(gig.paymentAmount)} / {paymentTypeLabel(gig.paymentType)}
-          </Text>
-        </Card>
-
-        {gig.status !== "ACTIVE" || capacityFull ? (
-          <Card style={styles.blockedCard}>
-            <Feather name="lock" size={18} color={colors.warning} />
-            <Text style={styles.blockedTitle}>Not accepting applications</Text>
-            <Text style={styles.blockedText}>
-              {capacityFull
-                ? "All available positions have been filled."
-                : "This gig is not currently active, so it can't accept new applications."}
-            </Text>
-          </Card>
-        ) : alreadyApplied ? (
-          <Card style={styles.appliedCard}>
-            <Feather name="check-circle" size={22} color={colors.success} />
-            <Text style={styles.appliedTitle}>You have already applied for this gig.</Text>
-            <Text style={styles.appliedStatus}>Application Status: {existingStatus ?? "PENDING"}</Text>
-            <Button
-              title="View My Applications"
-              variant="outline"
-              onPress={() => navigation.getParent()?.navigate("MyApplicationsTab" as never)}
-            />
-          </Card>
-        ) : (
-          <>
-            {user ? (
-              <Card style={styles.applicantCard}>
-                <Text style={styles.sectionTitle}>Applying as</Text>
-                <Text style={styles.applicantName}>{user.name}</Text>
-                <Text style={styles.applicantMeta}>{user.email}</Text>
-                {user.phone ? <Text style={styles.applicantMeta}>{user.phone}</Text> : null}
-              </Card>
-            ) : null}
-
-            <View style={styles.modeBadge}>
-              <Feather name="zap" size={13} color={colors.primaryDark} />
-              <Text style={styles.modeBadgeText}>{modeLabel(applicationMode)} application</Text>
+          {/* Gig Summary Card */}
+          <Card style={styles.gigSummaryCard}>
+            <View style={styles.gigTopRow}>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{gig.category?.name ?? "General"}</Text>
+              </View>
+              <Text style={styles.paymentText}>
+                {formatCurrency(gig.paymentAmount)} / {paymentTypeLabel(gig.paymentType)}
+              </Text>
             </View>
+            <Text style={styles.gigTitle}>{gig.title}</Text>
+            <Text style={styles.businessName}>{gig.business?.name ?? "WorkNest Business"}</Text>
+            <View style={styles.metaRow}>
+              <Feather name="map-pin" size={13} color={colors.textMuted} />
+              <Text style={styles.metaText}>{gig.location}</Text>
+              {schedule ? (
+                <>
+                  <Text style={styles.dot}>•</Text>
+                  <Feather name="calendar" size={13} color={colors.textMuted} />
+                  <Text style={styles.metaText}>{schedule}</Text>
+                </>
+              ) : null}
+            </View>
+          </Card>
 
-            <Text style={styles.sectionTitle}>Required Information</Text>
-
-            {requirements.requireExperience ? (
-              <Input
-                label="Previous Experience *"
-                value={values.experience}
-                onChangeText={(v) => updateField("experience", v)}
-                placeholder="Briefly describe any relevant experience..."
-                multiline
-                rows={3}
-                error={errors.experience}
-              />
-            ) : null}
-
-            {requirements.requireAvailability ? (
-              <View>
-                <Input
-                  label="Availability *"
-                  value={values.availability}
-                  onChangeText={(v) => updateField("availability", v)}
-                  placeholder="e.g. I am available for the full job period"
-                  multiline
-                  rows={2}
-                  error={errors.availability}
-                />
-                <Text style={styles.helperText}>Gig runs {schedule || "on the dates above"}.</Text>
+          {/* Blocked / Already Applied States */}
+          {alreadyApplied ? (
+            <Card style={styles.blockedCard} variant="highlight">
+              <Feather name="check-circle" size={32} color={colors.successText} />
+              <Text style={styles.blockedTitle}>You Already Applied</Text>
+              <Text style={styles.blockedText}>
+                You submitted an application for this gig. You can check your application details and status below.
+              </Text>
+              <View style={styles.statusRow}>
+                <Text style={styles.statusLabel}>Current Status: </Text>
+                <StatusBadge status={existingStatus ?? "PENDING"} size="sm" />
               </View>
-            ) : null}
-
-            {requirements.requireTransportation ? (
-              <View style={styles.fieldBlock}>
-                <Text style={styles.label}>Reliable Transportation *</Text>
-                <YesNoToggle
-                  value={values.transportation}
-                  onChange={(v) => updateField("transportation", v)}
-                  error={errors.transportation}
-                />
+              <Button
+                title="View My Applications"
+                variant="primary"
+                onPress={() =>
+                  (navigation as any).getParent()?.navigate("MyApplicationsTab", {
+                    screen: "MyApplications",
+                  })
+                }
+                style={{ marginTop: spacing.md }}
+              />
+            </Card>
+          ) : capacityFull ? (
+            <Card style={styles.blockedCard} variant="warning">
+              <Feather name="lock" size={32} color={colors.warningText} />
+              <Text style={styles.blockedTitle}>All Positions Filled</Text>
+              <Text style={styles.blockedText}>
+                All available positions have been filled for this gig. Please browse other active opportunities.
+              </Text>
+              <Button
+                title="Browse Other Gigs"
+                variant="outline"
+                onPress={() => navigation.goBack()}
+                style={{ marginTop: spacing.md }}
+              />
+            </Card>
+          ) : !isJobseeker ? (
+            <Card style={styles.blockedCard} variant="warning">
+              <Feather name="alert-triangle" size={32} color={colors.warningText} />
+              <Text style={styles.blockedTitle}>Jobseeker Account Required</Text>
+              <Text style={styles.blockedText}>
+                You are currently signed in with a business or administrative account. Switch to a jobseeker account to apply for gigs.
+              </Text>
+            </Card>
+          ) : (
+            <>
+              {/* Mode Info Pill */}
+              <View style={styles.modeBadge}>
+                <Feather name="layers" size={14} color={colors.primaryDark} />
+                <Text style={styles.modeBadgeText}>
+                  {modeLabel(mode)} Application
+                </Text>
               </View>
-            ) : null}
 
-            {requirements.requireExpectedSalary ? (
-              <Input
-                label="Expected Pay / Rate *"
-                value={values.expectedSalary}
-                onChangeText={(v) => updateField("expectedSalary", v)}
-                placeholder="e.g. 3500"
-                keyboardType="numeric"
-                error={errors.expectedSalary}
-              />
-            ) : null}
+              {/* Form Content */}
+              {!hasFormFields ? (
+                <Card style={styles.card}>
+                  <Text style={styles.quickApplyNote}>
+                    This gig uses one-tap Quick Apply. No additional answers or attachments are required. Tap below to send your profile.
+                  </Text>
+                </Card>
+              ) : null}
 
-            {requirements.requireCV ? (
-              <Input
-                label="CV / Resume Link *"
-                value={values.cvUrl}
-                onChangeText={(v) => updateField("cvUrl", v)}
-                placeholder="https://..."
-                autoCapitalize="none"
-                keyboardType="url"
-                error={errors.cvUrl}
-              />
-            ) : null}
+              {/* Experience & Availability Section */}
+              {(requirements.requireExperience ||
+                requirements.requireAvailability ||
+                requirements.requireTransportation ||
+                requirements.requireExpectedSalary) && (
+                <Card style={styles.card}>
+                  <SectionHeader title="Experience & Availability" />
 
-            {requirements.requireCoverLetter ? (
-              <Input
-                label="Cover Letter *"
-                value={values.coverLetter}
-                onChangeText={(v) => updateField("coverLetter", v)}
-                placeholder="Tell the business why you're a good fit..."
-                multiline
-                rows={4}
-                error={errors.coverLetter}
-              />
-            ) : null}
+                  {requirements.requireExperience ? (
+                    <Input
+                      label="Previous Experience"
+                      required
+                      value={values.experience}
+                      onChangeText={(v) => updateField("experience", v)}
+                      placeholder="Briefly describe any relevant work experience or skills..."
+                      multiline
+                      rows={3}
+                      error={errors.experience}
+                    />
+                  ) : null}
 
-            {requirements.requirePortfolio ? (
-              <Input
-                label="Portfolio Link *"
-                value={values.portfolioUrl}
-                onChangeText={(v) => updateField("portfolioUrl", v)}
-                placeholder="https://..."
-                autoCapitalize="none"
-                keyboardType="url"
-                error={errors.portfolioUrl}
-              />
-            ) : null}
+                  {requirements.requireAvailability ? (
+                    <Input
+                      label="Availability"
+                      required
+                      value={values.availability}
+                      onChangeText={(v) => updateField("availability", v)}
+                      placeholder="e.g., Available all days for the specified gig hours"
+                      helperText={schedule ? `Gig dates: ${schedule}` : undefined}
+                      multiline
+                      rows={2}
+                      error={errors.availability}
+                    />
+                  ) : null}
 
-            {requirements.requireShortMessage ? (
-              <Input
-                label="Short Message *"
-                value={values.shortMessage}
-                onChangeText={(v) => updateField("shortMessage", v)}
-                placeholder="A quick note to the business..."
-                multiline
-                rows={2}
-                error={errors.shortMessage}
-              />
-            ) : null}
+                  {requirements.requireTransportation ? (
+                    <View style={styles.toggleFieldWrap}>
+                      <Text style={styles.fieldLabel}>
+                        Reliable Transportation <Text style={styles.requiredAsterisk}>*</Text>
+                      </Text>
+                      <YesNoToggle
+                        value={values.transportation}
+                        onChange={(v) => updateField("transportation", v)}
+                        error={errors.transportation}
+                      />
+                    </View>
+                  ) : null}
 
-            {customQuestions.length > 0 ? (
-              <>
-                <Text style={styles.sectionTitle}>Screening Questions</Text>
-                {customQuestions.map((q, index) => (
-                  <CustomQuestionField
-                    key={q.id ?? index}
-                    question={q}
-                    index={index}
-                    value={q.id ? values.answers[q.id] : undefined}
-                    onChange={(v) => q.id && updateAnswer(q.id, v)}
-                    error={q.id ? errors[`question_${q.id}`] : undefined}
+                  {requirements.requireExpectedSalary ? (
+                    <Input
+                      label="Expected Pay / Rate (LKR)"
+                      required
+                      value={values.expectedSalary}
+                      onChangeText={(v) => updateField("expectedSalary", v)}
+                      placeholder={`e.g., ${gig.paymentAmount}`}
+                      keyboardType="numeric"
+                      error={errors.expectedSalary}
+                    />
+                  ) : null}
+                </Card>
+              )}
+
+              {/* Messages & Cover Letter Section */}
+              {(requirements.requireShortMessage || requirements.requireCoverLetter) && (
+                <Card style={styles.card}>
+                  <SectionHeader title="Messages & Cover Letter" />
+
+                  {requirements.requireShortMessage ? (
+                    <Input
+                      label="Short Message to Employer"
+                      required
+                      value={values.shortMessage}
+                      onChangeText={(v) => updateField("shortMessage", v)}
+                      placeholder="A brief greeting or introduction..."
+                      multiline
+                      rows={2}
+                      error={errors.shortMessage}
+                    />
+                  ) : null}
+
+                  {requirements.requireCoverLetter ? (
+                    <Input
+                      label="Cover Letter"
+                      required
+                      value={values.coverLetter}
+                      onChangeText={(v) => updateField("coverLetter", v)}
+                      placeholder="Tell the business why you are the best fit for this role..."
+                      multiline
+                      rows={4}
+                      error={errors.coverLetter}
+                    />
+                  ) : null}
+                </Card>
+              )}
+
+              {/* CV & Portfolio Section */}
+              {(requirements.requireCV || requirements.requirePortfolio) && (
+                <Card style={styles.card}>
+                  <SectionHeader title="Links & Attachments" />
+
+                  {requirements.requireCV ? (
+                    <Input
+                      label="CV / Resume Link"
+                      required
+                      icon="file-text"
+                      value={values.cvUrl}
+                      onChangeText={(v) => updateField("cvUrl", v)}
+                      placeholder="https://drive.google.com/..."
+                      autoCapitalize="none"
+                      keyboardType="url"
+                      error={errors.cvUrl}
+                      helperText="Paste a public link to your CV or Resume"
+                    />
+                  ) : null}
+
+                  {requirements.requirePortfolio ? (
+                    <Input
+                      label="Portfolio / Website Link"
+                      required
+                      icon="globe"
+                      value={values.portfolioUrl}
+                      onChangeText={(v) => updateField("portfolioUrl", v)}
+                      placeholder="https://myportfolio.com"
+                      autoCapitalize="none"
+                      keyboardType="url"
+                      error={errors.portfolioUrl}
+                    />
+                  ) : null}
+                </Card>
+              )}
+
+              {/* Screening Questions */}
+              {customQuestions.length > 0 && (
+                <View style={styles.customQuestionsSection}>
+                  <SectionHeader
+                    title="Screening Questions"
+                    subtitle="Please answer each required question from the employer"
+                    count={customQuestions.length}
                   />
-                ))}
-              </>
-            ) : null}
+                  {customQuestions.map((q, index) => (
+                    <CustomQuestionField
+                      key={q.id ?? index}
+                      question={q}
+                      index={index}
+                      value={q.id ? values.answers[q.id] : undefined}
+                      onChange={(v) => q.id && updateAnswer(q.id, v)}
+                      error={q.id ? errors[`question_${q.id}`] : undefined}
+                    />
+                  ))}
+                </View>
+              )}
 
-            <View style={{ height: spacing.md }} />
+              {/* Submission Button */}
+              <View style={styles.submitWrap}>
+                <Button
+                  title="Submit Application"
+                  icon="send"
+                  onPress={handleSubmit}
+                  disabled={submitting}
+                  loading={submitting}
+                  size="lg"
+                />
+              </View>
+            </>
+          )}
 
-            <Button
-              title="Submit Application"
-              onPress={handleSubmit}
-              disabled={submitting}
-              loading={submitting}
-            />
-          </>
-        )}
-
-        <View style={{ height: spacing.xxl }} />
-      </ScrollView>
+          <View style={{ height: spacing.xxl }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -366,57 +521,84 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: spacing.md,
+    maxWidth: 760,
+    width: "100%",
+    alignSelf: "center",
   },
-  headerRow: {
+  navBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: radius.full,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
+    ...shadows.subtle,
   },
-  headerTitle: {
-    fontSize: typography.sizes.md,
+  navTitle: {
+    fontSize: typography.sizes.base,
     fontWeight: "800",
     color: colors.text,
   },
-  gigCard: {
+  gigSummaryCard: {
     marginBottom: spacing.md,
+  },
+  gigTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.xs,
+  },
+  categoryBadge: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+  },
+  categoryText: {
+    fontSize: typography.sizes.xxs,
+    fontWeight: "800",
+    color: colors.primaryDark,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  paymentText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
+    color: colors.primaryDark,
   },
   gigTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: "800",
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
-  gigMeta: {
-    fontSize: typography.sizes.sm,
+  businessName: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  metaText: {
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
   },
-  gigPayment: {
-    fontSize: typography.sizes.sm,
-    color: colors.success,
-    fontWeight: "700",
-    marginTop: spacing.xs,
-  },
-  applicantCard: {
-    marginBottom: spacing.md,
-    backgroundColor: colors.cream,
-  },
-  applicantName: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  applicantMeta: {
-    fontSize: typography.sizes.sm,
+  dot: {
     color: colors.textMuted,
+    marginHorizontal: 4,
   },
   modeBadge: {
     flexDirection: "row",
@@ -425,95 +607,72 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: colors.primarySoft,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: 6,
     borderRadius: radius.full,
-    marginBottom: spacing.lg,
-  },
-  modeBadgeText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "700",
-    color: colors.primaryDark,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  fieldBlock: {
     marginBottom: spacing.md,
   },
-  label: {
+  modeBadgeText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: "800",
+    color: colors.primaryDark,
+  },
+  card: {
+    marginBottom: spacing.md,
+  },
+  toggleFieldWrap: {
+    marginBottom: spacing.md,
+  },
+  fieldLabel: {
+    fontSize: typography.sizes.xs,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    marginBottom: spacing.xs + 2,
+    letterSpacing: 0.2,
+  },
+  requiredAsterisk: {
+    color: colors.danger,
+    fontWeight: "700",
+  },
+  quickApplyNote: {
     fontSize: typography.sizes.sm,
-    fontWeight: "600",
-    color: colors.text,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  customQuestionsSection: {
     marginBottom: spacing.sm,
   },
-  helperText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-    marginTop: -spacing.sm,
+  submitWrap: {
+    marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
   blockedCard: {
     alignItems: "center",
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
+    gap: spacing.xs,
   },
   blockedTitle: {
     fontSize: typography.sizes.base,
-    fontWeight: "700",
+    fontWeight: "800",
     color: colors.text,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    textAlign: "center",
+    marginTop: spacing.xs,
   },
   blockedText: {
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
     textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 280,
   },
-  appliedCard: {
+  statusRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.md,
-    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
-  appliedTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
-    color: colors.text,
-    textAlign: "center",
-    marginTop: spacing.xs,
-  },
-  appliedStatus: {
-    fontSize: typography.sizes.sm,
+  statusLabel: {
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    marginBottom: spacing.md,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  errorIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    backgroundColor: colors.dangerLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  centerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  centerText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginBottom: spacing.lg,
   },
 });

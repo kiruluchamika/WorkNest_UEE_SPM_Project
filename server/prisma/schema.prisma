@@ -95,6 +95,9 @@ enum NotificationType {
   REPORT_RESOLVED
   REPORT_DISMISSED
   ACCOUNT_WARNING
+  GIG_POSTED
+  APPLICATION_SUBMITTED
+  APPLICATION_HIRED
 }
 
 enum EmailStatus {
@@ -137,6 +140,7 @@ model User {
   reviewsReceived        Review[]           @relation("ReviewsReceived")
   workHistoryEntries     WorkHistoryEntry[]
   notifications          Notification[]
+  devicePushTokens       DevicePushToken[]
   reviewReports          ReviewReport[]
   moderationAudits       ModerationAudit[]  @relation("AdminModerationAudits")
   reputationAudits       ReputationAudit[]  @relation("ReputationAudits")
@@ -386,6 +390,19 @@ model Notification {
 
   @@index([recipientId, isRead])
   @@index([recipientId, createdAt])
+}
+
+model DevicePushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive])
 }
 
 model ReviewReport {

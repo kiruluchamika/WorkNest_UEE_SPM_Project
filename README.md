@@ -211,7 +211,7 @@ Workspace: WorkNest
 3. **Write the Project Charter / Product Vision doc.** Use your existing research as the seed:
    - *Problem:* the reviewed competitor apps (TaskRabbit, Fiverr, LinkedIn Jobs, ikman.lk Jobs) are global freelance marketplaces, formal job boards, or large-chain shift-hiring platforms — none build a locally verified, community-trusted hiring pool where small businesses and youth co-build reputation together.
    - *Vision:* "Local businesses and youth co-build a trusted community hiring pool."
-   - *Scope:* Sprint 0–2 covers registration, profiles, gig posting/browsing, community endorsement, application workflow, and ratings. Out of scope for this assignment: payments, push notifications, admin moderation dashboard.
+   - *Scope:* Sprint 0–2 covers registration, profiles, gig posting/browsing, community endorsement, application workflow, ratings, in-app notifications, email notifications, and device push notifications. Out of scope for this assignment: payments and admin moderation dashboard.
    - *Stakeholder/client role:* recruit a real community leader, youth program coordinator, or local shop owner to play the customer/stakeholder role in your sprint reviews (the brief requires this explicitly).
    - *Constraints:* 4-person team, ~8 active development weeks, free-tier hosting only.
 4. **Write Project Selection & Justification**, expanding your existing research-gap note into the rubric's "clear and comprehensive justification" (map explicitly to Real-World Relevance / Agile Suitability / Scope Manageability / Team Collaboration / Demo-Readiness / Technological Flexibility / Version Control, from the assignment guidelines table).

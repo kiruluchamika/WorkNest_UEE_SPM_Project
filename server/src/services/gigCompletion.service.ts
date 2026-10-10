@@ -36,8 +36,11 @@ export async function notifyGigParticipantOfCompletion(params: {
   gigId: string;
   gigTitle: string;
   includeGigCompletedNotice: boolean;
+  paymentAmount?: number;
+  paymentType?: string;
 }) {
-  const { recipientId, counterpartName, gigId, gigTitle, includeGigCompletedNotice } = params;
+  const { recipientId, counterpartName, gigId, gigTitle, includeGigCompletedNotice, paymentAmount, paymentType } =
+    params;
   const gigLink = `/gigs/${gigId}`;
 
   const jobs = [
@@ -48,7 +51,7 @@ export async function notifyGigParticipantOfCompletion(params: {
       message: "You can now review the person or business you worked with.",
       link: gigLink,
       relatedEntityId: gigId,
-      emailParams: { counterpartName, gigTitle },
+      emailParams: { counterpartName, gigTitle, paymentAmount, paymentType },
     }),
   ];
 
@@ -124,6 +127,8 @@ export async function markGigComplete(gigId: string, businessUserId: string) {
         gigId,
         gigTitle: gig.title,
         includeGigCompletedNotice: true,
+        paymentAmount: Number(gig.paymentAmount),
+        paymentType: gig.paymentType,
       }),
       notifyGigParticipantOfCompletion({
         recipientId: gig.business.id,
@@ -131,6 +136,8 @@ export async function markGigComplete(gigId: string, businessUserId: string) {
         gigId,
         gigTitle: gig.title,
         includeGigCompletedNotice: false,
+        paymentAmount: Number(gig.paymentAmount),
+        paymentType: gig.paymentType,
       }),
     ]);
   }

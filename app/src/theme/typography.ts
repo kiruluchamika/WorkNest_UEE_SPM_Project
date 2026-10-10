@@ -1,5 +1,6 @@
 export const typography = {
   sizes: {
+    xxs: 11,
     xs: 12,
     sm: 14,
     base: 16,
@@ -13,5 +14,7 @@ export const typography = {
     medium: "500" as const,
     semibold: "600" as const,
     bold: "700" as const,
+    extrabold: "800" as const,
   },
 };
+

@@ -9,12 +9,24 @@ import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
 
 interface AppHeaderProps {
+  title?: string;
   subtitle?: string;
+  showBack?: boolean;
+  onBackPress?: () => void;
   onBellPress?: () => void;
   onProfilePress?: () => void;
+  rightElement?: React.ReactNode;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onProfilePress }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({
+  title,
+  subtitle,
+  showBack = false,
+  onBackPress,
+  onBellPress,
+  onProfilePress,
+  rightElement,
+}) => {
   const { user, logout } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -31,29 +43,58 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onP
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <Image
-          source={require("../../../assets/images/icon.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        {showBack && onBackPress ? (
+          <TouchableOpacity
+            onPress={onBackPress}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={18} color={colors.text} />
+          </TouchableOpacity>
+        ) : (
+          <Image
+            source={require("../../../assets/images/icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        )}
         <View style={styles.copy}>
-          <Text style={styles.brand}>WorkNest</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          <Text style={styles.brand} numberOfLines={1}>
+            {title || "WorkNest"}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
       </View>
+
       <View style={styles.actions}>
-        <NotificationBell onPress={onBellPress} />
-        <TouchableOpacity
-          style={styles.avatar}
-          activeOpacity={0.8}
-          onPress={() => setMenuVisible(true)}
-        >
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
-          ) : (
-            <Feather name="user" size={13} color={colors.textInverse} />
-          )}
-        </TouchableOpacity>
+        {rightElement ? (
+          rightElement
+        ) : (
+          <>
+            <NotificationBell onPress={onBellPress} />
+            <TouchableOpacity
+              style={styles.avatar}
+              activeOpacity={0.8}
+              onPress={() => setMenuVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="User profile menu"
+            >
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarInitials}>
+                  {user?.name?.charAt(0).toUpperCase() || "W"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <Modal
@@ -63,13 +104,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onP
         onRequestClose={() => setMenuVisible(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setMenuVisible(false)}>
-          <Pressable style={styles.menuCard} onPress={() => {}}>
+          <Pressable style={styles.menuCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.menuHeader}>
               <View style={styles.menuAvatar}>
                 {user?.avatarUrl ? (
                   <Image source={{ uri: user.avatarUrl }} style={styles.menuAvatarImage} />
                 ) : (
-                  <Feather name="user" size={16} color={colors.textInverse} />
+                  <Text style={styles.avatarInitials}>
+                    {user?.name?.charAt(0).toUpperCase() || "W"}
+                  </Text>
                 )}
               </View>
               <View style={styles.menuIdentity}>
@@ -87,15 +130,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ subtitle, onBellPress, onP
             <View style={styles.menuDivider} />
 
             {onProfilePress ? (
-              <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleProfile}>
-                <Feather name="user" size={14} color={colors.text} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={handleProfile}
+              >
+                <Feather name="user" size={16} color={colors.textSecondary} />
                 <Text style={styles.menuItemTextDefault}>My Profile</Text>
               </TouchableOpacity>
             ) : null}
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleSignOut}>
-              <Feather name="log-out" size={14} color={colors.danger} />
-              <Text style={styles.menuItemText}>Sign Out</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={handleSignOut}
+            >
+              <Feather name="log-out" size={16} color={colors.danger} />
+              <Text style={styles.menuItemTextDanger}>Sign Out</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -113,12 +164,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    minHeight: 56,
   },
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: spacing.sm,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.sm,
   },
   logo: {
     width: 28,
@@ -129,9 +191,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brand: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.base,
     fontWeight: "800",
     color: colors.primaryDark,
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: typography.sizes.xs,
@@ -141,44 +204,50 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.xs,
   },
   avatar: {
-    width: 28,
-    height: 28,
+    width: 34,
+    height: 34,
     borderRadius: radius.full,
     backgroundColor: colors.primaryDark,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    marginLeft: spacing.xs,
   },
   avatarImage: {
     width: "100%",
     height: "100%",
   },
+  avatarInitials: {
+    color: colors.textInverse,
+    fontSize: typography.sizes.xs,
+    fontWeight: "800",
+  },
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(31, 42, 46, 0.35)",
+    backgroundColor: "rgba(21, 36, 41, 0.4)",
     alignItems: "flex-end",
-    paddingTop: 64,
+    paddingTop: 60,
     paddingRight: spacing.md,
   },
   menuCard: {
-    width: 220,
+    width: 240,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    ...shadows.medium,
-    shadowColor: colors.shadow,
+    ...shadows.floating,
   },
   menuHeader: {
     flexDirection: "row",
     alignItems: "center",
   },
   menuAvatar: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: radius.full,
     backgroundColor: colors.primaryDark,
     alignItems: "center",
@@ -212,16 +281,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.md,
   },
   menuItemTextDefault: {
     fontSize: typography.sizes.sm,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.text,
     marginLeft: spacing.sm,
   },
-  menuItemText: {
+  menuItemTextDanger: {
     fontSize: typography.sizes.sm,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.danger,
     marginLeft: spacing.sm,
   },

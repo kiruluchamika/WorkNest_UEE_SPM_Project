@@ -1,6 +1,7 @@
 import { NotificationType, EmailStatus, Prisma } from "@prisma/client";
 import { prisma } from "../config/db";
 import * as emailService from "./email.service";
+import { sendPushNotification } from "./pushNotification.service";
 
 // Notification types that never generate an email: GIG_COMPLETED's email is
 // folded into the REVIEW_REQUESTED email sent alongside it (one combined
@@ -30,6 +31,8 @@ async function sendNotificationEmail(
         recipientName,
         counterpartName: params.counterpartName as string,
         gigTitle: params.gigTitle as string,
+        paymentAmount: params.paymentAmount as number | undefined,
+        paymentType: params.paymentType as string | undefined,
       });
     case "REVIEW_RECEIVED":
       return emailService.sendReviewReceivedEmail(to, {
@@ -58,6 +61,35 @@ async function sendNotificationEmail(
       return emailService.sendAccountWarningEmail(to, {
         recipientName,
         reason: params.reason as string,
+      });
+    case "GIG_POSTED":
+      return emailService.sendGigPostedEmail(to, {
+        recipientName,
+        gigTitle: params.gigTitle as string,
+        category: params.category as string,
+        paymentAmount: params.paymentAmount as number,
+        paymentType: params.paymentType as string,
+        location: params.location as string,
+      });
+    case "APPLICATION_SUBMITTED":
+      return emailService.sendApplicationSubmittedEmail(to, {
+        recipientName,
+        gigTitle: params.gigTitle as string,
+        businessName: params.businessName as string,
+        appliedDate: params.appliedDate as string,
+        details: params.details as string | undefined,
+      });
+    case "APPLICATION_HIRED":
+      return emailService.sendHiredConfirmationEmail(to, {
+        recipientName,
+        gigTitle: params.gigTitle as string,
+        businessName: params.businessName as string,
+        businessContact: params.businessContact as string | undefined,
+        location: params.location as string,
+        startDate: params.startDate as string,
+        startTime: params.startTime as string | undefined,
+        paymentAmount: params.paymentAmount as number,
+        paymentType: params.paymentType as string,
       });
     case "GIG_COMPLETED":
     case "REVIEW_REPORTED":
@@ -92,6 +124,18 @@ export async function createNotification(input: CreateNotificationInput) {
       select: { email: true, name: true },
     }),
   ]);
+
+  void sendPushNotification({
+    recipientId: input.recipientId,
+    title: input.title,
+    body: input.message,
+    data: {
+      notificationId: notification.id,
+      type: input.type,
+      link: input.link,
+      relatedEntityId: input.relatedEntityId,
+    },
+  });
 
   if (!requiresEmail || !user) {
     return notification;

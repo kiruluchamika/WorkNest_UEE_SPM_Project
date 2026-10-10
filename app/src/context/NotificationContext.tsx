@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react";
 import * as notificationApi from "../api/notificationApi";
 import { useAuth } from "./AuthContext";
+import {
+  addForegroundNotificationListener,
+  addNotificationResponseListener,
+  getLastNotificationResponseAsync,
+} from "../utils/pushNotifications";
+import { navigateToNotificationLink } from "../navigation/notificationLinks";
 import type { Notification } from "../types";
 
 const PAGE_SIZE = 20;
@@ -52,6 +58,49 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (user) refresh();
   }, [user, refresh]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const subscription = addForegroundNotificationListener(() => {
+      refresh().catch(() => {});
+    });
+
+    return () => subscription.remove();
+  }, [user, refresh]);
+
+  // Tapping a notification while the app is foregrounded, backgrounded, or
+  // being launched by the tap itself.
+  useEffect(() => {
+    if (!user) return;
+
+    const subscription = addNotificationResponseListener((data) => {
+      navigateToNotificationLink(data.link, user.role);
+      refresh().catch(() => {});
+    });
+
+    return () => subscription.remove();
+  }, [user, refresh]);
+
+  // True cold start: the app process wasn't running and got launched by a
+  // notification tap. Checked once per app launch — `user` isn't resolved
+  // yet on the first render, so the latest value is read via a ref once the
+  // check settles. If the navigator isn't mounted yet either, the link is
+  // queued and replayed by RootNavigator's onReady.
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLastNotificationResponseAsync().then((data) => {
+      if (!cancelled && data?.link) navigateToNotificationLink(data.link, userRef.current?.role);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (!user || isLoadingMore || !hasMore) return;
