@@ -1,6 +1,6 @@
+import { toast } from "./toast";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import { Alert } from "react-native";
 
 const MAX_DIMENSION = 1080;
 const JPEG_COMPRESSION = 0.6;
@@ -27,7 +27,7 @@ async function compressToDataUri(uri: string): Promise<string> {
 export async function pickImageFromLibrary(): Promise<string | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    Alert.alert(
+    toast.error(
       "Permission needed",
       "Please allow photo library access in your device settings to attach an image."
     );
@@ -51,7 +51,7 @@ export async function pickImageFromLibrary(): Promise<string | null> {
 export async function captureImageFromCamera(): Promise<string | null> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
-    Alert.alert(
+    toast.error(
       "Permission needed",
       "Please allow camera access in your device settings to take a photo."
     );

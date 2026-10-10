@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from "react-native";
+import { toast } from "../../utils/toast";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -66,13 +67,13 @@ const STATUS_EXPLANATIONS: Record<JobApplicationStatus, { title: string; message
 
 async function openExternalUrl(url: string) {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    Alert.alert("Invalid Link", "This link must start with http:// or https://.");
+    toast.error("Invalid Link", "This link must start with http:// or https://.");
     return;
   }
 
   const supported = await Linking.canOpenURL(url);
   if (!supported) {
-    Alert.alert("Cannot Open Link", "This link could not be opened on your device.");
+    toast.error("Cannot Open Link", "This link could not be opened on your device.");
     return;
   }
 
@@ -124,7 +125,7 @@ export const ApplicationDetailsScreen: React.FC = () => {
           await applicationsApi.withdrawApplication(applicationId);
           await load();
         } catch (err) {
-          Alert.alert("Could not withdraw", err instanceof Error ? err.message : "Please try again.");
+          toast.error("Could not withdraw", err instanceof Error ? err.message : "Please try again.");
         } finally {
           setWithdrawing(false);
         }

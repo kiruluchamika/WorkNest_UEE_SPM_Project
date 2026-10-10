@@ -1,5 +1,6 @@
+import { toast } from "../../utils/toast";
 import React, { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { AppHeader } from "../../components/common/AppHeader";
@@ -84,7 +85,7 @@ export const VerificationRequestScreen: React.FC = () => {
         supportingEvidence: supportingEvidence || undefined,
         communityReferences,
       });
-      Alert.alert(
+      toast.success(
         "Request submitted",
         request.status === "ASSIGNED"
           ? "A Community Verifier has been assigned."

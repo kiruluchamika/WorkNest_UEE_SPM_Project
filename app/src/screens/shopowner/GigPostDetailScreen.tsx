@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useState } from "react";
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -103,7 +104,7 @@ export const GigPostDetailScreen: React.FC = () => {
             await closeGig(gig.id);
             await refresh();
           } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to close gig");
+            toast.error("Error", err instanceof Error ? err.message : "Failed to close gig");
           } finally {
             setBusy(false);
           }
@@ -125,7 +126,7 @@ export const GigPostDetailScreen: React.FC = () => {
             await removeGig(gig.id);
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to delete gig");
+            toast.error("Error", err instanceof Error ? err.message : "Failed to delete gig");
             setBusy(false);
           }
         },
@@ -138,10 +139,10 @@ export const GigPostDetailScreen: React.FC = () => {
     setBusy(true);
     try {
       await resubmitGig(gig.id);
-      Alert.alert("Resubmitted", "Your gig has been resubmitted for admin review.");
+      toast.success("Resubmitted", "Your gig has been resubmitted for admin review.");
       await refresh();
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to resubmit gig");
+      toast.error("Error", err instanceof Error ? err.message : "Failed to resubmit gig");
     } finally {
       setBusy(false);
     }
@@ -162,7 +163,7 @@ export const GigPostDetailScreen: React.FC = () => {
               await completeGig(gig.id);
               await refresh();
             } catch (err) {
-              Alert.alert("Error", err instanceof Error ? err.message : "Failed to complete gig");
+              toast.error("Error", err instanceof Error ? err.message : "Failed to complete gig");
             } finally {
               setBusy(false);
             }

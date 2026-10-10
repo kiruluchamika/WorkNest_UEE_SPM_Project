@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -11,6 +11,7 @@ import { Input } from "../../components/common/Input";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
+import { toast } from "../../utils/toast";
 
 export const ReviewFormScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -32,9 +33,8 @@ export const ReviewFormScreen: React.FC = () => {
     setSubmitting(true);
     try {
       await reviewApi.submitReview(gigId, { revieweeId, rating, comment: comment.trim() || undefined });
-      Alert.alert("Review submitted", "Thanks for your feedback.", [
-        { text: "OK", onPress: () => navigation.goBack() },
-      ]);
+      toast.success("Review submitted", "Thanks for your feedback.");
+      navigation.goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit your review.");
     } finally {

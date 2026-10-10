@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -5,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
@@ -146,7 +146,7 @@ export const ApplyToGigScreen: React.FC = () => {
     const validationErrors = validateApplicationForm(requirements, customQuestions, values);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      Alert.alert(
+      toast.error(
         "Missing or Invalid Fields",
         "Please check the highlighted fields and correct any issues before submitting."
       );
@@ -157,22 +157,15 @@ export const ApplyToGigScreen: React.FC = () => {
     try {
       const payload = buildApplicationPayload(gigId, customQuestions, values);
       await applicationsApi.submitApplication(payload);
-      Alert.alert(
+      toast.success(
         "Application Submitted!",
-        "Your application has been sent to the employer. You can track its status in My Applications.",
-        [
-          {
-            text: "View My Applications",
-            onPress: () => {
-              (navigation as any).getParent()?.navigate("MyApplicationsTab", {
-                screen: "MyApplications",
-              });
-            },
-          },
-        ]
+        "Your application has been sent to the employer. You can track its status in My Applications."
       );
+      (navigation as any).getParent()?.navigate("MyApplicationsTab", {
+        screen: "MyApplications",
+      });
     } catch (err) {
-      Alert.alert(
+      toast.error(
         "Could not submit application",
         err instanceof Error ? err.message : "Please check your information and try again."
       );

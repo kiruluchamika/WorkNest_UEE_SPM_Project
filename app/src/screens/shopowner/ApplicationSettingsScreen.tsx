@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -130,7 +131,7 @@ export const ApplicationSettingsScreen: React.FC = () => {
 
   const openAddQuestion = () => {
     if (questions.length >= MAX_CUSTOM_QUESTIONS) {
-      Alert.alert(
+      toast.error(
         "Question Limit Reached",
         `You can add a maximum of ${MAX_CUSTOM_QUESTIONS} custom screening questions per gig.`
       );
@@ -246,13 +247,13 @@ export const ApplicationSettingsScreen: React.FC = () => {
         await applicationSettingsApi.createApplicationSettings(gigId, payload);
       }
 
-      Alert.alert(
+      toast.success(
         "Settings Saved",
         "Your gig application configuration has been updated successfully."
       );
       navigation.goBack();
     } catch (err) {
-      Alert.alert(
+      toast.error(
         "Could not save settings",
         err instanceof Error ? err.message : "Please try again."
       );

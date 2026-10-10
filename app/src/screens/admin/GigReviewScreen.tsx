@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useState } from "react";
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -101,10 +102,10 @@ export const GigReviewScreen: React.FC = () => {
           setBusy(true);
           try {
             await approveGig(gig.id);
-            Alert.alert("Gig approved successfully.");
+            toast.success("Gig approved successfully.");
             navigation.goBack();
           } catch (err) {
-            Alert.alert(
+            toast.error(
               "Something went wrong",
               err instanceof Error ? err.message : "Could not approve this gig."
             );

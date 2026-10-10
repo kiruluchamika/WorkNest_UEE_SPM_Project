@@ -1,5 +1,6 @@
+import { toast } from "../../utils/toast";
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { VerificationManagementStackParamList } from "../../navigation/AdminStack";
@@ -17,7 +18,7 @@ export const ReactivationRequestHistoryScreen: React.FC = () => {
   const route = useRoute<RouteProp<VerificationManagementStackParamList, "ReactivationRequestHistory">>();
   const [application, setApplication] = useState<VerifierApplication>();
   useEffect(() => {
-    getApplication(route.params.applicationId).then(setApplication).catch((error) => Alert.alert("Error", error instanceof Error ? error.message : "Could not load reactivation request history."));
+    getApplication(route.params.applicationId).then(setApplication).catch((error) => toast.error("Error", error instanceof Error ? error.message : "Could not load reactivation request history."));
   }, [route.params.applicationId]);
   const requests = useMemo(() => (application?.reactivationRequests ?? [])
     .filter((request) => request.suspensionEventId === route.params.suspensionEventId)

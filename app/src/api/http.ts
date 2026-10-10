@@ -41,7 +41,17 @@ export function setAuthToken(token: string | null): void {
 
 export function extractErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
-    const data = err.response?.data as { error?: string } | undefined;
+    // No response at all means the request never reached the backend.
+    if (!err.response) {
+      return "Cannot reach the server. Check your internet connection and try again.";
+    }
+    const data = err.response.data as
+      | { error?: string; issues?: Array<{ path?: string; message?: string }> }
+      | undefined;
+    // Validation failures carry the useful text in `issues`, not `error`.
+    const issueMessage = data?.issues?.find((issue) => issue.message)?.message;
+    if (issueMessage) return issueMessage;
+    if (err.response.status >= 500) return "Something went wrong on our side. Please try again shortly.";
     if (data?.error) return data.error;
   }
   return fallback;

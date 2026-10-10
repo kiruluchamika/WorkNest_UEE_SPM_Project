@@ -1,5 +1,6 @@
+import { toast } from "../../utils/toast";
 import React, { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,7 +21,7 @@ export const SuspensionHistoryScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<VerificationManagementStackParamList>>();
   const [application, setApplication] = useState<VerifierApplication>();
   useEffect(() => {
-    getApplication(route.params.applicationId).then(setApplication).catch((error) => Alert.alert("Error", error instanceof Error ? error.message : "Could not load suspension history."));
+    getApplication(route.params.applicationId).then(setApplication).catch((error) => toast.error("Error", error instanceof Error ? error.message : "Could not load suspension history."));
   }, [route.params.applicationId]);
   if (!application) return <LoadingSpinner fullScreen message="Loading suspension history..."/>;
   const events = application.suspensionEvents ?? [];

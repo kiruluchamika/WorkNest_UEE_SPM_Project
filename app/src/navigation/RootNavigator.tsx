@@ -24,10 +24,13 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isInitializing } = useAuth();
   const { isLoading: onboardingLoading, hasOnboarded } = useOnboarding();
 
-  if (isLoading || onboardingLoading) {
+  // Only block on the initial session restore. Gating on the per-request
+  // isLoading flag would unmount the auth screens mid sign-in and wipe their
+  // error state before it could be shown.
+  if (isInitializing || onboardingLoading) {
     return <LoadingSpinner fullScreen message="Starting WorkNest..." />;
   }
 
