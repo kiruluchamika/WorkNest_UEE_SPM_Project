@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Image, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, ViewStyle } from "react-native";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -7,25 +7,26 @@ import { typography } from "../../theme/typography";
 interface LoadingSpinnerProps {
   message?: string;
   fullScreen?: boolean;
+  style?: ViewStyle;
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message = "Loading...",
   fullScreen = false,
+  style,
 }) => {
   return (
     <View
       style={[
         styles.container,
-        fullScreen ? { flex: 1, backgroundColor: colors.background } : null,
+        fullScreen ? styles.fullScreen : null,
+        style,
       ]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={message}
     >
-      <Image
-        source={require("../../../assets/images/loading.gif")}
-        style={fullScreen ? styles.gifLarge : styles.gifSmall}
-        resizeMode="contain"
-      />
-      <Text style={styles.message}>{message}</Text>
+      <ActivityIndicator size={fullScreen ? "large" : "small"} color={colors.primaryDark} />
+      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 };
@@ -36,17 +37,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: spacing.xl,
   },
-  gifLarge: {
-    width: 120,
-    height: 120,
-  },
-  gifSmall: {
-    width: 56,
-    height: 56,
+  fullScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
   message: {
     marginTop: spacing.md,
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
+    fontWeight: "600",
   },
 });

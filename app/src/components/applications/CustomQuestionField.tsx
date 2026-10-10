@@ -5,7 +5,7 @@ import { Input } from "../common/Input";
 import { YesNoToggle } from "./YesNoToggle";
 import { ChoiceGroup } from "./ChoiceGroup";
 import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import type { ApplicationQuestion } from "../../types";
 
@@ -26,13 +26,22 @@ export const CustomQuestionField: React.FC<CustomQuestionFieldProps> = ({
 }) => {
   return (
     <Card style={styles.card}>
-      <Text style={styles.label}>
-        {index + 1}. {question.question}
-        {question.required ? " *" : ""}
-      </Text>
+      <View style={styles.header}>
+        <View style={styles.numberBadge}>
+          <Text style={styles.numberText}>Q{index + 1}</Text>
+        </View>
+        <Text style={styles.label}>
+          {question.question}
+          {question.required ? <Text style={styles.requiredAsterisk}> *</Text> : null}
+        </Text>
+      </View>
 
       {question.type === "YES_NO" ? (
-        <YesNoToggle value={typeof value === "boolean" ? value : null} onChange={onChange} error={error} />
+        <YesNoToggle
+          value={typeof value === "boolean" ? value : null}
+          onChange={onChange}
+          error={error}
+        />
       ) : question.type === "MULTIPLE_CHOICE" ? (
         <ChoiceGroup
           options={question.options ?? []}
@@ -41,11 +50,11 @@ export const CustomQuestionField: React.FC<CustomQuestionFieldProps> = ({
           error={error}
         />
       ) : (
-        <View>
+        <View style={styles.textInputWrap}>
           <Input
             value={typeof value === "string" ? value : ""}
             onChangeText={onChange}
-            placeholder="Type your answer..."
+            placeholder="Type your answer here..."
             multiline
             rows={2}
             error={error}
@@ -60,10 +69,36 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.md,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: spacing.sm,
+    gap: spacing.xs + 2,
+  },
+  numberBadge: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.md,
+    marginTop: 1,
+  },
+  numberText: {
+    fontSize: typography.sizes.xxs,
+    fontWeight: "800",
+    color: colors.primaryDark,
+  },
   label: {
-    fontSize: typography.sizes.base,
+    flex: 1,
+    fontSize: typography.sizes.sm,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.sm,
+    lineHeight: 20,
+  },
+  requiredAsterisk: {
+    color: colors.danger,
+    fontWeight: "700",
+  },
+  textInputWrap: {
+    marginTop: spacing.xs,
   },
 });
