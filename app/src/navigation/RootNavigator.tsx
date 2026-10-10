@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import { useOnboarding } from "../context/OnboardingContext";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { appScreenLayout } from "../components/common/AppBackground";
 import { AuthStack } from "./AuthStack";
 import { JobSeekerTabs } from "./JobSeekerTabs";
 import { ShopOwnerTabs } from "./ShopOwnerTabs";
@@ -36,7 +37,7 @@ export const RootNavigator: React.FC = () => {
 
   return (
     <NavigationContainer ref={navigationRef} onReady={() => flushPendingNotificationLink(user?.role)}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
         {!user ? (
           <Stack.Screen name="Auth">
             {() => <AuthStack initialRouteName={hasOnboarded ? "Login" : "Onboarding"} />}
