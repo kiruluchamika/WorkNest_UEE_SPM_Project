@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
     borderWidth: 0,
     borderRadius: 0,
   },

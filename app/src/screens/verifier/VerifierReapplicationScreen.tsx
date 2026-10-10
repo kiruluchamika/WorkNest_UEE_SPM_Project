@@ -41,4 +41,4 @@ export const VerifierReapplicationScreen: React.FC = () => {
   </ScrollView></KeyboardAvoidingView></SafeAreaView>;
 };
 
-const styles=StyleSheet.create({container:{flex:1,backgroundColor:colors.background},scroll:{padding:spacing.lg},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},help:{fontSize:typography.sizes.sm,color:colors.textMuted,lineHeight:20,marginTop:spacing.xs,marginBottom:spacing.lg},error:{fontSize:typography.sizes.sm,color:colors.danger,marginBottom:spacing.md}});
+const styles=StyleSheet.create({container:{flex:1,backgroundColor: "transparent"},scroll:{padding:spacing.lg},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},help:{fontSize:typography.sizes.sm,color:colors.textMuted,lineHeight:20,marginTop:spacing.xs,marginBottom:spacing.lg},error:{fontSize:typography.sizes.sm,color:colors.danger,marginBottom:spacing.md}});

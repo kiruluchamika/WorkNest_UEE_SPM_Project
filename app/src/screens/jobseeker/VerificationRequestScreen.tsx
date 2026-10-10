@@ -152,7 +152,7 @@ export const VerificationRequestScreen: React.FC = () => {
 };
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: "transparent" },
   scroll: { padding: spacing.lg },
   title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text },
   help: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 20, marginVertical: spacing.md },

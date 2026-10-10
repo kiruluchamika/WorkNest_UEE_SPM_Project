@@ -104,7 +104,7 @@ export const VerifierDashboardScreen: React.FC = () => {
 };
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: "transparent" },
   scroll: { padding: spacing.md },
   title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text },
   muted: { fontSize: typography.sizes.sm, color: colors.textMuted },

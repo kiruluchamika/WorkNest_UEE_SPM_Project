@@ -1,3 +1,4 @@
+import { appScreenLayout } from "../components/common/AppBackground";
 import { EmployerProfileScreen } from "../screens/jobseeker/EmployerProfileScreen";
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -54,7 +55,7 @@ const Tab = createBottomTabNavigator<JobSeekerTabParamList>();
 
 function JobSeekerStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="BrowseGigs" component={BrowseGigsScreen} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} />
       <Stack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
@@ -66,7 +67,7 @@ function JobSeekerStack() {
 
 function MyApplicationsStackNavigator() {
   return (
-    <MyApplicationsStack.Navigator screenOptions={{ headerShown: false }}>
+    <MyApplicationsStack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <MyApplicationsStack.Screen name="MyApplications" component={MyApplicationsScreen} />
       <MyApplicationsStack.Screen name="ApplicationDetails" component={ApplicationDetailsScreen} />
       <MyApplicationsStack.Screen name="ReviewForm" component={ReviewFormScreen} />
@@ -76,7 +77,7 @@ function MyApplicationsStackNavigator() {
 
 function ProfileStackNavigator() {
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="WorkHistory" component={WorkHistoryScreen} />
       <ProfileStack.Screen name="Reputation" component={ReputationScreen} />
@@ -88,7 +89,7 @@ function ProfileStackNavigator() {
 
 export const JobSeekerTabs: React.FC = () => {
   return (
-    <Tab.Navigator
+    <Tab.Navigator screenLayout={appScreenLayout}
       tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
