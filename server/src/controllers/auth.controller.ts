@@ -7,6 +7,15 @@ import { signToken } from "../utils/jwt";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
 import { RegisterInput, LoginInput, UpdateProfileInput } from "../validators/auth.validator";
+import { sendWelcomeEmail } from "../services/email.service";
+
+// Best-effort: registration must succeed even if SMTP is down, so the send is
+// not awaited and a failure is only logged.
+function sendWelcomeEmailInBackground(email: string, name: string, role: string) {
+  void sendWelcomeEmail(email, { recipientName: name, role }).catch((err) => {
+    console.error(`Failed to send welcome email to ${email}:`, err);
+  });
+}
 
 function toPublicUser(user: {
   id: string;
@@ -118,6 +127,7 @@ export async function register(
         }],
       };
       const token = signToken({ userId: user.id, role: user.role });
+      sendWelcomeEmailInBackground(user.email, user.name, user.role);
       return res.status(201).json({ token, user: toPublicUser(user) });
     }
 
@@ -128,6 +138,7 @@ export async function register(
     });
 
     const token = signToken({ userId: user.id, role: user.role });
+    sendWelcomeEmailInBackground(user.email, user.name, user.role);
 
     res.status(201).json({ token, user: toPublicUser({ ...user, verifierApplications: [] }) });
   } catch (err) {

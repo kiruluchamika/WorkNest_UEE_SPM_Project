@@ -184,6 +184,61 @@ function renderLayout(params: {
 </html>`;
 }
 
+const welcomeCopyByRole: Record<string, { roleLabel: string; intro: string; nextStep: string }> = {
+  jobseeker: {
+    roleLabel: "Job seeker",
+    intro: "Your account is ready. You can now browse local gigs and apply to the ones that suit you.",
+    nextStep: "Complete your profile so businesses can get to know you, then head to the gig feed to find your first job.",
+  },
+  shopowner: {
+    roleLabel: "Shop owner",
+    intro: "Your account is ready. You can now post gigs and hire trusted people from your community.",
+    nextStep: "Complete your business profile, then post your first gig to start receiving applications.",
+  },
+  verifier: {
+    roleLabel: "Community verifier",
+    intro: "Your account has been created and your verifier application has been submitted for review.",
+    nextStep: "Our team will review your details and identity document. You&rsquo;ll be notified in the app as soon as a decision is made.",
+  },
+};
+
+export function welcomeTemplate(params: {
+  recipientName: string;
+  email: string;
+  role: string;
+}): EmailTemplateContent {
+  const { recipientName, email, role } = params;
+  const name = escapeHtml(recipientName);
+  const copy = welcomeCopyByRole[role] ?? welcomeCopyByRole.jobseeker;
+  const isVerifier = role === "verifier";
+  const status = isVerifier
+    ? pill("Pending review", brand.warning, brand.warningLight)
+    : pill("Active", brand.success, brand.successLight);
+  const nextStepText = copy.nextStep.replace(/&rsquo;/g, "'");
+
+  return {
+    subject: "Welcome to WorkNest",
+    html: renderLayout({
+      kind: "success",
+      eyebrow: "Welcome",
+      heading: "Welcome to WorkNest!",
+      preheader: `Your WorkNest account has been created. ${copy.intro}`,
+      bodyHtml: `
+        <p style="margin:0 0 8px;">Hi ${name},</p>
+        <p style="margin:0;">${copy.intro}</p>
+        ${detailBox(
+          detailRow("Email", escapeHtml(email)) +
+            detailRow("Account type", escapeHtml(copy.roleLabel)) +
+            detailRow(isVerifier ? "Application" : "Status", status, true)
+        )}
+        <p style="margin:0 0 8px;">${copy.nextStep}</p>
+        <p style="margin:0;font-size:13px;color:${brand.textMuted};">If you didn&rsquo;t create this account, please contact WorkNest support.</p>
+      `,
+    }),
+    text: `Hi ${recipientName},\n\nWelcome to WorkNest! ${copy.intro}\n\nEmail: ${email}\nAccount type: ${copy.roleLabel}\n\n${nextStepText}\n\nIf you didn't create this account, please contact WorkNest support.\n\n— WorkNest`,
+  };
+}
+
 export function gigCompletedAndReviewRequestedTemplate(params: {
   recipientName: string;
   counterpartName: string;
