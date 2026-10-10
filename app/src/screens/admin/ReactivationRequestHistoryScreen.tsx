@@ -1,3 +1,4 @@
+import { DocumentEvidence } from "../../components/common/DocumentField";
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -35,7 +36,7 @@ export const ReactivationRequestHistoryScreen: React.FC = () => {
           {field("Submitted", formatVerifierDateTime(request.createdAt))}
           {field("Explanation", request.explanation || "Not available")}
           {field("Supporting Evidence", request.attachmentReference ? "Attached" : "Not provided")}
-          {request.attachmentReference ? field("Private reference", request.attachmentReference) : null}
+          <DocumentEvidence label="Supporting document" value={request.attachmentReference}/>
           {request.reviewedAt ? field("Reviewed", formatVerifierDateTime(request.reviewedAt)) : null}
           {request.reviewer ? field("Reviewed by", request.reviewer.name) : null}
           {request.reviewReason ? field("Admin Response", request.reviewReason) : null}

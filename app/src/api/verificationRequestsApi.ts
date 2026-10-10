@@ -1,7 +1,7 @@
 import { http, extractErrorMessage } from "./http";
 import type { AdminVerificationOverview, AdminVerifierStatistics, VerificationRequest, VerificationRequestStatus, VerifierDashboardData } from "../types";
 const fail=(e:unknown,m:string)=>new Error(extractErrorMessage(e,m));
-export async function submitVerificationRequest(payload:{district:string;personalInformation:string;identityDocument:string;supportingEvidence?:string;communityReferences:string}){try{return (await http.post("/jobseeker/verification-requests",payload)).data.request as VerificationRequest}catch(e){throw fail(e,"Could not submit verification request.")}}
+export async function submitVerificationRequest(payload:{gateExplanation?:string;identityDocumentUpload?: import("../components/common/DocumentField").DocumentUpload;supportingEvidenceUpload?: import("../components/common/DocumentField").DocumentUpload;district:string;personalInformation:string;identityDocument:string;supportingEvidence?:string;communityReferences:string}){try{return (await http.post("/jobseeker/verification-requests",payload)).data.request as VerificationRequest}catch(e){throw fail(e,"Could not submit verification request.")}}
 export async function getMyVerificationRequests(){try{return (await http.get("/jobseeker/verification-requests/mine")).data.requests as VerificationRequest[]}catch(e){throw fail(e,"Could not load verification requests.")}}
 export async function getVerifierDashboard(){try{return (await http.get("/verifier/work/dashboard")).data.dashboard as VerifierDashboardData}catch(e){throw fail(e,"Could not load verifier dashboard.")}}
 export async function setVerifierAvailability(isAvailable:boolean){try{return (await http.patch("/verifier/work/availability",{isAvailable})).data.availability}catch(e){throw fail(e,"Could not update availability.")}}
@@ -16,3 +16,17 @@ export async function listAdminFlagged(){try{return (await http.get("/admin/veri
 export async function resolveAdminFlag(id:string,response:string,returned:boolean){try{return (await http.patch(`/admin/verification-work/requests/${id}/${returned?"return":"confirm"}`,{response})).data.request as VerificationRequest}catch(e){throw fail(e,"Could not resolve flagged case.")}}
 export async function getAdminVerificationOverview(){try{return (await http.get("/admin/verification-work/overview")).data.overview as AdminVerificationOverview}catch(e){throw fail(e,"Could not load verification overview.")}}
 export async function getAdminVerifierStatistics(applicationId:string){try{return (await http.get(`/admin/verification-work/verifiers/${applicationId}/statistics`)).data.statistics as AdminVerifierStatistics}catch(e){throw fail(e,"Could not load verifier statistics.")}}
+
+export async function listAdminVerificationRequests(status: "ASSIGNED" | "UNDER_REVIEW" | "RETURNED_FOR_REVIEW") {
+  try { return (await http.get("/admin/verification-work/requests", { params: { status } })).data.requests as VerificationRequest[]; }
+  catch (e) { throw fail(e, "Could not load verification requests."); }
+}
+export async function listAdminVerificationHistory(tab: "APPROVED" | "REJECTED" | "FLAGGED") {
+  try { return (await http.get("/admin/verification-work/history", { params: { tab } })).data.requests as VerificationRequest[]; }
+  catch (e) { throw fail(e, "Could not load verification history."); }
+}
+
+export async function getMyVerificationState() {
+  try { return (await http.get("/jobseeker/verification-requests/state")).data as import("../types").VerificationState; }
+  catch (e) { throw fail(e, "Could not load verification status."); }
+}

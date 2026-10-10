@@ -10,7 +10,7 @@ const requestInclude = {
   assignedVerifier: { select: { id: true, name: true, email: true } },
   adminReviewer: { select: { id: true, name: true, email: true } },
 } as const;
-const activeStatuses = ["PENDING", "ASSIGNED", "UNDER_REVIEW", "FLAGGED", "RETURNED_FOR_REVIEW"] as VerificationRequestStatus[];
+const activeStatuses = ["ADMIN_REVIEW", "PENDING", "ASSIGNED", "UNDER_REVIEW", "FLAGGED", "RETURNED_FOR_REVIEW"] as VerificationRequestStatus[];
 
 export async function getAdminVerificationOverview(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -59,6 +59,20 @@ export async function createVerificationRequest(req: Request, res: Response, nex
     const { userId } = req as AuthedRequest;
     const existing = await prisma.verificationRequest.findFirst({ where: { applicantId: userId, status: { in: activeStatuses } } });
     if (existing) return next(new HttpError(409, "You already have an active verification request."));
+    const revocation = await prisma.verificationRevocation.findFirst({ where: { verificationRequest: { applicantId: userId } }, orderBy: { revokedAt: "desc" } });
+    if (revocation) {
+      if (!req.body.gateExplanation?.trim()) return next(new HttpError(400, "Explain why you are requesting verification again."));
+      // Including relations during create requires a transaction unsupported by
+      // PrismaNeonHTTP. Write first, then load the normal response separately.
+      const created = await prisma.verificationRequest.create({ data: {
+        applicantId: userId, district: req.body.district, personalInformation: req.body.personalInformation,
+        identityDocument: req.body.identityDocument || "", supportingEvidence: req.body.supportingEvidence || null,
+        communityReferences: req.body.communityReferences, status: "ADMIN_REVIEW", gateStatus: "PENDING",
+        gateExplanation: req.body.gateExplanation, revocationId: revocation.id,
+      } });
+      const request = await prisma.verificationRequest.findUnique({ where: { id: created.id }, include: requestInclude });
+      return res.status(201).json({ request });
+    }
     const id = randomUUID(); const now = new Date();
     const rows = await neonSql`
       WITH eligible AS (
@@ -86,7 +100,10 @@ export async function createVerificationRequest(req: Request, res: Response, nex
     `;
     const request = await prisma.verificationRequest.findUnique({ where: { id: rows[0].id as string }, include: requestInclude });
     res.status(201).json({ request });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if ((error as { code?: string }).code === "P2002") return next(new HttpError(409, "You already have a request waiting for Admin review."));
+    next(error);
+  }
 }
 
 export async function getMyJobSeekerRequests(req: Request, res: Response, next: NextFunction) {
@@ -98,14 +115,14 @@ export async function setAvailability(req: Request, res: Response, next: NextFun
 export async function getVerifierDashboard(req: Request, res: Response, next: NextFunction) {
   try { const { userId }=req as AuthedRequest; const application=await prisma.verifierApplication.findFirst({where:{applicantId:userId},orderBy:{submittedAt:"desc"},select:{district:true,isAvailable:true,status:true}}); const requests=await prisma.verificationRequest.findMany({where:{assignedVerifierId:userId},select:{status:true,submittedAt:true,decidedAt:true,wasFlagged:true,flaggedAt:true}}); const today=new Date();today.setHours(0,0,0,0); const count=(status:VerificationRequestStatus)=>requests.filter(r=>r.status===status).length; const decidedToday=(status:VerificationRequestStatus)=>requests.filter(r=>r.status===status&&r.decidedAt&&r.decidedAt>=today).length; res.json({dashboard:{application,queues:{awaiting:count("ASSIGNED"),underReview:count("UNDER_REVIEW"),returned:count("RETURNED_FOR_REVIEW")},today:{assigned:requests.filter(r=>r.submittedAt>=today).length,approved:decidedToday("APPROVED"),rejected:decidedToday("REJECTED"),flagged:requests.filter(r=>r.flaggedAt&&r.flaggedAt>=today).length},allTime:{assigned:requests.length,approved:count("APPROVED"),rejected:count("REJECTED"),flagged:requests.filter(r=>r.wasFlagged).length}}}); }catch(e){next(e);}
 }
-export async function listVerifierRequests(req: Request,res:Response,next:NextFunction){try{const{userId}=req as AuthedRequest;const status=String(req.query.status);if(!Object.values(VerificationRequestStatus).includes(status as VerificationRequestStatus))return next(new HttpError(400,"Invalid verification status."));res.json({requests:await prisma.verificationRequest.findMany({where:{assignedVerifierId:userId,status:status as VerificationRequestStatus},include:requestInclude,orderBy:{submittedAt:req.query.sort==="newest"?"desc":"asc"}})});}catch(e){next(e);}}
+export async function listVerifierRequests(req: Request,res:Response,next:NextFunction){try{const{userId,userRole}=req as AuthedRequest;const status=String(req.query.status);if(!Object.values(VerificationRequestStatus).includes(status as VerificationRequestStatus))return next(new HttpError(400,"Invalid verification status."));res.json({requests:await prisma.verificationRequest.findMany({where:{...(userRole==="admin"?{}:{assignedVerifierId:userId}),status:status as VerificationRequestStatus},include:requestInclude,orderBy:{submittedAt:req.query.sort==="newest"?"desc":"asc"}})});}catch(e){next(e);}}
 export async function getVerificationRequest(req:Request<{id:string}>,res:Response,next:NextFunction){try{const{userId,userRole}=req as unknown as AuthedRequest;const where=userRole==="admin"?{id:req.params.id}:{id:req.params.id,assignedVerifierId:userId};const request=await prisma.verificationRequest.findFirst({where,include:requestInclude});if(!request)return next(new HttpError(404,"Verification request not found."));res.json({request});}catch(e){next(e);}}
 export async function startReview(req:Request<{id:string}>,res:Response,next:NextFunction){try{const{userId}=req as unknown as AuthedRequest;const rows=await neonSql`UPDATE "VerificationRequest" SET "status"='UNDER_REVIEW'::"VerificationRequestStatus","reviewStartedAt"=${new Date()} WHERE "id"=${req.params.id} AND "assignedVerifierId"=${userId} AND "status"='ASSIGNED'::"VerificationRequestStatus" RETURNING "id"`;if(!rows.length)return next(new HttpError(409,"Only assigned requests can be started."));return getVerificationRequest(req,res,next);}catch(e){next(e);}}
 async function decide(req:Request<{id:string}>,res:Response,next:NextFunction,status:"APPROVED"|"REJECTED"){try{const{userId}=req as unknown as AuthedRequest;const allowed=status==="APPROVED"?["UNDER_REVIEW","RETURNED_FOR_REVIEW"]:["UNDER_REVIEW","RETURNED_FOR_REVIEW"];const rows=await neonSql`UPDATE "VerificationRequest" SET "status"=${status}::"VerificationRequestStatus","verifierNote"=${req.body.verifierNote},"rejectionReason"=${status==="REJECTED"?req.body.rejectionReason:null},"decidedAt"=${new Date()} WHERE "id"=${req.params.id} AND "assignedVerifierId"=${userId} AND "status"=ANY(${allowed}::"VerificationRequestStatus"[]) RETURNING "id"`;if(!rows.length)return next(new HttpError(409,"This request is not ready for a decision."));return getVerificationRequest(req,res,next);}catch(e){next(e);}}
 export const approveVerification=(req:Request<{id:string}>,res:Response,next:NextFunction)=>decide(req,res,next,"APPROVED");
 export const rejectVerification=(req:Request<{id:string}>,res:Response,next:NextFunction)=>decide(req,res,next,"REJECTED");
 export async function flagVerification(req:Request<{id:string}>,res:Response,next:NextFunction){try{const{userId}=req as unknown as AuthedRequest;const rows=await neonSql`UPDATE "VerificationRequest" SET "status"='FLAGGED'::"VerificationRequestStatus","verifierNote"=${req.body.verifierNote},"flagReason"=${req.body.flagReason},"flaggedAt"=${new Date()},"wasFlagged"=true WHERE "id"=${req.params.id} AND "assignedVerifierId"=${userId} AND "status"='UNDER_REVIEW'::"VerificationRequestStatus" RETURNING "id"`;if(!rows.length)return next(new HttpError(409,"Only requests under review can be flagged."));return getVerificationRequest(req,res,next);}catch(e){next(e);}}
-export async function listHistory(req:Request,res:Response,next:NextFunction){try{const{userId}=req as AuthedRequest;const tab=String(req.query.tab||"APPROVED");const where=tab==="FLAGGED"?{assignedVerifierId:userId,wasFlagged:true}:{assignedVerifierId:userId,status:tab as VerificationRequestStatus};res.json({requests:await prisma.verificationRequest.findMany({where,include:requestInclude,orderBy:{submittedAt:"desc"}})});}catch(e){next(e);}}
+export async function listHistory(req:Request,res:Response,next:NextFunction){try{const{userId,userRole}=req as AuthedRequest;const tab=String(req.query.tab||"APPROVED");if(userRole==="admin"&&!["APPROVED","REJECTED","FLAGGED"].includes(tab))return next(new HttpError(400,"Invalid history category."));const scope=userRole==="admin"?{}:{assignedVerifierId:userId};const where=tab==="FLAGGED"?{...scope,wasFlagged:true}:{...scope,status:tab as VerificationRequestStatus};res.json({requests:await prisma.verificationRequest.findMany({where,include:requestInclude,orderBy:{submittedAt:"desc"}})});}catch(e){next(e);}}
 export async function listFlagged(req:Request,res:Response,next:NextFunction){try{res.json({requests:await prisma.verificationRequest.findMany({where:{status:"FLAGGED"},include:requestInclude,orderBy:{flaggedAt:"asc"}})});}catch(e){next(e);}}
 export async function resolveFlag(req:Request<{id:string}>,res:Response,next:NextFunction,returned:boolean){try{const{userId}=req as unknown as AuthedRequest;const rows=await neonSql`UPDATE "VerificationRequest" SET "status"=${returned?"RETURNED_FOR_REVIEW":"ADMIN_CONFIRMED"}::"VerificationRequestStatus","adminResponse"=${req.body.response},"adminReviewedAt"=${new Date()},"adminReviewerId"=${userId},"decidedAt"=${returned?null:new Date()} WHERE "id"=${req.params.id} AND "status"='FLAGGED'::"VerificationRequestStatus" RETURNING "id"`;if(!rows.length)return next(new HttpError(409,"Only flagged requests can be resolved."));return getVerificationRequest(req,res,next);}catch(e){next(e);}}
 export const returnFlaggedVerification=(req:Request<{id:string}>,res:Response,next:NextFunction)=>resolveFlag(req,res,next,true);

@@ -33,6 +33,7 @@ export interface RegisterPayload {
   district?: string;
   identityType?: string;
   identityNumber?: string;
+  identityDocumentReferenceUpload?: import("../components/common/DocumentField").DocumentUpload;
   identityDocumentReference?: string;
   identityDocumentMetadata?: Record<string, unknown>;
   addressInformation?: string;
