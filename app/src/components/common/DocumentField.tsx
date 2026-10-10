@@ -10,9 +10,9 @@ export interface DocumentUpload { name: string; mimeType: string; base64: string
 const MAX_BYTES = 2 * 1024 * 1024;
 const types = ["image/jpeg", "image/png", "application/pdf"];
 
-export function DocumentField({ label, value, onChange, existing, onRemoveExisting, disabled = false }: {
+export function DocumentField({ label, value, onChange, existing, onRemoveExisting, disabled = false, required = false }: {
   label: string; value?: DocumentUpload; onChange: (file?: DocumentUpload) => void;
-  existing?: string; onRemoveExisting?: () => void; disabled?: boolean;
+  existing?: string; onRemoveExisting?: () => void; disabled?: boolean; required?: boolean;
 }) {
   const [error, setError] = useState("");
   const [picking, setPicking] = useState(false);
@@ -46,7 +46,7 @@ export function DocumentField({ label, value, onChange, existing, onRemoveExisti
       setPicking(false);
     }
   };
-  return <View style={{ marginVertical: 10 }}><Text>{label} (optional)</Text><Text>JPEG, PNG or PDF · Maximum 2 MB</Text>
+  return <View style={{ marginVertical: 10 }}><Text>{label} ({required ? "required" : "optional"})</Text><Text>JPEG, PNG or PDF · Maximum 2 MB</Text>
     {value ? <Text>Selected: {value.name}</Text> : existing ? <DocumentEvidence label="Previous document" value={existing}/> : null}
     <Button title={value || existing ? "Replace document" : "Select document"} variant="outline" onPress={select} disabled={disabled || picking}/>
     {value || existing ? <Button title="Remove document" variant="outline" disabled={disabled || picking} onPress={() => { onChange(undefined); onRemoveExisting?.(); setError(""); }}/> : null}

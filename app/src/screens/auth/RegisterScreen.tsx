@@ -74,7 +74,7 @@ export const RegisterScreen: React.FC = () => {
       role,
       password,
       confirmPassword,
-      district, identityType, identityNumber, identityDocumentReference, addressInformation, communityReference,
+      district, identityType, identityNumber, identityDocumentReference, identityDocumentReferenceUpload: documentUpload, addressInformation, communityReference,
     });
 
     if (!result.success) {
@@ -201,8 +201,9 @@ export const RegisterScreen: React.FC = () => {
                 { value: "NATIONAL_ID", label: "National identity card" }, { value: "PASSPORT", label: "Passport" }, { value: "DRIVING_LICENCE", label: "Driving licence" },
               ]} />
               <Input label="ID number" value={identityNumber} onChangeText={setIdentityNumber} placeholder="Identity document number" error={errors.identityNumber} />
-              <DocumentField label="Identity document" value={documentUpload} onChange={setDocumentUpload} disabled={isLoading}/>
-              <Text style={styles.documentNote}>Optional in this development build. When supplied, the document reference is not published by WorkNest.</Text>
+              <DocumentField required label="Identity document" value={documentUpload} onChange={setDocumentUpload} disabled={isLoading}/>
+              {errors.identityDocumentReference ? <Text style={styles.error}>{errors.identityDocumentReference}</Text> : null}
+              <Text style={styles.documentNote}>The document reference is not published by WorkNest.</Text>
               <Input label="Address / supporting information" value={addressInformation} onChangeText={setAddressInformation} placeholder="Residential address and supporting details" multiline rows={3} error={errors.addressInformation} />
               <Input label="Community reference (optional)" value={communityReference} onChangeText={setCommunityReference} placeholder="Reference name and contact information" multiline rows={3} error={errors.communityReference} />
             </View>

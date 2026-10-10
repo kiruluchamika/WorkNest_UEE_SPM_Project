@@ -16,7 +16,7 @@ import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 
 const identityOptions = [
-  { value: "", label: "No identity document" },
+  { value: "", label: "Select identity document" },
   { value: "NATIONAL_ID", label: "National identity card" },
   { value: "PASSPORT", label: "Passport" },
   { value: "DRIVING_LICENCE", label: "Driving licence" },
@@ -76,15 +76,16 @@ export const VerificationRequestScreen: React.FC = () => {
       setError("Please enter your address.");
       return;
     }
-    if (phoneNumber.trim().length < 9) {
-      setError("Please enter a valid phone number.");
+    if (!/^[0-9]{10}$/.test(phoneNumber)) {
+      setError("Mobile number must be exactly 10 digits.");
       return;
     }
     if (!districts.includes(district)) {
       setError("Please select a supported district.");
       return;
     }
-    if (identityType && identityNumber.trim().length < 2) {
+    if (!identityType || !identityUpload) { setError("Identity document is required."); return; }
+    if (identityNumber.trim().length < 2) {
       setError(`Please enter your ${identityNumberLabels[identityType].toLowerCase()}.`);
       return;
     }
@@ -145,7 +146,7 @@ export const VerificationRequestScreen: React.FC = () => {
             emptyMessage="No districts found"
           />
           <Select
-            label="Identity Document (optional)"
+            label="Identity Document (required)"
             value={identityType}
             onChange={(value) => {
               setIdentityType(value);
@@ -162,7 +163,7 @@ export const VerificationRequestScreen: React.FC = () => {
               placeholder={`Enter ${identityNumberLabels[identityType].toLowerCase()}`}
             />
           ) : null}
-          <DocumentField label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
+          <DocumentField required label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
           <DocumentField label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
           <Input label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
           {previouslyRevoked ? <Input label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}

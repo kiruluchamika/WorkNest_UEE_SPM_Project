@@ -80,17 +80,22 @@ function neonSql(parts, ...values) {
   throw new Error('Unexpected SQL in test');
 }
 require.cache[require.resolve('../dist/config/db')] = { exports: { prisma, neonSql } };
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const { app } = require('../dist/app');
 const { signToken } = require('../dist/utils/jwt');
 
 test('revocation, repeated Admin gates, restoration and unchanged ordinary review', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'worknest-validation-flow-'));
+  process.env.PRIVATE_DOCUMENT_DIR = directory;
   requests.push({ id: 'original', applicantId: 'revoked-user', status: 'APPROVED', district: 'Colombo', submittedAt: '2026-01-01' });
   const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
   const call = (url, role, userId, body, method = body ? 'POST' : 'GET') => fetch(base + url, { method, headers: { 'Content-Type': 'application/json', ...(role ? { Authorization: `Bearer ${signToken({ userId, role })}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
   const admin = (url, body) => call('/admin/verification-work' + url, 'admin', 'admin', body);
   const state = async (id = 'revoked-user') => (await call('/jobseeker/verification-requests/state', 'jobseeker', id)).json();
-  const payload = { district: 'Colombo', personalInformation: 'Full personal information', communityReferences: 'Community references', gateExplanation: 'Please consider new supporting evidence.' };
+  const payload = { district: 'Colombo', personalInformation: 'Full Name: Test\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', identityDocumentUpload: { name: 'id.pdf', mimeType: 'application/pdf', base64: Buffer.from('%PDF-1.4\n%%EOF').toString('base64') }, communityReferences: 'Community references', gateExplanation: 'Please consider new supporting evidence.' };
   const submit = (id = 'revoked-user') => call('/jobseeker/verification-requests', 'jobseeker', id, payload);
   const review = (id, action, body = {}) => call(`/verifier/work/requests/${id}/${action}`, 'verifier', 'verifier', body, 'PATCH');
   try {
@@ -162,5 +167,5 @@ test('revocation, repeated Admin gates, restoration and unchanged ordinary revie
     await review(ordinary.id, 'start'); await review(ordinary.id, 'reject', { verifierNote: 'Review complete', rejectionReason: 'Insufficient evidence' });
     assert.equal((await (await submit('ordinary-user')).json()).request.status, 'ASSIGNED');
     assert.equal((await state('ordinary-user')).revocation, null);
-  } finally { await new Promise(resolve => server.close(resolve)); }
+  } finally { await new Promise(resolve => server.close(resolve)); for (const file of await fs.readdir(directory)) await fs.unlink(path.join(directory, file)); await fs.rmdir(directory); }
 });
