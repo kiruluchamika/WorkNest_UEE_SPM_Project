@@ -300,6 +300,8 @@ model GigPost {
   businessId      String
   business        User        @relation(fields: [businessId], references: [id])
   location        String
+  latitude        Float?
+  longitude       Float?
   paymentAmount   Decimal
   paymentType     PaymentType
   startDate       DateTime

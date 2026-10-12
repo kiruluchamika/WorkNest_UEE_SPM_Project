@@ -6,6 +6,8 @@ export interface GigPostFormPayload {
   categoryId: string;
   description: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   paymentAmount: number;
   paymentType: GigPaymentType;
   startDate: string;
@@ -20,8 +22,13 @@ export interface GigPostFormPayload {
 
 // On update, null clears an optional field (undefined leaves it unchanged).
 export type GigPostUpdatePayload = Partial<
-  Omit<GigPostFormPayload, "startTime" | "endDate" | "endTime" | "contactInfo" | "imageUrl">
+  Omit<
+    GigPostFormPayload,
+    "startTime" | "endDate" | "endTime" | "contactInfo" | "imageUrl" | "latitude" | "longitude"
+  >
 > & {
+  latitude?: number | null;
+  longitude?: number | null;
   startTime?: string | null;
   endDate?: string | null;
   endTime?: string | null;

@@ -131,6 +131,8 @@ export async function createGig(
         categoryId: data.categoryId,
         businessId: userId,
         location: data.location,
+        latitude: data.latitude,
+        longitude: data.longitude,
         paymentAmount: data.paymentAmount,
         paymentType: data.paymentType,
         startDate: data.startDate,

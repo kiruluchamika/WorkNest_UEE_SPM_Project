@@ -261,6 +261,16 @@ export const BrowseGigsScreen: React.FC = () => {
                   color={payment !== "all" ? colors.textInverse : colors.primaryDark}
                 />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="View gigs on a map"
+                style={styles.filterButton}
+                onPress={() => navigation.navigate("GigMap")}
+                activeOpacity={0.8}
+              >
+                <Feather name="map" size={18} color={colors.primaryDark} />
+              </TouchableOpacity>
             </View>
 
             {/* Expanded Payment Filter Panel */}

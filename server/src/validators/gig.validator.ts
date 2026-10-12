@@ -13,6 +13,37 @@ export const GIG_LIMITS = {
   imageDataUriMax: 2_000_000,
 } as const;
 
+// Map pins must fall inside Sri Lanka (with a small margin for coastal spots).
+export const SRI_LANKA_BOUNDS = {
+  minLatitude: 5.7,
+  maxLatitude: 10.0,
+  minLongitude: 79.4,
+  maxLongitude: 82.1,
+} as const;
+
+const OUTSIDE_SRI_LANKA = "Please pick a location inside Sri Lanka.";
+
+const latitudeSchema = z.coerce
+  .number({ message: "Please pick a valid map location." })
+  .min(SRI_LANKA_BOUNDS.minLatitude, OUTSIDE_SRI_LANKA)
+  .max(SRI_LANKA_BOUNDS.maxLatitude, OUTSIDE_SRI_LANKA);
+
+const longitudeSchema = z.coerce
+  .number({ message: "Please pick a valid map location." })
+  .min(SRI_LANKA_BOUNDS.minLongitude, OUTSIDE_SRI_LANKA)
+  .max(SRI_LANKA_BOUNDS.maxLongitude, OUTSIDE_SRI_LANKA);
+
+// A pin is a pair: latitude and longitude are set together or cleared together.
+function hasHalfPin(data: { latitude?: number | null; longitude?: number | null }): boolean {
+  return (data.latitude == null) !== (data.longitude == null);
+}
+
+const HALF_PIN_ISSUE = {
+  code: "custom" as const,
+  path: ["latitude"],
+  message: "Map location needs both latitude and longitude.",
+};
+
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^\+?[\d\s-]{9,15}$/;
@@ -57,6 +88,8 @@ const gigPostFields = z.object({
     .trim()
     .min(1, "Location is required.")
     .max(GIG_LIMITS.locationMax, `Location must be at most ${GIG_LIMITS.locationMax} characters.`),
+  latitude: latitudeSchema.optional(),
+  longitude: longitudeSchema.optional(),
   paymentAmount: z.coerce
     .number()
     .positive("Payment must be greater than 0.")
@@ -142,18 +175,32 @@ export const createGigPostSchema = gigPostFields.superRefine((data, ctx) => {
   if (issue) {
     ctx.addIssue({ code: "custom", path: [issue.path], message: issue.message });
   }
+
+  if (hasHalfPin(data)) {
+    ctx.addIssue(HALF_PIN_ISSUE);
+  }
 });
 
 export type CreateGigPostInput = z.infer<typeof createGigPostSchema>;
 
 // Optional fields accept null on update so the business can clear them.
-export const updateGigPostSchema = gigPostFields.partial().extend({
-  startTime: timeSchema.nullable().optional(),
-  endDate: z.coerce.date({ message: "Please enter a valid date." }).nullable().optional(),
-  endTime: timeSchema.nullable().optional(),
-  contactInfo: contactInfoSchema.nullable().optional(),
-  imageUrl: imageSourceSchema.nullable().optional(),
-});
+export const updateGigPostSchema = gigPostFields
+  .partial()
+  .extend({
+    startTime: timeSchema.nullable().optional(),
+    endDate: z.coerce.date({ message: "Please enter a valid date." }).nullable().optional(),
+    endTime: timeSchema.nullable().optional(),
+    contactInfo: contactInfoSchema.nullable().optional(),
+    imageUrl: imageSourceSchema.nullable().optional(),
+    // z.coerce.number() would turn null into 0, so null is matched first.
+    latitude: z.union([z.null(), latitudeSchema]).optional(),
+    longitude: z.union([z.null(), longitudeSchema]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (hasHalfPin(data)) {
+      ctx.addIssue(HALF_PIN_ISSUE);
+    }
+  });
 
 export type UpdateGigPostInput = z.infer<typeof updateGigPostSchema>;
 

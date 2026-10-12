@@ -128,6 +128,9 @@ export interface GigPost {
   businessId: string;
   business?: GigPostBusiness;
   location: string;
+  /** Optional map pin; both are set together or both absent. */
+  latitude?: number | null;
+  longitude?: number | null;
   paymentAmount: number;
   paymentType: GigPaymentType;
   startDate: string;
