@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -76,7 +77,7 @@ export const ProfileScreen: React.FC = () => {
             const uri = await pickImageFromLibrary();
             if (uri) setAvatarUrl(uri);
           } catch {
-            Alert.alert("Something went wrong", "Could not process that image.");
+            toast.error("Something went wrong", "Could not process that image.");
           } finally {
             setAvatarBusy(false);
           }
@@ -90,7 +91,7 @@ export const ProfileScreen: React.FC = () => {
             const uri = await captureImageFromCamera();
             if (uri) setAvatarUrl(uri);
           } catch {
-            Alert.alert("Something went wrong", "Could not process that image.");
+            toast.error("Something went wrong", "Could not process that image.");
           } finally {
             setAvatarBusy(false);
           }
@@ -292,7 +293,7 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,

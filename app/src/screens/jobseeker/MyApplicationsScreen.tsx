@@ -218,7 +218,7 @@ export const MyApplicationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,

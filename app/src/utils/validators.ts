@@ -9,7 +9,7 @@ export const registerSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email"),
-    phone: z.string().min(9, "Please enter a valid phone number"),
+    phone: z.string(),
     role: z.enum(["jobseeker", "shopowner", "verifier"]),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(6, "Please confirm your password"),
@@ -17,6 +17,7 @@ export const registerSchema = z
     identityType: z.string().trim().optional(),
     identityNumber: z.string().trim().optional(),
     identityDocumentReference: z.string().trim().optional(),
+    identityDocumentReferenceUpload: z.unknown().optional(),
     addressInformation: z.string().trim().optional(),
     communityReference: z.string().trim().optional(),
   })
@@ -24,7 +25,12 @@ export const registerSchema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   }).superRefine((data, ctx) => {
-    if (data.role !== "verifier") return;
+    if (data.role !== "verifier") {
+      if (data.phone.length < 9) ctx.addIssue({ code: "custom", path: ["phone"], message: "Please enter a valid phone number" });
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(data.phone)) ctx.addIssue({ code: "custom", path: ["phone"], message: "Mobile number must be exactly 10 digits." });
+    if (!data.identityDocumentReferenceUpload) ctx.addIssue({ code: "custom", path: ["identityDocumentReference"], message: "Identity document is required." });
     const required = [
       ["district", "District is required"], ["identityType", "ID type is required"],
       ["identityNumber", "ID number is required"],
@@ -38,8 +44,11 @@ export const verifierReapplicationSchema = z.object({
   identityType: z.enum(["NATIONAL_ID", "PASSPORT", "DRIVING_LICENCE"]),
   identityNumber: z.string().trim().min(4, "ID number is required"),
   identityDocumentReference: z.string().trim().optional(),
+  identityDocumentReferenceUpload: z.unknown().optional(),
   addressInformation: z.string().trim().min(5, "Address information is required"),
   communityReference: z.string().trim().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.identityDocumentReferenceUpload && !/worknest-file:[0-9a-f-]{36}/.test(data.identityDocumentReference || "")) ctx.addIssue({ code: "custom", path: ["identityDocumentReference"], message: "Identity document is required." });
 });
 
 // Accepts either an http(s) URL or a base64 data URI (from the device image picker).

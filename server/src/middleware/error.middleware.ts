@@ -24,6 +24,7 @@ export function errorHandler(
     return res.status(err.status).json({ error: err.message });
   }
 
+  if ((err as { type?: string })?.type === "entity.too.large") return res.status(413).json({ error: "Request is too large. Documents must be 2 MB or smaller." });
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
 }

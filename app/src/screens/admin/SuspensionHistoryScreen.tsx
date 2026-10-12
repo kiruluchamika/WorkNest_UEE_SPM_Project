@@ -1,5 +1,6 @@
+import { toast } from "../../utils/toast";
 import React, { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,7 +21,7 @@ export const SuspensionHistoryScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<VerificationManagementStackParamList>>();
   const [application, setApplication] = useState<VerifierApplication>();
   useEffect(() => {
-    getApplication(route.params.applicationId).then(setApplication).catch((error) => Alert.alert("Error", error instanceof Error ? error.message : "Could not load suspension history."));
+    getApplication(route.params.applicationId).then(setApplication).catch((error) => toast.error("Error", error instanceof Error ? error.message : "Could not load suspension history."));
   }, [route.params.applicationId]);
   if (!application) return <LoadingSpinner fullScreen message="Loading suspension history..."/>;
   const events = application.suspensionEvents ?? [];
@@ -46,4 +47,4 @@ export const SuspensionHistoryScreen: React.FC = () => {
   </SafeAreaView>;
 };
 
-const styles = StyleSheet.create({container:{flex:1,backgroundColor:colors.background},scroll:{padding:spacing.md},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},subtitle:{fontSize:typography.sizes.sm,color:colors.textMuted,marginTop:spacing.xs,marginBottom:spacing.lg},card:{marginBottom:spacing.md},eventTitle:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.primaryDark,marginBottom:spacing.md},field:{marginBottom:spacing.md},label:{fontSize:typography.sizes.xs,color:colors.textMuted},value:{fontSize:typography.sizes.sm,fontWeight:"700",color:colors.text,marginTop:2},reactivated:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md},reactivatedTitle:{fontSize:typography.sizes.sm,fontWeight:"800",color:colors.primaryDark,marginBottom:spacing.md},active:{fontSize:typography.sizes.sm,fontWeight:"800",color:colors.danger,borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md},empty:{fontSize:typography.sizes.sm,color:colors.textMuted,textAlign:"center"}});
+const styles = StyleSheet.create({container:{flex:1,backgroundColor: "transparent"},scroll:{padding:spacing.md},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},subtitle:{fontSize:typography.sizes.sm,color:colors.textMuted,marginTop:spacing.xs,marginBottom:spacing.lg},card:{marginBottom:spacing.md},eventTitle:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.primaryDark,marginBottom:spacing.md},field:{marginBottom:spacing.md},label:{fontSize:typography.sizes.xs,color:colors.textMuted},value:{fontSize:typography.sizes.sm,fontWeight:"700",color:colors.text,marginTop:2},reactivated:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md},reactivatedTitle:{fontSize:typography.sizes.sm,fontWeight:"800",color:colors.primaryDark,marginBottom:spacing.md},active:{fontSize:typography.sizes.sm,fontWeight:"800",color:colors.danger,borderTopWidth:1,borderTopColor:colors.border,paddingTop:spacing.md},empty:{fontSize:typography.sizes.sm,color:colors.textMuted,textAlign:"center"}});

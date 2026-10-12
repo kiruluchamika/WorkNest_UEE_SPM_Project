@@ -12,6 +12,7 @@ import { AdminGigProvider } from "./src/context/AdminGigContext";
 import { OnboardingProvider } from "./src/context/OnboardingContext";
 import { NotificationProvider } from "./src/context/NotificationContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
+import { ToastHost } from "./src/components/common/ToastHost";
 import { colors } from "./src/theme/colors";
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
                     <AdminGigProvider>
                       <StatusBar style="dark" />
                       <RootNavigator />
+                      <ToastHost />
                     </AdminGigProvider>
                   </GigPostProvider>
                 </CategoryProvider>

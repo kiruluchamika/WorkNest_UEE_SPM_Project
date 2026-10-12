@@ -11,7 +11,7 @@ export const colors = {
   accentSoft: "#F4F7D6",
 
   // Backgrounds & Surfaces
-  background: "#F4F9FA",
+  background: "#EEF5F6",
   surface: "#FFFFFF",
   surfaceSubtle: "#F9FCFC",
   cream: "#E8F2F2",

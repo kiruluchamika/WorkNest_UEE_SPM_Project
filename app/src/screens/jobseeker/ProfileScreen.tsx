@@ -1,3 +1,4 @@
+import { DocumentEvidence } from "../../components/common/DocumentField";
 import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
@@ -13,7 +14,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../context/AuthContext";
 import * as endorsementApi from "../../api/endorsementApi";
 import * as applicationApi from "../../api/applicationApi";
-import { getMyVerificationRequests } from "../../api/verificationRequestsApi";
+import { getMyVerificationRequests, getMyVerificationState } from "../../api/verificationRequestsApi";
 import * as reputationApi from "../../api/reputationApi";
 import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
@@ -30,6 +31,7 @@ export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [verificationState,setVerificationState]=useState<import("../../types").VerificationState>();
   const [verificationRequest, setVerificationRequest] = useState<VerificationRequest>();
   const [verificationLoading, setVerificationLoading] = useState(true);
   const [verificationError, setVerificationError] = useState("");
@@ -40,7 +42,8 @@ export const ProfileScreen: React.FC = () => {
     setVerificationLoading(true);
     setVerificationError("");
     try {
-      const requests = await getMyVerificationRequests();
+      const [requests,state] = await Promise.all([getMyVerificationRequests(),getMyVerificationState()]);
+      setVerificationState(state);
       setVerificationRequest(requests[0]);
     } catch (error) {
       setVerificationError(error instanceof Error ? error.message : "Could not load verification status.");
@@ -183,6 +186,16 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.verificationMessage}>{verificationError}</Text>
               <Button title="Retry" variant="outline" onPress={loadVerificationStatus} />
             </>
+          ) : verificationState?.revocation && !verificationState.verified ? (
+            <>
+              <Text style={[styles.verificationStatus,{color:colors.danger}]}>VERIFICATION REVOKED</Text>
+              <Text style={styles.verificationMessage}>Revocation reason: {verificationState.revocation.reason}</Text>
+              {verificationRequest?.status === "ADMIN_REVIEW" ? <Text style={styles.verificationMessage}>PENDING / ADMIN REVIEW</Text>
+                : verificationRequest?.status === "ADMIN_DENIED" ? <><Text style={styles.verificationStatus}>REJECTED BY ADMIN</Text><Text style={styles.rejectionReason}>Reason: {verificationRequest.gateReason}</Text><Button title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/></>
+                : verificationRequest?.status === "REJECTED" ? <><Text style={styles.verificationStatus}>REJECTED BY VERIFIER</Text><Text style={styles.rejectionReason}>Reason: {verificationRequest.rejectionReason}</Text><Button title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/></>
+                : verificationRequest && ["PENDING","ASSIGNED","UNDER_REVIEW","RETURNED_FOR_REVIEW","FLAGGED"].includes(verificationRequest.status) ? <Text style={styles.verificationMessage}>Your verification request is pending review.</Text>
+                : <Button title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/>}
+            </>
           ) : !verificationRequest ? (
             <Button title="Request Verification" onPress={() => (navigation as any).navigate("VerificationRequest")} />
           ) : verificationRequest.status === "REJECTED" ? (
@@ -206,6 +219,7 @@ export const ProfileScreen: React.FC = () => {
             </>
           )}
         </Card>
+        {verificationRequest ? <Card><DocumentEvidence label="Identity document" value={verificationRequest.identityDocument}/><DocumentEvidence label="Supporting evidence" value={verificationRequest.supportingEvidence}/></Card> : null}
         <Button title="Sign out" variant="outline" onPress={logout} />
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -216,7 +230,7 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.lg,

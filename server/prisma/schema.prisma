@@ -58,6 +58,8 @@ enum VerifierReactivationRequestStatus {
 }
 
 enum VerificationRequestStatus {
+  ADMIN_REVIEW
+  ADMIN_DENIED
   PENDING
   ASSIGNED
   UNDER_REVIEW
@@ -114,6 +116,12 @@ enum WorkHistoryRole {
   BUSINESS
 }
 
+enum VerificationGateStatus {
+  PENDING
+  ALLOWED
+  DENIED
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -147,6 +155,8 @@ model User {
   moderationAudits       ModerationAudit[]  @relation("AdminModerationAudits")
   reputationAudits       ReputationAudit[]  @relation("ReputationAudits")
   adminReputationAudits  ReputationAudit[]  @relation("AdminReputationAudits")
+  badgeRevocations VerificationRevocation[] @relation("BadgeRevokingAdmin")
+  gateReviews VerificationRequest[] @relation("VerificationGateAdmin")
 }
 
 model VerifierApplication {
@@ -180,6 +190,17 @@ model VerifierApplication {
   @@index([status, submittedAt])
 }
 
+model VerificationRevocation {
+  id String @id @default(uuid())
+  verificationRequestId String @unique
+  verificationRequest VerificationRequest @relation("RevokedVerification", fields: [verificationRequestId], references: [id])
+  reason String
+  revokedById String
+  revokedBy User @relation("BadgeRevokingAdmin", fields: [revokedById], references: [id])
+  revokedAt DateTime @default(now()) @db.Timestamptz(3)
+  gatedRequests VerificationRequest[] @relation("RevocationGate")
+}
+
 model VerificationRequest {
   id                    String                    @id @default(uuid())
   applicantId           String
@@ -205,6 +226,15 @@ model VerificationRequest {
   adminReviewedAt       DateTime?                 @db.Timestamptz(3)
   adminReviewerId       String?
   adminReviewer         User?                     @relation("VerificationAdminReviewer", fields: [adminReviewerId], references: [id])
+  badgeRevocation VerificationRevocation? @relation("RevokedVerification")
+  revocationId String?
+  revocation VerificationRevocation? @relation("RevocationGate", fields: [revocationId], references: [id])
+  gateStatus VerificationGateStatus?
+  gateExplanation String?
+  gateReason String?
+  gateReviewedAt DateTime? @db.Timestamptz(3)
+  gateReviewerId String?
+  gateReviewer User? @relation("VerificationGateAdmin", fields: [gateReviewerId], references: [id])
 
   @@index([applicantId, submittedAt])
   @@index([assignedVerifierId, status, submittedAt])

@@ -73,6 +73,8 @@ const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: spacing.md,
     alignItems: "center",
+    // Matches the flat lower part of AppBackground so the bar blends in.
+    backgroundColor: colors.background,
   },
   bar: {
     flexDirection: "row",
