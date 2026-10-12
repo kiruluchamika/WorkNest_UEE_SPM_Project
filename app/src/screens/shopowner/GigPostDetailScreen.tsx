@@ -346,7 +346,7 @@ export const GigPostDetailScreen: React.FC = () => {
 
         {/* Gig Actions Section */}
         <View style={styles.actionsBlock}>
-          {gig.status !== "CLOSED" ? (
+          {gig.status !== "CLOSED" && gig.status !== "COMPLETED" ? (
             <Button
               title="Edit Gig Details"
               icon="edit-2"

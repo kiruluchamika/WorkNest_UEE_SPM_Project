@@ -18,6 +18,17 @@ export interface GigPostFormPayload {
   imageUrl?: string;
 }
 
+// On update, null clears an optional field (undefined leaves it unchanged).
+export type GigPostUpdatePayload = Partial<
+  Omit<GigPostFormPayload, "startTime" | "endDate" | "endTime" | "contactInfo" | "imageUrl">
+> & {
+  startTime?: string | null;
+  endDate?: string | null;
+  endTime?: string | null;
+  contactInfo?: string | null;
+  imageUrl?: string | null;
+};
+
 export async function createGigPost(payload: GigPostFormPayload): Promise<GigPost> {
   try {
     const { data } = await http.post("/gigs", payload);
@@ -68,7 +79,7 @@ export async function getPublicGigPost(id: string): Promise<GigPost> {
 
 export async function updateGigPost(
   id: string,
-  payload: Partial<GigPostFormPayload>
+  payload: GigPostUpdatePayload
 ): Promise<GigPost> {
   try {
     const { data } = await http.put(`/gigs/${id}`, payload);
