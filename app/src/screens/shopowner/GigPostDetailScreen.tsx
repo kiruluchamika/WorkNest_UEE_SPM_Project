@@ -15,6 +15,7 @@ import { ErrorState } from "../../components/common/ErrorState";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import { SectionHeader } from "../../components/common/SectionHeader";
 import { InfoRow } from "../../components/common/InfoRow";
+import { GigLocationMapCard } from "../../components/map/GigLocationMapCard";
 import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -343,6 +344,13 @@ export const GigPostDetailScreen: React.FC = () => {
           />
           <InfoRow icon="clock" label="Posted On" value={formatDate(gig.createdAt)} />
         </Card>
+
+        <GigLocationMapCard
+          latitude={gig.latitude}
+          longitude={gig.longitude}
+          locationText={gig.location}
+          style={styles.card}
+        />
 
         {/* Gig Actions Section */}
         <View style={styles.actionsBlock}>

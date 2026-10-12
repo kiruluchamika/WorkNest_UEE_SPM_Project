@@ -16,6 +16,7 @@ import { StatusBadge } from "../../components/common/StatusBadge";
 import { InfoRow } from "../../components/common/InfoRow";
 import { SectionHeader } from "../../components/common/SectionHeader";
 import { EmployerSection } from "../../components/gig/EmployerSection";
+import { GigLocationMapCard } from "../../components/map/GigLocationMapCard";
 import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -192,6 +193,14 @@ export const GigDetailScreen: React.FC = () => {
             <InfoRow icon="phone" label="Contact Info" value={gig.contactInfo} />
           ) : null}
         </Card>
+
+        {/* Renders nothing for gigs without a map pin */}
+        <GigLocationMapCard
+          latitude={gig.latitude}
+          longitude={gig.longitude}
+          locationText={gig.location}
+          style={styles.sectionCard}
+        />
 
         {/* About the Gig Description */}
         <Card style={styles.sectionCard}>
