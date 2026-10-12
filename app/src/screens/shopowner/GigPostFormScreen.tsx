@@ -19,6 +19,8 @@ import { Input } from "../../components/common/Input";
 import { Select } from "../../components/common/Select";
 import { DateTimeField } from "../../components/common/DateTimeField";
 import { ImagePickerField } from "../../components/common/ImagePickerField";
+import { LocationPickerField } from "../../components/map/LocationPickerField";
+import type { LatLng } from "../../components/map/leafletHtml";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
@@ -62,6 +64,11 @@ export const GigPostFormScreen: React.FC = () => {
   const [categoryId, setCategoryId] = useState(editingGig?.categoryId ?? "");
   const [description, setDescription] = useState(editingGig?.description ?? "");
   const [location, setLocation] = useState(editingGig?.location ?? "");
+  const [mapPin, setMapPin] = useState<LatLng | null>(
+    editingGig?.latitude != null && editingGig?.longitude != null
+      ? { latitude: editingGig.latitude, longitude: editingGig.longitude }
+      : null
+  );
   const [paymentAmount, setPaymentAmount] = useState(
     editingGig ? String(editingGig.paymentAmount) : ""
   );
@@ -90,6 +97,7 @@ export const GigPostFormScreen: React.FC = () => {
     setCategoryId("");
     setDescription("");
     setLocation("");
+    setMapPin(null);
     setPaymentAmount("");
     setPaymentType("DAILY");
     setStartDate("");
@@ -205,6 +213,8 @@ export const GigPostFormScreen: React.FC = () => {
           endTime: result.data.endTime || null,
           contactInfo: result.data.contactInfo || null,
           imageUrl: result.data.imageUrl || null,
+          latitude: mapPin?.latitude ?? null,
+          longitude: mapPin?.longitude ?? null,
         });
         navigation.goBack();
       } else {
@@ -215,6 +225,8 @@ export const GigPostFormScreen: React.FC = () => {
           endTime: result.data.endTime || undefined,
           contactInfo: result.data.contactInfo || undefined,
           imageUrl: result.data.imageUrl || undefined,
+          latitude: mapPin?.latitude,
+          longitude: mapPin?.longitude,
         });
         setSuccess(true);
       }
@@ -317,6 +329,12 @@ export const GigPostFormScreen: React.FC = () => {
               onChangeText={setLocation}
               placeholder="e.g. Colombo 05"
               error={errors.location}
+            />
+            <LocationPickerField
+              value={mapPin}
+              onChange={setMapPin}
+              addressQuery={location}
+              error={errors.latitude}
             />
             <Input
               label="Workers Needed"
