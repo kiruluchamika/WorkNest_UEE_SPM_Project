@@ -7,6 +7,8 @@ import {
   TextInputProps,
   TouchableOpacity,
   ViewStyle,
+  StyleProp,
+  TextStyle,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
@@ -14,7 +16,9 @@ import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 
 interface InputProps extends TextInputProps {
+  inputRef?: React.Ref<TextInput>;
   label?: string;
+  labelStyle?: StyleProp<TextStyle>;
   required?: boolean;
   error?: string;
   helperText?: string;
@@ -24,10 +28,13 @@ interface InputProps extends TextInputProps {
   multiline?: boolean;
   rows?: number;
   containerStyle?: ViewStyle;
+  inputWrapStyle?: StyleProp<ViewStyle>;
 }
 
 export const Input: React.FC<InputProps> = ({
+  inputRef,
   label,
+  labelStyle,
   required = false,
   error,
   helperText,
@@ -38,6 +45,7 @@ export const Input: React.FC<InputProps> = ({
   rows = 1,
   style,
   containerStyle,
+  inputWrapStyle,
   onFocus,
   onBlur,
   ...textInputProps
@@ -48,7 +56,7 @@ export const Input: React.FC<InputProps> = ({
     <View style={[styles.container, containerStyle]}>
       {label ? (
         <View style={styles.labelRow}>
-          <Text style={styles.label}>{label}</Text>
+          <Text style={[styles.label, labelStyle]}>{label}</Text>
           {required ? <Text style={styles.requiredAsterisk}> *</Text> : null}
         </View>
       ) : null}
@@ -56,6 +64,7 @@ export const Input: React.FC<InputProps> = ({
       <View
         style={[
           styles.inputWrap,
+          inputWrapStyle,
           multiline && {
             minHeight: rows * 24 + spacing.md * 2,
             alignItems: "flex-start",
@@ -74,6 +83,7 @@ export const Input: React.FC<InputProps> = ({
         ) : null}
 
         <TextInput
+          ref={inputRef}
           style={[
             styles.input,
             multiline && {

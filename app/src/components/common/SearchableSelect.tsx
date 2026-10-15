@@ -5,9 +5,11 @@ import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import type { SelectOption } from "./Select";
+import type { StyleProp, ViewStyle, TextStyle } from "react-native";
 
 interface SearchableSelectProps {
   label: string;
+  labelStyle?: StyleProp<TextStyle>;
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
@@ -15,11 +17,13 @@ interface SearchableSelectProps {
   searchPlaceholder?: string;
   error?: string;
   emptyMessage?: string;
+  triggerStyle?: StyleProp<ViewStyle>;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
-  label, value, options, onChange, placeholder = "Select an option...",
+  label, labelStyle, value, options, onChange, placeholder = "Select an option...",
   searchPlaceholder = "Search...", error, emptyMessage = "No options found",
+  triggerStyle,
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -31,8 +35,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const close = () => { setOpen(false); setQuery(""); };
 
   return <View style={styles.container}>
-    <Text style={styles.label}>{label}</Text>
-    <TouchableOpacity style={[styles.trigger, error && styles.triggerError]} onPress={() => setOpen(true)} activeOpacity={0.8}>
+    <Text style={[styles.label, labelStyle]}>{label}</Text>
+    <TouchableOpacity style={[styles.trigger, triggerStyle, error && styles.triggerError]} onPress={() => setOpen(true)} activeOpacity={0.8}>
       <Text style={[styles.triggerText, !selected && styles.placeholder]} numberOfLines={1}>{selected?.label ?? placeholder}</Text>
       <Feather name="chevron-down" size={16} color={colors.textMuted}/>
     </TouchableOpacity>
