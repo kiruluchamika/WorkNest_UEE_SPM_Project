@@ -327,10 +327,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontSize: typography.sizes.sm,
   },
-  verifierSection: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md },
+  verifierSection: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, padding: spacing.lg, marginTop: spacing.sm, marginBottom: spacing.lg },
   sectionTitle: { fontSize: typography.sizes.base, fontWeight: "800", color: colors.primaryDark, marginBottom: spacing.xs },
-  sectionHelp: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 20, marginBottom: spacing.md },
-  documentNote: { fontSize: typography.sizes.xs, color: colors.textMuted, marginTop: -spacing.sm, marginBottom: spacing.md, lineHeight: 17 },
+  sectionHelp: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 22, marginBottom: spacing.lg },
+  documentNote: { fontSize: typography.sizes.xs, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md, lineHeight: 19 },
   divider: {
     flexDirection: "row",
     alignItems: "center",

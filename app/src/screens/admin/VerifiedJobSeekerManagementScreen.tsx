@@ -19,6 +19,8 @@ import { typography } from "../../theme/typography";
 
 export function VerifiedJobSeekerManagementScreen() {
   const route = useRoute<any>(); const nav = useNavigation<any>();
+  const home = route.name === "VerifiedJobSeekerManagement";
+  const verifiedList = route.name === "VerifiedJobSeekers";
   const history = route.name === "BadgeRevocationHistory";
   const gates = route.name === "VerificationAdminGate";
   const details = route.name === "JobSeekerVerificationDetails";
@@ -38,10 +40,11 @@ export function VerifiedJobSeekerManagementScreen() {
       if (details) { const value = await api.getJobSeekerVerificationDetails(route.params.userId); if (current === generation.current) setRecord(value); }
       else if (history) { const value = await api.listRevocations(); if (current === generation.current) setRevocations(value); }
       else if (gates) { const value = await api.listGateRequests(); if (current === generation.current) setRequests(value); }
-      else { const [value, options, pending] = await Promise.all([api.listVerifiedJobSeekers(district), getDistricts(), api.listGateRequests()]); if (current === generation.current) { setRequests(value); setDistricts(options); setPendingCount(pending.length); } }
+      else if (verifiedList) { const [value, options] = await Promise.all([api.listVerifiedJobSeekers(district), getDistricts()]); if (current === generation.current) { setRequests(value); setDistricts(options); } }
+      else if (home) { const pending = await api.listGateRequests(); if (current === generation.current) setPendingCount(pending.length); }
     } catch (e) { if (current === generation.current) setError(e instanceof Error ? e.message : "Could not load records."); }
     finally { if (current === generation.current) setLoading(false); }
-  }, [details, history, gates, district, route.params?.userId]);
+  }, [details, history, gates, home, verifiedList, district, route.params?.userId]);
   useFocusEffect(useCallback(() => { void load(); return () => { generation.current++; }; }, [load]));
   const act = async (operation: () => Promise<void>) => {
     setBusy(true); setError("");
@@ -49,7 +52,7 @@ export function VerifiedJobSeekerManagementScreen() {
     catch (e) { setError(e instanceof Error ? e.message : "Action failed."); }
     finally { setBusy(false); }
   };
-  const title = details ? "Job Seeker Verification Details" : history ? "Revocation History" : gates ? "Incoming Re-verification Requests" : "Verified Job Seeker Management";
+  const title = details ? "Job Seeker Verification Details" : history ? "Revocation History" : gates ? "Incoming Re-verification Requests" : verifiedList ? "Verified Job Seekers" : "Verified Job Seeker Management";
   const latestRequest = record?.requests[0];
   const currentReverification = !record?.verified && latestRequest?.revocation ? latestRequest : undefined;
   const awaitingVerifier = currentReverification?.gateStatus === "ALLOWED"
@@ -65,23 +68,23 @@ export function VerifiedJobSeekerManagementScreen() {
   return <SafeAreaView style={s.container}><AppHeader subtitle={title}/>
     <ScrollView contentContainerStyle={s.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>
       <Text style={s.title}>{title}</Text>
-      {!details && !history && !gates ? <>
+      {verifiedList ? <>
         <SearchableSelect label="District" value={district} onChange={setDistrict} options={[{ value: "", label: "All districts" }, ...districts.map(value => ({ value, label: value }))]} placeholder="All districts"/>
         <Text style={s.sectionTitle}>Verified Job Seekers</Text>
       </> : null}
-      {loading ? <LoadingSpinner/> : error ? <Card><Text style={s.error}>{error}</Text><Button title="Retry" onPress={load}/></Card> : details && record ? <>
+      {!home && (loading ? <LoadingSpinner/> : error ? <Card style={s.polishPanel}><Text style={s.error}>{error}</Text><Button style={s.polishButton} textStyle={s.polishButtonText} title="Retry" onPress={load}/></Card> : details && record ? <>
         <Card style={s.card}><Text style={s.name}>{record.user.name}</Text>{field("Email", record.user.email)}<Text style={s.text}>{record.verified ? "VERIFIED" : "NOT VERIFIED"}</Text>
           {awaitingVerifier ? <Text style={s.text}>Re-verification allowed — awaiting verifier review.</Text> : deniedByAdmin ? <>
             <Text style={s.text}>Re-verification rejected by Admin.</Text>
             {field("Reason", currentReverification?.gateReason)}
           </> : null}
-          {record.verified && record.requests[0] ? <Button title="Revoke Verification Badge" variant="danger" disabled={busy} onPress={() => { setReason(""); setDialog({ action: "revoke", id: record.requests[0].id }); }}/>:null}
+          {record.verified && record.requests[0] ? <Button style={s.polishButton} textStyle={s.polishButtonText} title="Revoke Verification Badge" variant="danger" disabled={busy} onPress={() => { setReason(""); setDialog({ action: "revoke", id: record.requests[0].id }); }}/>:null}
         </Card>
         {record.requests.filter(item => item.status === "ADMIN_REVIEW").map(item => <Card key={item.id} style={s.card}>
           <Text style={s.name}>Pending Admin approval</Text>{requestInfo(item)}
           {field("ORIGINAL BADGE REVOCATION REASON", item.revocation?.reason)}{field("New request explanation", item.gateExplanation)}
-          <Button title="Deny Re-verification" variant="danger" disabled={busy} onPress={() => { setReason(""); setDialog({ action: "deny", id: item.id }); }}/>
-          <Button title="Allow Re-verification" loading={busy} onPress={() => act(() => api.decideVerificationGate(item.id, true))}/>
+          <Button style={s.polishButton} textStyle={s.polishButtonText} title="Deny Re-verification" variant="danger" disabled={busy} onPress={() => { setReason(""); setDialog({ action: "deny", id: item.id }); }}/>
+          <Button style={s.polishButton} textStyle={s.polishButtonText} title="Allow Re-verification" loading={busy} onPress={() => act(() => api.decideVerificationGate(item.id, true))}/>
         </Card>)}
         <Text style={s.title}>Revocation history</Text>
         {!record.revocations.length ? <Text style={s.text}>No revocations.</Text> : record.revocations.map(item => <Card key={item.id} style={s.card}>
@@ -94,19 +97,25 @@ export function VerifiedJobSeekerManagementScreen() {
           {field("Original revocation reason", item.revocation?.reason)}{field("Request explanation", item.gateExplanation)}{field("Admin gate decision", item.gateStatus)}{field("Admin gate reason", item.gateReason)}
           <DocumentEvidence label="Identity document" value={item.identityDocument}/><DocumentEvidence label="Supporting information" value={item.supportingEvidence}/>
         </Card>)}
-      </> : history ? (!revocations.length ? <Card><Text>No revoked badges found.</Text></Card> : revocations.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.verificationRequest?.applicantId })}><Card style={s.card}><Text style={s.name}>{item.verificationRequest?.applicant.name}</Text>{field("District", item.verificationRequest?.district)}{field("Revocation reason", item.reason)}{field("Revoked", new Date(item.revokedAt).toLocaleString())}</Card></TouchableOpacity>))
-        : !requests.length ? <Card><Text>{gates ? "No requests awaiting Admin approval." : "No verified Job Seekers found."}</Text></Card>
-        : requests.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.applicantId })}><Card style={s.card}>{requestInfo(item)}{!gates ? <Text style={s.text}>VERIFIED</Text> : field("Original revocation reason", item.revocation?.reason)}</Card></TouchableOpacity>)}
-      {!details && !history && !gates ? <View style={s.navigation}>
-        <TouchableOpacity accessibilityRole="button" style={s.navigationRow} onPress={() => nav.navigate("BadgeRevocationHistory")}>
-          <Feather name="clock" size={18} color={colors.primaryDark}/>
-          <Text style={s.navigationText}>Revocation History</Text>
+      </> : history ? (!revocations.length ? <Card style={s.polishPanel}><Text>No revoked badges found.</Text></Card> : revocations.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.verificationRequest?.applicantId })}><Card style={s.card}><Text style={s.name}>{item.verificationRequest?.applicant.name}</Text>{field("District", item.verificationRequest?.district)}{field("Revocation reason", item.reason)}{field("Revoked", new Date(item.revokedAt).toLocaleString())}</Card></TouchableOpacity>))
+        : !requests.length ? <Card style={s.polishPanel}><Text>{gates ? "No requests awaiting Admin approval." : "No verified Job Seekers found."}</Text></Card>
+        : requests.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.applicantId })}><Card style={s.card}>{requestInfo(item)}{!gates ? <Text style={s.text}>VERIFIED</Text> : field("Original revocation reason", item.revocation?.reason)}</Card></TouchableOpacity>))}
+      {home && error ? <Text style={s.error}>{error}</Text> : null}
+      {home ? <View style={s.navigation}>
+        <TouchableOpacity accessibilityRole="button" style={s.navigationRow} onPress={() => nav.navigate("VerifiedJobSeekers")}>
+          <Feather name="users" size={18} color={colors.primaryDark}/>
+          <Text style={s.navigationText}>View Verified Job Seekers</Text>
           <Feather name="chevron-right" size={18} color={colors.textMuted}/>
         </TouchableOpacity>
         <TouchableOpacity accessibilityRole="button" style={s.navigationRow} onPress={() => nav.navigate("VerificationAdminGate")}>
           <Feather name="inbox" size={18} color={colors.primaryDark}/>
           <Text style={s.navigationText}>Incoming Re-verification Requests</Text>
           <Text style={s.navigationCount} accessibilityLabel={pendingCount === undefined ? "Pending request count unavailable" : `${pendingCount} pending requests`}>{pendingCount ?? "—"}</Text>
+          <Feather name="chevron-right" size={18} color={colors.textMuted}/>
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" style={s.navigationRow} onPress={() => nav.navigate("BadgeRevocationHistory")}>
+          <Feather name="clock" size={18} color={colors.primaryDark}/>
+          <Text style={s.navigationText}>Revocation History</Text>
           <Feather name="chevron-right" size={18} color={colors.textMuted}/>
         </TouchableOpacity>
       </View> : null}
@@ -116,16 +125,16 @@ export function VerifiedJobSeekerManagementScreen() {
         <Text style={s.text}>Job Seeker: {record?.user.name}</Text>
         <Input label="Reason" value={reason} onChangeText={setReason} multiline rows={4}/>
         {error ? <Text style={s.error}>{error}</Text> : null}
-        <Button title="Cancel" variant="outline" disabled={busy} onPress={() => setDialog(undefined)}/>
-        <Button title={dialog?.action === "revoke" ? "Revoke Badge" : "Deny Re-verification"} variant="danger" loading={busy} disabled={!reason.trim()} onPress={() => { if (!dialog || !reason.trim()) return; void act(() => dialog.action === "revoke" ? api.revokeVerificationBadge(dialog.id, reason.trim()) : api.decideVerificationGate(dialog.id, false, reason.trim())); }}/>
+        <Button style={s.polishButton} textStyle={s.polishButtonText} title="Cancel" variant="outline" disabled={busy} onPress={() => setDialog(undefined)}/>
+        <Button style={s.polishButton} textStyle={s.polishButtonText} title={dialog?.action === "revoke" ? "Revoke Badge" : "Deny Re-verification"} variant="danger" loading={busy} disabled={!reason.trim()} onPress={() => { if (!dialog || !reason.trim()) return; void act(() => dialog.action === "revoke" ? api.revokeVerificationBadge(dialog.id, reason.trim()) : api.decideVerificationGate(dialog.id, false, reason.trim())); }}/>
       </View></View>
     </Modal>
   </SafeAreaView>;
 }
 const s = StyleSheet.create({
-  sectionTitle: { fontSize: typography.sizes.base, fontWeight: "700", color: colors.text, marginBottom: spacing.md },
-  navigation: { marginTop: spacing.xl },
-  navigationRow: { width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
-  navigationText: { flex: 1, fontSize: typography.sizes.sm, fontWeight: "700", color: colors.text, marginHorizontal: spacing.md },
-  navigationCount: { flexShrink: 0, minWidth: 24, textAlign: "center", marginRight: spacing.sm, fontSize: typography.sizes.sm, fontWeight: "800", color: colors.primaryDark },
-  container: { flex: 1, backgroundColor: colors.background }, scroll: { padding: spacing.md, paddingBottom: spacing.xxl }, title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, marginVertical: spacing.md }, name: { fontSize: typography.sizes.base, fontWeight: "700", color: colors.text }, text: { fontSize: typography.sizes.sm, color: colors.textMuted, marginVertical: spacing.xs }, card: { marginBottom: spacing.md }, error: { color: colors.danger }, backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,.4)", justifyContent: "center", padding: spacing.md }, dialog: { backgroundColor: colors.surface, padding: spacing.lg, borderRadius: radius.lg } });
+  sectionTitle: { fontSize: typography.sizes.base, fontWeight: "700", color: colors.text, marginBottom: spacing.md, lineHeight: 24 },
+  navigation: { marginTop: spacing.md },
+  navigationRow: { width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, minHeight: 76, padding: spacing.md + spacing.xs, marginBottom: spacing.sm + spacing.xs, borderRadius: 16 },
+  navigationText: { flex: 1, fontSize: typography.sizes.sm, fontWeight: "700", color: colors.text, marginHorizontal: spacing.md, lineHeight: 22 },
+  navigationCount: { flexShrink: 0, minWidth: 24, textAlign: "center", marginRight: spacing.sm, fontSize: typography.sizes.sm, fontWeight: "800", color: colors.primaryDark, backgroundColor: colors.primaryLight, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: 8 },
+  container: { flex: 1, backgroundColor: colors.background }, scroll: { padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" }, title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, marginVertical: spacing.md, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 }, name: { fontSize: typography.sizes.base, fontWeight: "700", color: colors.text, lineHeight: 26, flexShrink: 1 }, text: { fontSize: typography.sizes.sm, color: colors.textMuted, marginVertical: spacing.xs, lineHeight: 22 }, card: { marginBottom: spacing.md, padding: spacing.md + spacing.xs, borderRadius: 16 }, error: { color: colors.danger }, backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,.4)", justifyContent: "center", padding: spacing.md }, dialog: { backgroundColor: colors.surface, padding: spacing.lg, borderRadius: 24, width: "100%", maxWidth: 600, alignSelf: "center" }, polishButton: { marginTop: spacing.sm, marginBottom: spacing.xs, minHeight: 50, paddingVertical: spacing.sm, borderRadius: 14 }, polishButtonText: { textAlign: "center", flexShrink: 1, lineHeight: 20 }, polishPanel: { marginBottom: spacing.md, padding: spacing.md + spacing.xs, borderRadius: 16 }});

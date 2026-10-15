@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const loadFrontend = require('./helpers/loadFrontend.cjs');
 const helper = loadFrontend('utils/documentUpload.ts');
+const theme = { '../../theme/colors': loadFrontend('theme/colors.ts'), '../../theme/spacing': loadFrontend('theme/spacing.ts') };
 const { prepareDocumentUpload, MAX_DOCUMENT_BYTES } = helper;
 const pdf = Buffer.from('%PDF-1.4\n%%EOF').toString('base64');
 
@@ -37,7 +38,8 @@ function component(os, result, read = async () => pdf) {
   const React = { createElement: (type, props, ...children) => ({ type, props: props || {}, children }),
     useState: initial => [initial, value => { if (typeof value === 'string' && value) errors.push(value); }] };
   const { DocumentField } = loadFrontend('components/common/DocumentField.tsx', {
-    react: React, 'react-native': { Platform: { OS: os }, Text: 'Text', View: 'View' },
+    ...theme,
+    react: React, 'react-native': { Platform: { OS: os }, Text: 'Text', View: 'View', StyleSheet: { create: styles => styles } },
     'expo-document-picker': { getDocumentAsync: async value => { options.push(value); return typeof result === 'function' ? result(value) : result; } },
     'expo-file-system': { File: class {
       constructor(uri) { this.uri = uri; }
@@ -117,7 +119,8 @@ test('native document retrieval carries authentication, checks HTTP status and c
     const React = { createElement: (type, props, ...children) => ({ type, props, children }),
       useState: initial => [initial, value => { if (typeof value === 'string' && value) errors.push(value); }] };
     const { DocumentEvidence } = loadFrontend('components/common/DocumentField.tsx', {
-      react: React, 'react-native': { Platform: { OS: 'android' }, Text: 'Text', View: 'View' },
+      ...theme,
+      react: React, 'react-native': { Platform: { OS: 'android' }, Text: 'Text', View: 'View', StyleSheet: { create: styles => styles } },
       'expo-document-picker': {},
       'expo-file-system': {},
       'expo-file-system/legacy': { cacheDirectory: 'file:///cache/',

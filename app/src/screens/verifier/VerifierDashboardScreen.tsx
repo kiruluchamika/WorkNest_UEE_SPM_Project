@@ -97,7 +97,7 @@ export const VerifierDashboardScreen: React.FC = () => {
           {metric("Rejected", data.allTime.rejected)}
           {metric("Flagged", data.allTime.flagged)}
         </Card>
-        <Button title="Verification History" variant="outline" onPress={() => (nav as any).navigate("VerificationHistory")} />
+        <Button style={s.polishButton} textStyle={s.polishButtonText} title="Verification History" variant="outline" onPress={() => (nav as any).navigate("VerificationHistory")} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -105,19 +105,18 @@ export const VerifierDashboardScreen: React.FC = () => {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "transparent" },
-  scroll: { padding: spacing.md },
-  title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text },
-  muted: { fontSize: typography.sizes.sm, color: colors.textMuted },
-  section: { fontSize: typography.sizes.base, fontWeight: "800", color: colors.text, marginVertical: spacing.md },
+  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" },
+  title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 },
+  muted: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 22 },
+  section: { fontSize: typography.sizes.base, fontWeight: "800", color: colors.text, marginVertical: spacing.md, lineHeight: 24 },
   availability: { flexDirection: "row", alignItems: "center", marginTop: spacing.md },
   availabilityCopy: { flex: 1 },
   switchGroup: { alignItems: "center", marginLeft: spacing.sm },
   availabilityStatus: { fontSize: typography.sizes.xs, fontWeight: "700", color: colors.textMuted, marginTop: spacing.xs },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: spacing.sm },
-  rowText: { flex: 1, fontSize: typography.sizes.sm, fontWeight: "700", color: colors.text },
+  row: { flexDirection: "row", alignItems: "center", minHeight: 68, padding: spacing.md + spacing.xs, marginBottom: spacing.sm + spacing.xs, borderRadius: 16 },
+  rowText: { flex: 1, fontSize: typography.sizes.sm, fontWeight: "700", color: colors.text, lineHeight: 22, flexShrink: 1 },
   count: { fontSize: typography.sizes.base, fontWeight: "800", color: colors.primaryDark, marginRight: spacing.sm },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   metric: { width: "50%", padding: spacing.sm },
-  metricValue: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.primaryDark },
-  metricLabel: { fontSize: typography.sizes.xs, color: colors.textMuted },
-});
+  metricValue: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.primaryDark, lineHeight: 34 },
+  metricLabel: { fontSize: typography.sizes.xs, color: colors.textMuted, lineHeight: 18 }, polishButton: { marginTop: spacing.sm, marginBottom: spacing.xs, minHeight: 50, paddingVertical: spacing.sm, borderRadius: 14 }, polishButtonText: { textAlign: "center", flexShrink: 1, lineHeight: 20 }});

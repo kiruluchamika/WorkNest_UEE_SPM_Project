@@ -40,8 +40,8 @@ export const VerifierReapplicationScreen: React.FC = () => {
     {errors.identityDocumentReference ? <Text style={styles.error}>{errors.identityDocumentReference}</Text> : null}
     <Input label="Address / supporting information" value={addressInformation} onChangeText={setAddressInformation} multiline rows={3} error={errors.addressInformation}/>
     <Input label="Community reference (optional)" value={communityReference} onChangeText={setCommunityReference} multiline rows={3}/>
-    {error?<Text style={styles.error}>{error}</Text>:null}<Button title="Submit Re-application" onPress={submit} loading={submitting}/>
+    {error?<Text style={styles.error}>{error}</Text>:null}<Button style={styles.polishButton} textStyle={styles.polishButtonText} title="Submit Re-application" onPress={submit} loading={submitting}/>
   </ScrollView></KeyboardAvoidingView></SafeAreaView>;
 };
 
-const styles=StyleSheet.create({container:{flex:1,backgroundColor: "transparent"},scroll:{padding:spacing.lg},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},help:{fontSize:typography.sizes.sm,color:colors.textMuted,lineHeight:20,marginTop:spacing.xs,marginBottom:spacing.lg},error:{fontSize:typography.sizes.sm,color:colors.danger,marginBottom:spacing.md}});
+const styles=StyleSheet.create({container:{flex:1,backgroundColor: "transparent"},scroll:{ padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" },title:{ fontSize:typography.sizes.lg, fontWeight:"800", color:colors.text, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 },help:{ fontSize:typography.sizes.sm, color:colors.textMuted, marginTop:spacing.xs, marginBottom:spacing.lg, lineHeight: 22 },error:{fontSize:typography.sizes.sm,color:colors.danger,marginBottom:spacing.md}, polishButton: { marginTop: spacing.sm, marginBottom: spacing.xs, minHeight: 50, paddingVertical: spacing.sm, borderRadius: 14 }, polishButtonText: { textAlign: "center", flexShrink: 1, lineHeight: 20 }});

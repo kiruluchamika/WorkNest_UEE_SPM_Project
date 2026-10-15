@@ -184,20 +184,20 @@ export const ProfileScreen: React.FC = () => {
           ) : verificationError ? (
             <>
               <Text style={styles.verificationMessage}>{verificationError}</Text>
-              <Button title="Retry" variant="outline" onPress={loadVerificationStatus} />
+              <Button style={{ marginTop: spacing.sm, paddingVertical: spacing.sm }} textStyle={{ textAlign: "center", flexShrink: 1, lineHeight: 20 }} title="Retry" variant="outline" onPress={loadVerificationStatus} />
             </>
           ) : verificationState?.revocation && !verificationState.verified ? (
             <>
               <Text style={[styles.verificationStatus,{color:colors.danger}]}>VERIFICATION REVOKED</Text>
               <Text style={styles.verificationMessage}>Revocation reason: {verificationState.revocation.reason}</Text>
               {verificationRequest?.status === "ADMIN_REVIEW" ? <Text style={styles.verificationMessage}>PENDING / ADMIN REVIEW</Text>
-                : verificationRequest?.status === "ADMIN_DENIED" ? <><Text style={styles.verificationStatus}>REJECTED BY ADMIN</Text><Text style={styles.rejectionReason}>Reason: {verificationRequest.gateReason}</Text><Button title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/></>
-                : verificationRequest?.status === "REJECTED" ? <><Text style={styles.verificationStatus}>REJECTED BY VERIFIER</Text><Text style={styles.rejectionReason}>Reason: {verificationRequest.rejectionReason}</Text><Button title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/></>
+                : verificationRequest?.status === "ADMIN_DENIED" ? <><Text style={styles.verificationStatus}>REJECTED BY ADMIN</Text><Text style={styles.rejectionReason}>Reason: {verificationRequest.gateReason}</Text><Button style={{ marginTop: spacing.sm, paddingVertical: spacing.sm }} textStyle={{ textAlign: "center", flexShrink: 1, lineHeight: 20 }} title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/></>
+                : verificationRequest?.status === "REJECTED" ? <><Text style={styles.verificationStatus}>REJECTED BY VERIFIER</Text><Text style={styles.rejectionReason}>Reason: {verificationRequest.rejectionReason}</Text><Button style={{ marginTop: spacing.sm, paddingVertical: spacing.sm }} textStyle={{ textAlign: "center", flexShrink: 1, lineHeight: 20 }} title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/></>
                 : verificationRequest && ["PENDING","ASSIGNED","UNDER_REVIEW","RETURNED_FOR_REVIEW","FLAGGED"].includes(verificationRequest.status) ? <Text style={styles.verificationMessage}>Your verification request is pending review.</Text>
-                : <Button title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/>}
+                : <Button style={{ marginTop: spacing.sm, paddingVertical: spacing.sm }} textStyle={{ textAlign: "center", flexShrink: 1, lineHeight: 20 }} title="Request Verification Again" onPress={()=>(navigation as any).navigate("VerificationRequest")}/>}
             </>
           ) : !verificationRequest ? (
-            <Button title="Request Verification" onPress={() => (navigation as any).navigate("VerificationRequest")} />
+            <Button style={{ marginTop: spacing.sm, paddingVertical: spacing.sm }} textStyle={{ textAlign: "center", flexShrink: 1, lineHeight: 20 }} title="Request Verification" onPress={() => (navigation as any).navigate("VerificationRequest")} />
           ) : verificationRequest.status === "REJECTED" ? (
             <>
               <Text style={[styles.verificationStatus, { color: colors.danger }]}>REJECTED</Text>
@@ -205,7 +205,7 @@ export const ProfileScreen: React.FC = () => {
               {verificationRequest.rejectionReason ? (
                 <Text style={styles.rejectionReason}>Reason: {verificationRequest.rejectionReason}</Text>
               ) : null}
-              <Button title="Apply Again" onPress={() => (navigation as any).navigate("VerificationRequest")} />
+              <Button style={{ marginTop: spacing.sm, paddingVertical: spacing.sm }} textStyle={{ textAlign: "center", flexShrink: 1, lineHeight: 20 }} title="Apply Again" onPress={() => (navigation as any).navigate("VerificationRequest")} />
             </>
           ) : verificationRequest.status === "APPROVED" || verificationRequest.status === "ADMIN_CONFIRMED" ? (
             <>
@@ -297,18 +297,19 @@ const styles = StyleSheet.create({
   verificationStatus: {
     fontSize: typography.sizes.base,
     fontWeight: "800",
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: 26,
   },
   verificationMessage: {
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
-    lineHeight: 20,
+    lineHeight: 22,
     marginBottom: spacing.md,
   },
   rejectionReason: {
     fontSize: typography.sizes.sm,
     color: colors.text,
-    lineHeight: 20,
+    lineHeight: 22,
     marginBottom: spacing.md,
   },
   infoRow: {
