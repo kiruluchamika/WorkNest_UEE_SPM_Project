@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+﻿import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -8,24 +8,65 @@ import * as applicationsApi from "../../api/applicationsApi";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
-import { ApplicationStatusBadge } from "../../components/applications/ApplicationStatusBadge";
-import { colors } from "../../theme/colors";
+import { EmptyState } from "../../components/common/EmptyState";
+import { ErrorState } from "../../components/common/ErrorState";
+import { StatusBadge } from "../../components/common/StatusBadge";
+import { FilterChips, FilterOption } from "../../components/common/FilterChips";
+import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
-import { formatDate } from "../../utils/formatters";
+import { formatDate, formatCurrency } from "../../utils/formatters";
 import type { JobApplicationStatus, MyApplicationListItem } from "../../types";
 
 type FilterTab = "ALL" | JobApplicationStatus;
 
-const TABS: { value: FilterTab; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "PENDING", label: "Pending" },
-  { value: "SHORTLISTED", label: "Shortlisted" },
-  { value: "HIRED", label: "Hired" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "REJECTED", label: "Rejected" },
-  { value: "WITHDRAWN", label: "Withdrawn" },
+const TABS: { value: FilterTab; label: string; icon?: keyof typeof Feather.glyphMap }[] = [
+  { value: "ALL", label: "All", icon: "grid" },
+  { value: "PENDING", label: "Pending", icon: "clock" },
+  { value: "SHORTLISTED", label: "Shortlisted", icon: "star" },
+  { value: "HIRED", label: "Hired", icon: "check-circle" },
+  { value: "COMPLETED", label: "Completed", icon: "award" },
+  { value: "REJECTED", label: "Rejected", icon: "x-circle" },
+  { value: "WITHDRAWN", label: "Withdrawn", icon: "slash" },
 ];
+
+const EMPTY_DESCRIPTIONS: Record<FilterTab, { title: string; description: string; icon: keyof typeof Feather.glyphMap }> = {
+  ALL: {
+    title: "No applications yet",
+    description: "Browse available gigs and submit applications to see them tracked here.",
+    icon: "file-text",
+  },
+  PENDING: {
+    title: "No pending applications",
+    description: "You don't have any applications awaiting review.",
+    icon: "clock",
+  },
+  SHORTLISTED: {
+    title: "No shortlisted applications yet",
+    description: "When an employer shortlists your profile, it will appear in this tab.",
+    icon: "star",
+  },
+  HIRED: {
+    title: "No hired applications yet",
+    description: "Congratulations! Applications you've been hired for will be listed here.",
+    icon: "check-circle",
+  },
+  COMPLETED: {
+    title: "No completed gigs yet",
+    description: "Finished gigs you have worked on will show up here.",
+    icon: "award",
+  },
+  REJECTED: {
+    title: "No rejected applications",
+    description: "You don't have any rejected applications.",
+    icon: "slash",
+  },
+  WITHDRAWN: {
+    title: "No withdrawn applications",
+    description: "Applications you voluntarily withdraw will be archived here.",
+    icon: "slash",
+  },
+};
 
 export const MyApplicationsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -59,72 +100,112 @@ export const MyApplicationsScreen: React.FC = () => {
     await load();
   };
 
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { ALL: applications.length };
+    applications.forEach((a) => {
+      map[a.status] = (map[a.status] ?? 0) + 1;
+    });
+    return map;
+  }, [applications]);
+
+  const filterOptions: FilterOption<FilterTab>[] = useMemo(() => {
+    return TABS.map((t) => ({
+      value: t.value,
+      label: t.label,
+      count: counts[t.value] ?? 0,
+      icon: t.icon,
+    }));
+  }, [counts]);
+
   const filtered = useMemo(
     () => (tab === "ALL" ? applications : applications.filter((a) => a.status === tab)),
     [applications, tab]
   );
 
+  const emptyConfig = EMPTY_DESCRIPTIONS[tab];
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primaryDark}
+          />
+        }
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>My Applications</Text>
+        {/* Header Title */}
+        <View style={styles.header}>
+          <Text style={styles.title}>My Applications</Text>
+          <Text style={styles.subtitle}>
+            Track review status, hiring decisions, and completed work.
+          </Text>
+        </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
-          {TABS.map((t) => (
-            <TouchableOpacity
-              key={t.value}
-              onPress={() => setTab(t.value)}
-              style={[styles.tab, tab === t.value && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, tab === t.value && styles.tabTextActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* Filter Chips Bar */}
+        <FilterChips<FilterTab>
+          options={filterOptions}
+          selected={tab}
+          onSelect={setTab}
+          style={styles.tabsRow}
+        />
 
         {loading ? (
           <LoadingSpinner message="Loading your applications..." />
         ) : loadError ? (
-          <Card style={styles.emptyCard}>
-            <Feather name="alert-triangle" size={22} color={colors.danger} />
-            <Text style={styles.emptyTitle}>Couldn&apos;t load applications</Text>
-            <Text style={styles.emptyText}>{loadError}</Text>
-          </Card>
+          <ErrorState
+            title="Couldn't load applications"
+            message={loadError}
+            onRetry={load}
+          />
         ) : filtered.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <Feather name="file-text" size={22} color={colors.primaryDark} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {tab === "ALL" ? "No applications yet" : `No ${tab.toLowerCase()} applications`}
-            </Text>
-            <Text style={styles.emptyText}>
-              {tab === "ALL"
-                ? "Jobs you apply for will appear here."
-                : "Applications in this status will appear here."}
-            </Text>
-          </Card>
+          <EmptyState
+            icon={emptyConfig.icon}
+            title={emptyConfig.title}
+            description={emptyConfig.description}
+            actionTitle={tab !== "ALL" ? "View All Applications" : undefined}
+            onAction={tab !== "ALL" ? () => setTab("ALL") : undefined}
+          />
         ) : (
           filtered.map((app) => (
-            <Card key={app.id} style={styles.appCard}>
-              <View style={styles.appHeader}>
-                <Text style={styles.appTitle} numberOfLines={1}>
-                  {app.gig.title}
-                </Text>
-                <ApplicationStatusBadge status={app.status} />
-              </View>
-              <Text style={styles.appMeta}>{app.gig.location}</Text>
-              <Text style={styles.appMeta}>Applied: {formatDate(app.createdAt)}</Text>
-              <Button
-                title="View Application"
-                variant="outline"
-                size="sm"
-                onPress={() => (navigation as any).navigate("ApplicationDetails", { applicationId: app.id })}
-                style={{ marginTop: spacing.sm }}
-              />
-            </Card>
+            <TouchableOpacity
+              key={app.id}
+              activeOpacity={0.85}
+              onPress={() =>
+                (navigation as any).navigate("ApplicationDetails", { applicationId: app.id })
+              }
+            >
+              <Card style={styles.appCard}>
+                <View style={styles.appHeader}>
+                  <Text style={styles.appTitle} numberOfLines={1}>
+                    {app.gig.title}
+                  </Text>
+                  <StatusBadge status={app.status} size="sm" />
+                </View>
+
+                <View style={styles.metaRow}>
+                  <Feather name="map-pin" size={13} color={colors.textMuted} />
+                  <Text style={styles.appMeta} numberOfLines={1}>
+                    {app.gig.location}
+                  </Text>
+                </View>
+
+                <View style={styles.appFooter}>
+                  <View style={styles.dateWrap}>
+                    <Feather name="calendar" size={12} color={colors.textMuted} />
+                    <Text style={styles.dateText}>Applied {formatDate(app.createdAt)}</Text>
+                  </View>
+
+                  <View style={styles.actionLink}>
+                    <Text style={styles.actionText}>Details</Text>
+                    <Feather name="chevron-right" size={14} color={colors.primaryDark} />
+                  </View>
+                </View>
+              </Card>
+            </TouchableOpacity>
           ))
         )}
 
@@ -137,85 +218,85 @@ export const MyApplicationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,
+    maxWidth: 760,
+    width: "100%",
+    alignSelf: "center",
+  },
+  header: {
+    marginBottom: spacing.sm,
   },
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: "800",
     color: colors.text,
-    marginBottom: spacing.md,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   tabsRow: {
     marginBottom: spacing.md,
   },
-  tab: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    marginRight: spacing.sm,
-  },
-  tabActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  tabText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  tabTextActive: {
-    color: colors.textInverse,
-    fontWeight: "800",
-  },
-  emptyCard: {
-    alignItems: "center",
-    padding: spacing.xl,
-  },
-  emptyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
-    color: colors.text,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  emptyText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
   appCard: {
     marginBottom: spacing.md,
+    ...shadows.subtle,
   },
   appHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs + 2,
+    gap: spacing.sm,
   },
   appTitle: {
     fontSize: typography.sizes.base,
-    fontWeight: "700",
+    fontWeight: "800",
     color: colors.text,
     flex: 1,
-    marginRight: spacing.sm,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: spacing.sm,
   },
   appMeta: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
+    flex: 1,
+  },
+  appFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    paddingTop: spacing.sm,
+  },
+  dateWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dateText: {
+    fontSize: typography.sizes.xxs,
+    color: colors.textMuted,
+    fontWeight: "500",
+  },
+  actionLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  actionText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: "700",
+    color: colors.primaryDark,
   },
 });

@@ -1,3 +1,4 @@
+import { appScreenLayout } from "../components/common/AppBackground";
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -21,7 +22,7 @@ interface AuthStackProps {
 
 export const AuthStack: React.FC<AuthStackProps> = ({ initialRouteName = "Onboarding" }) => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
+    <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />

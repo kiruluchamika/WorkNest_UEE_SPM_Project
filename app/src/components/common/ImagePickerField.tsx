@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useState } from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -28,7 +29,7 @@ export const ImagePickerField: React.FC<ImagePickerFieldProps> = ({
       const uri = await picker();
       if (uri) onChange(uri);
     } catch (err) {
-      Alert.alert("Something went wrong", "Could not process that image. Try another one.");
+      toast.error("Something went wrong", "Could not process that image. Try another one.");
     } finally {
       setLoading(false);
     }

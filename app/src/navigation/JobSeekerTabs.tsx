@@ -1,3 +1,4 @@
+import { appScreenLayout } from "../components/common/AppBackground";
 import { EmployerProfileScreen } from "../screens/jobseeker/EmployerProfileScreen";
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -6,6 +7,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { BrowseGigsScreen } from "../screens/jobseeker/BrowseGigsScreen";
 import { GigDetailScreen } from "../screens/jobseeker/GigDetailScreen";
+import { GigMapScreen } from "../screens/jobseeker/GigMapScreen";
 import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
 import { ApplyToGigScreen } from "../screens/jobseeker/ApplyToGigScreen";
 import { MyApplicationsScreen } from "../screens/jobseeker/MyApplicationsScreen";
@@ -21,6 +23,7 @@ import { GlassTabBar } from "./GlassTabBar";
 export type JobSeekerStackParamList = {
   EmployerProfile: { gigId: string };
   BrowseGigs: undefined;
+  GigMap: undefined;
   GigDetail: { gigId: string };
   ApplyGig: { gigId: string };
   ApplyToGig: { gigId: string };
@@ -54,8 +57,9 @@ const Tab = createBottomTabNavigator<JobSeekerTabParamList>();
 
 function JobSeekerStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="BrowseGigs" component={BrowseGigsScreen} />
+      <Stack.Screen name="GigMap" component={GigMapScreen} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} />
       <Stack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
       <Stack.Screen name="ApplyGig" component={ApplyGigScreen} />
@@ -66,7 +70,7 @@ function JobSeekerStack() {
 
 function MyApplicationsStackNavigator() {
   return (
-    <MyApplicationsStack.Navigator screenOptions={{ headerShown: false }}>
+    <MyApplicationsStack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <MyApplicationsStack.Screen name="MyApplications" component={MyApplicationsScreen} />
       <MyApplicationsStack.Screen name="ApplicationDetails" component={ApplicationDetailsScreen} />
       <MyApplicationsStack.Screen name="ReviewForm" component={ReviewFormScreen} />
@@ -76,7 +80,7 @@ function MyApplicationsStackNavigator() {
 
 function ProfileStackNavigator() {
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="WorkHistory" component={WorkHistoryScreen} />
       <ProfileStack.Screen name="Reputation" component={ReputationScreen} />
@@ -88,7 +92,7 @@ function ProfileStackNavigator() {
 
 export const JobSeekerTabs: React.FC = () => {
   return (
-    <Tab.Navigator
+    <Tab.Navigator screenLayout={appScreenLayout}
       tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,

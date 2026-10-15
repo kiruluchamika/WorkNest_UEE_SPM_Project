@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import { useOnboarding } from "../context/OnboardingContext";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { appScreenLayout } from "../components/common/AppBackground";
 import { AuthStack } from "./AuthStack";
 import { JobSeekerTabs } from "./JobSeekerTabs";
 import { ShopOwnerTabs } from "./ShopOwnerTabs";
@@ -24,16 +25,19 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isInitializing } = useAuth();
   const { isLoading: onboardingLoading, hasOnboarded } = useOnboarding();
 
-  if (isLoading || onboardingLoading) {
+  // Only block on the initial session restore. Gating on the per-request
+  // isLoading flag would unmount the auth screens mid sign-in and wipe their
+  // error state before it could be shown.
+  if (isInitializing || onboardingLoading) {
     return <LoadingSpinner fullScreen message="Starting WorkNest..." />;
   }
 
   return (
     <NavigationContainer ref={navigationRef} onReady={() => flushPendingNotificationLink(user?.role)}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
         {!user ? (
           <Stack.Screen name="Auth">
             {() => <AuthStack initialRouteName={hasOnboarded ? "Login" : "Onboarding"} />}

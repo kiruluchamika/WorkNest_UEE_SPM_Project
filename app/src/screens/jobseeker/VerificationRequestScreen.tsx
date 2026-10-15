@@ -1,6 +1,7 @@
+import { toast } from "../../utils/toast";
 import { DocumentField, DocumentUpload } from "../../components/common/DocumentField";
 import React, { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { AppHeader } from "../../components/common/AppHeader";
@@ -117,7 +118,7 @@ export const VerificationRequestScreen: React.FC = () => {
         supportingEvidence: supportingEvidence || undefined,
         communityReferences,
       });
-      Alert.alert(
+      toast.success(
         "Request submitted",
         request.status === "ADMIN_REVIEW" ? "Your request is waiting for Admin approval." : request.status === "ASSIGNED"
           ? "A Community Verifier has been assigned."
@@ -188,7 +189,7 @@ export const VerificationRequestScreen: React.FC = () => {
 };
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: "transparent" },
   scroll: { padding: spacing.lg },
   title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text },
   help: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 20, marginVertical: spacing.md },

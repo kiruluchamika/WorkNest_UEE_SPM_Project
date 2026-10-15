@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -23,6 +24,8 @@ import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { ErrorState } from "../../components/common/ErrorState";
+import { SectionHeader } from "../../components/common/SectionHeader";
 import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -118,17 +121,22 @@ export const ApplicationSettingsScreen: React.FC = () => {
   }, [gigId]);
 
   const handleModeSelect = (mode: ApplicationMode) => {
-    if (mode === applicationMode) return;
     setApplicationMode(mode);
     setRequirements(getDefaultRequirements(mode));
   };
 
-  const toggleRequirement = (key: keyof ApplicationRequirements) => {
-    setRequirements((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleRequirementToggle = (field: keyof ApplicationRequirements, val: boolean) => {
+    setRequirements((prev) => ({ ...prev, [field]: val }));
   };
 
   const openAddQuestion = () => {
-    if (questions.length >= MAX_CUSTOM_QUESTIONS) return;
+    if (questions.length >= MAX_CUSTOM_QUESTIONS) {
+      toast.error(
+        "Question Limit Reached",
+        `You can add a maximum of ${MAX_CUSTOM_QUESTIONS} custom screening questions per gig.`
+      );
+      return;
+    }
     setEditingQuestionId(null);
     setDraftQuestion("");
     setDraftType("YES_NO");
@@ -143,121 +151,119 @@ export const ApplicationSettingsScreen: React.FC = () => {
     setDraftQuestion(q.question);
     setDraftType(q.type);
     setDraftRequired(q.required);
-    setDraftOptions(q.options && q.options.length ? q.options : ["", ""]);
+    setDraftOptions(q.options && q.options.length > 0 ? [...q.options] : ["", ""]);
     setDraftErrors({});
     setQuestionModalVisible(true);
   };
 
-  const removeQuestion = (id?: string) => {
+  const deleteQuestion = (id?: string) => {
+    if (!id) return;
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
-  const updateDraftOption = (index: number, value: string) => {
-    setDraftOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
+  const addDraftOption = () => {
+    setDraftOptions((prev) => [...prev, ""]);
   };
 
-  const addDraftOption = () => setDraftOptions((prev) => [...prev, ""]);
-
   const removeDraftOption = (index: number) => {
+    if (draftOptions.length <= 2) {
+      Alert.alert("Minimum Options", "Multiple choice questions require at least 2 options.");
+      return;
+    }
     setDraftOptions((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const saveDraftQuestion = () => {
-    const trimmedQuestion = draftQuestion.trim();
-    const errors: { question?: string; options?: string } = {};
-    if (!trimmedQuestion) errors.question = "Question text cannot be empty.";
+  const updateDraftOption = (index: number, value: string) => {
+    setDraftOptions((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
 
-    let cleanOptions: string[] = [];
-    if (draftType === "MULTIPLE_CHOICE") {
-      cleanOptions = draftOptions.map((o) => o.trim()).filter(Boolean);
-      if (cleanOptions.length < 2) errors.options = "Add at least 2 options.";
+  const saveDraftQuestion = () => {
+    const errs: { question?: string; options?: string } = {};
+    if (!draftQuestion.trim()) {
+      errs.question = "Question text is required.";
     }
 
-    if (Object.keys(errors).length > 0) {
-      setDraftErrors(errors);
+    let cleanedOptions: string[] | undefined = undefined;
+    if (draftType === "MULTIPLE_CHOICE") {
+      cleanedOptions = draftOptions.map((o) => o.trim()).filter(Boolean);
+      if (cleanedOptions.length < 2) {
+        errs.options = "Please provide at least 2 options.";
+      }
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setDraftErrors(errs);
       return;
     }
 
-    const newQuestion: ApplicationQuestion = {
-      id: editingQuestionId ?? genId(),
-      question: trimmedQuestion,
-      type: draftType,
-      required: draftRequired,
-      ...(draftType === "MULTIPLE_CHOICE" ? { options: cleanOptions } : {}),
-    };
-
-    setQuestions((prev) => {
-      if (editingQuestionId) {
-        return prev.map((q) => (q.id === editingQuestionId ? newQuestion : q));
-      }
-      if (prev.length >= MAX_CUSTOM_QUESTIONS) return prev;
-      return [...prev, newQuestion];
-    });
+    if (editingQuestionId) {
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === editingQuestionId
+            ? {
+                ...q,
+                question: draftQuestion.trim(),
+                type: draftType,
+                required: draftRequired,
+                options: cleanedOptions,
+              }
+            : q
+        )
+      );
+    } else {
+      setQuestions((prev) => [
+        ...prev,
+        {
+          id: genId(),
+          question: draftQuestion.trim(),
+          type: draftType,
+          required: draftRequired,
+          options: cleanedOptions,
+        },
+      ]);
+    }
 
     setQuestionModalVisible(false);
   };
 
   const handleSave = async () => {
-    if (saving) return;
-
-    if (!gigId) {
-      Alert.alert("Missing gig", "This gig could not be identified.");
-      return;
-    }
-    if (questions.length > MAX_CUSTOM_QUESTIONS) {
-      Alert.alert("Too many questions", `You can add up to ${MAX_CUSTOM_QUESTIONS} screening questions.`);
-      return;
-    }
-    const invalidQuestion = questions.find(
-      (q) =>
-        !q.question.trim() ||
-        (q.type === "MULTIPLE_CHOICE" && (!q.options || q.options.filter((o) => o.trim()).length < 2))
-    );
-    if (invalidQuestion) {
-      Alert.alert(
-        "Fix screening questions",
-        "Each question needs text, and multiple-choice questions need at least 2 options."
-      );
-      return;
-    }
+    if (!gigId) return;
 
     setSaving(true);
-    const payload: applicationSettingsApi.ApplicationSettingsPayload = {
-      applicationMode,
-      requirements,
-      customQuestions: questions,
-    };
     try {
+      const payload = {
+        applicationMode,
+        requirements,
+        customQuestions: questions,
+      };
+
       if (settingsExisted) {
         await applicationSettingsApi.updateApplicationSettings(gigId, payload);
       } else {
         await applicationSettingsApi.createApplicationSettings(gigId, payload);
-        setSettingsExisted(true);
       }
-      Alert.alert("Saved", "Application settings have been saved.");
+
+      toast.success(
+        "Settings Saved",
+        "Your gig application configuration has been updated successfully."
+      );
+      navigation.goBack();
     } catch (err) {
-      Alert.alert("Could not save", err instanceof Error ? err.message : "Please try again.");
+      toast.error(
+        "Could not save settings",
+        err instanceof Error ? err.message : "Please try again."
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  if (loadError) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-        <View style={styles.errorState}>
-          <View style={styles.errorIcon}>
-            <Feather name="lock" size={22} color={colors.danger} />
-          </View>
-          <Text style={styles.errorTitle}>Can&apos;t open this screen</Text>
-          <Text style={styles.errorText}>{loadError}</Text>
-          <Button title="Go Back" variant="outline" onPress={() => navigation.goBack()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
 
-  if (!gig || loading) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <LoadingSpinner message="Loading application settings..." fullScreen />
@@ -265,229 +271,320 @@ export const ApplicationSettingsScreen: React.FC = () => {
     );
   }
 
-  const schedule = [formatDate(gig.startDate), gig.endDate ? `- ${formatDate(gig.endDate)}` : null]
-    .filter(Boolean)
-    .join(" ");
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
+        <ErrorState
+          title="Could not load settings"
+          message={loadError}
+          onRetry={() => {
+            setLoading(true);
+            applicationSettingsApi
+              .getApplicationSettings(gigId)
+              .then((settings) => {
+                if (settings) {
+                  setSettingsExisted(true);
+                  setApplicationMode(settings.applicationMode);
+                  setRequirements(settings.requirements);
+                  setQuestions(settings.customQuestions.map((q) => ({ ...q, id: q.id ?? genId() })));
+                }
+                setLoadError(null);
+              })
+              .catch((err) => setLoadError(err.message))
+              .finally(() => setLoading(false));
+          }}
+          onGoBack={() => navigation.goBack()}
+          fullScreen
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Feather name="arrow-left" size={16} color={colors.text} />
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Navigation Bar */}
+        <View style={styles.navBar}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={18} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Application Settings</Text>
-          <View style={{ width: 32 }} />
+          <Text style={styles.navTitle}>Application Settings</Text>
+          <View style={{ width: 36 }} />
         </View>
 
-        <Card style={styles.gigCard}>
-          <Text style={styles.gigTitle}>{gig.title}</Text>
-          <Text style={styles.gigMeta}>{gig.category?.name ?? "Uncategorized"}</Text>
-          <Text style={styles.gigMeta}>{gig.location}</Text>
-          <Text style={styles.gigMeta}>{schedule}</Text>
-        </Card>
+        {gig ? (
+          <Card style={styles.gigSummaryCard}>
+            <Text style={styles.gigTitle}>{gig.title}</Text>
+            <Text style={styles.gigMeta}>Configure requirements for candidates applying to this gig</Text>
+          </Card>
+        ) : null}
 
-        <Text style={styles.sectionTitle}>Application Method</Text>
-        {APPLICATION_MODE_OPTIONS.map((option) => {
-          const selected = option.value === applicationMode;
-          return (
-            <TouchableOpacity
-              key={option.value}
-              activeOpacity={0.85}
-              onPress={() => handleModeSelect(option.value)}
-            >
-              <Card style={StyleSheet.flatten([styles.modeCard, selected && styles.modeCardSelected])}>
+        {/* Section 1: Application Mode Preset */}
+        <Card style={styles.card}>
+          <SectionHeader
+            title="Application Mode"
+            subtitle="Choose a preset to balance applicant volume and screening depth"
+          />
+
+          {APPLICATION_MODE_OPTIONS.map((opt) => {
+            const isSelected = applicationMode === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => handleModeSelect(opt.value)}
+                activeOpacity={0.8}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                style={[styles.modeCard, isSelected && styles.modeCardSelected]}
+              >
                 <View style={styles.modeRow}>
-                  <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-                    {selected ? <View style={styles.radioInner} /> : null}
+                  <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                    {isSelected ? <View style={styles.radioInner} /> : null}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.modeLabel}>{option.label}</Text>
-                    <Text style={styles.modeDescription}>{option.description}</Text>
-                    <Text style={styles.modeSuited}>{option.suitedFor}</Text>
+                    <Text style={[styles.modeLabel, isSelected && styles.modeLabelSelected]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={styles.modeDescription}>{opt.description}</Text>
+                    <Text style={styles.modeSuited}>Best for: {opt.suitedFor}</Text>
                   </View>
                 </View>
-              </Card>
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })}
+        </Card>
 
-        <Text style={styles.sectionTitle}>Required Information</Text>
-        <Card style={styles.requirementsCard}>
-          {REQUIREMENT_FIELDS.map((field, index) => (
-            <View
-              key={field.key}
-              style={[styles.requirementRow, index === REQUIREMENT_FIELDS.length - 1 && { marginBottom: 0 }]}
-            >
-              <Text style={styles.requirementLabel}>{field.label}</Text>
+        {/* Section 2: Requirement Fields Switches */}
+        <Card style={styles.card}>
+          <SectionHeader
+            title="Form Requirements"
+            subtitle="Toggle required fields for applicant submissions"
+          />
+
+          {REQUIREMENT_FIELDS.map((field) => (
+            <View key={field.key} style={styles.requirementRow}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <Text style={styles.requirementLabel}>{field.label}</Text>
+              </View>
               <Switch
                 value={requirements[field.key]}
-                onValueChange={() => toggleRequirement(field.key)}
+                onValueChange={(val) => handleRequirementToggle(field.key, val)}
                 trackColor={{ false: colors.border, true: colors.primarySoft }}
-                thumbColor={requirements[field.key] ? colors.primary : colors.surface}
+                thumbColor={requirements[field.key] ? colors.primaryDark : colors.surface}
               />
             </View>
           ))}
         </Card>
 
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Screening Questions</Text>
-          <Text style={styles.sectionCount}>
-            {questions.length}/{MAX_CUSTOM_QUESTIONS}
-          </Text>
-        </View>
+        {/* Section 3: Custom Screening Questions */}
+        <Card style={styles.card}>
+          <SectionHeader
+            title="Custom Screening Questions"
+            subtitle={`Add up to ${MAX_CUSTOM_QUESTIONS} tailored questions`}
+            count={questions.length}
+          />
 
-        {questions.length === 0 ? (
-          <Card style={styles.emptyQuestionsCard}>
-            <Text style={styles.emptyQuestionsText}>No screening questions yet.</Text>
-          </Card>
-        ) : (
-          questions.map((q, index) => (
-            <Card key={q.id ?? index} style={styles.questionCard}>
-              <Text style={styles.questionIndex}>Question {index + 1}</Text>
-              <Text style={styles.questionText}>{q.question}</Text>
-              <Text style={styles.questionMeta}>
-                Type: {QUESTION_TYPE_OPTIONS.find((t) => t.value === q.type)?.label ?? q.type}
+          {questions.length === 0 ? (
+            <View style={styles.emptyQuestionsWrap}>
+              <Feather name="help-circle" size={24} color={colors.textMuted} />
+              <Text style={styles.emptyQuestionsText}>
+                No screening questions added yet.
               </Text>
-              <Text style={styles.questionMeta}>Required: {q.required ? "Yes" : "No"}</Text>
-              {q.type === "MULTIPLE_CHOICE" && q.options ? (
-                <Text style={styles.questionMeta}>Options: {q.options.join(", ")}</Text>
-              ) : null}
-              <View style={styles.questionActions}>
-                <TouchableOpacity onPress={() => openEditQuestion(q)} style={styles.questionActionButton}>
-                  <Feather name="edit-2" size={13} color={colors.primaryDark} />
-                  <Text style={styles.questionActionText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => removeQuestion(q.id)} style={styles.questionActionButton}>
-                  <Feather name="trash-2" size={13} color={colors.danger} />
-                  <Text style={[styles.questionActionText, { color: colors.danger }]}>Remove</Text>
-                </TouchableOpacity>
+            </View>
+          ) : (
+            questions.map((q, index) => (
+              <View key={q.id ?? index} style={styles.questionItem}>
+                <View style={styles.questionTop}>
+                  <View style={styles.questionBadge}>
+                    <Text style={styles.questionBadgeText}>Q{index + 1}</Text>
+                  </View>
+                  <Text style={styles.questionText}>
+                    {q.question} {q.required ? <Text style={{ color: colors.danger }}>*</Text> : ""}
+                  </Text>
+                </View>
+
+                <Text style={styles.questionMeta}>
+                  Type: {q.type.replace(/_/g, " ")} • {q.required ? "Required" : "Optional"}
+                </Text>
+
+                {q.type === "MULTIPLE_CHOICE" && q.options ? (
+                  <Text style={styles.optionsPreview}>
+                    Options: {q.options.join(", ")}
+                  </Text>
+                ) : null}
+
+                <View style={styles.questionActions}>
+                  <TouchableOpacity
+                    onPress={() => openEditQuestion(q)}
+                    style={styles.actionLink}
+                  >
+                    <Feather name="edit-2" size={13} color={colors.primaryDark} />
+                    <Text style={styles.actionLinkText}>Edit</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => deleteQuestion(q.id)}
+                    style={styles.actionLink}
+                  >
+                    <Feather name="trash-2" size={13} color={colors.danger} />
+                    <Text style={[styles.actionLinkText, { color: colors.danger }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </Card>
-          ))
-        )}
+            ))
+          )}
 
-        <Button
-          title="+ Add Question"
-          variant="outline"
-          onPress={openAddQuestion}
-          disabled={questions.length >= MAX_CUSTOM_QUESTIONS}
-          style={{ marginBottom: spacing.xs }}
-        />
-        {questions.length >= MAX_CUSTOM_QUESTIONS ? (
-          <Text style={styles.limitHint}>You&apos;ve reached the maximum of {MAX_CUSTOM_QUESTIONS} questions.</Text>
-        ) : null}
+          {questions.length < MAX_CUSTOM_QUESTIONS ? (
+            <Button
+              title="+ Add Screening Question"
+              icon="plus"
+              variant="secondary"
+              onPress={openAddQuestion}
+              style={{ marginTop: spacing.sm }}
+            />
+          ) : (
+            <Text style={styles.limitHint}>Maximum question limit reached.</Text>
+          )}
+        </Card>
 
-        <View style={{ height: spacing.lg }} />
-
-        <Button
-          title="Save Application Settings"
-          onPress={handleSave}
-          disabled={saving}
-          loading={saving}
-        />
+        {/* Save CTA */}
+        <View style={styles.saveWrap}>
+          <Button
+            title="Save Application Settings"
+            icon="check"
+            onPress={handleSave}
+            disabled={saving}
+            loading={saving}
+            size="lg"
+          />
+        </View>
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
 
+      {/* Modal for Creating / Editing a Question */}
       <Modal
         visible={questionModalVisible}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setQuestionModalVisible(false)}
       >
-        <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setQuestionModalVisible(false)} />
-          <ScrollView style={styles.sheet} contentContainerStyle={{ paddingBottom: spacing.lg }}>
-            <Text style={styles.sheetTitle}>{editingQuestionId ? "Edit Question" : "Add Question"}</Text>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>
+              {editingQuestionId ? "Edit Question" : "Add Screening Question"}
+            </Text>
 
-            <Input
-              label="Question"
-              value={draftQuestion}
-              onChangeText={(v) => {
-                setDraftQuestion(v);
-                if (draftErrors.question) setDraftErrors((prev) => ({ ...prev, question: undefined }));
-              }}
-              placeholder="e.g. Are you available on weekends?"
-              error={draftErrors.question}
-              multiline
-              rows={2}
-            />
-
-            <Text style={styles.label}>Question Type</Text>
-            <View style={styles.typeChipsRow}>
-              {QUESTION_TYPE_OPTIONS.map((option) => {
-                const selected = option.value === draftType;
-                return (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={() => setDraftType(option.value)}
-                    style={[styles.typeChip, selected && styles.typeChipSelected]}
-                  >
-                    <Text style={[styles.typeChipText, selected && styles.typeChipTextSelected]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {draftType === "MULTIPLE_CHOICE" ? (
-              <View style={styles.optionsSection}>
-                <Text style={styles.label}>Options</Text>
-                {draftOptions.map((opt, index) => (
-                  <View key={index} style={styles.optionRow}>
-                    <TextInput
-                      style={styles.optionInput}
-                      value={opt}
-                      onChangeText={(v) => updateDraftOption(index, v)}
-                      placeholder={`Option ${index + 1}`}
-                      placeholderTextColor={colors.textMuted}
-                    />
-                    <TouchableOpacity
-                      onPress={() => removeDraftOption(index)}
-                      style={styles.optionRemove}
-                      disabled={draftOptions.length <= 1}
-                    >
-                      <Feather
-                        name="x"
-                        size={16}
-                        color={draftOptions.length <= 1 ? colors.border : colors.danger}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                {draftErrors.options ? <Text style={styles.error}>{draftErrors.options}</Text> : null}
-                <TouchableOpacity onPress={addDraftOption} style={styles.addOptionButton}>
-                  <Feather name="plus" size={14} color={colors.primaryDark} />
-                  <Text style={styles.addOptionText}>Add option</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            <View style={styles.requiredRow}>
-              <Text style={styles.label}>Required</Text>
-              <Switch
-                value={draftRequired}
-                onValueChange={setDraftRequired}
-                trackColor={{ false: colors.border, true: colors.primarySoft }}
-                thumbColor={draftRequired ? colors.primary : colors.surface}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Input
+                label="Question Text"
+                required
+                value={draftQuestion}
+                onChangeText={(v) => {
+                  setDraftQuestion(v);
+                  if (draftErrors.question) setDraftErrors((e) => ({ ...e, question: undefined }));
+                }}
+                placeholder="e.g. Do you have previous experience in this role?"
+                multiline
+                rows={2}
+                error={draftErrors.question}
               />
-            </View>
 
-            <View style={styles.modalActions}>
-              <View style={{ flex: 1, marginRight: spacing.sm }}>
-                <Button
-                  title="Cancel"
-                  variant="outline"
-                  onPress={() => setQuestionModalVisible(false)}
+              <Text style={styles.fieldLabel}>Question Type</Text>
+              <View style={styles.typeChipsRow}>
+                {QUESTION_TYPE_OPTIONS.map((opt) => {
+                  const isSelected = draftType === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      onPress={() => setDraftType(opt.value)}
+                      style={[styles.typeChip, isSelected && styles.typeChipSelected]}
+                      activeOpacity={0.75}
+                    >
+                      <Text
+                        style={[
+                          styles.typeChipText,
+                          isSelected && styles.typeChipTextSelected,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {draftType === "MULTIPLE_CHOICE" ? (
+                <View style={styles.optionsWrap}>
+                  <Text style={styles.fieldLabel}>Multiple Choice Options</Text>
+                  {draftOptions.map((opt, i) => (
+                    <View key={i} style={styles.optionInputRow}>
+                      <TextInput
+                        style={styles.optionInput}
+                        value={opt}
+                        onChangeText={(v) => updateDraftOption(i, v)}
+                        placeholder={`Option ${i + 1}`}
+                        placeholderTextColor={colors.textPlaceholder}
+                      />
+                      {draftOptions.length > 2 ? (
+                        <TouchableOpacity
+                          onPress={() => removeDraftOption(i)}
+                          style={styles.removeOptionBtn}
+                        >
+                          <Feather name="x" size={16} color={colors.danger} />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  ))}
+
+                  {draftErrors.options ? (
+                    <Text style={styles.optionsErrorText}>{draftErrors.options}</Text>
+                  ) : null}
+
+                  <TouchableOpacity onPress={addDraftOption} style={styles.addOptionBtn}>
+                    <Feather name="plus" size={14} color={colors.primaryDark} />
+                    <Text style={styles.addOptionText}>Add Another Option</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              <View style={styles.requiredToggleRow}>
+                <Text style={styles.fieldLabel}>Applicant must answer (Required)</Text>
+                <Switch
+                  value={draftRequired}
+                  onValueChange={setDraftRequired}
+                  trackColor={{ false: colors.border, true: colors.primarySoft }}
+                  thumbColor={draftRequired ? colors.primaryDark : colors.surface}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Button title="Save Question" onPress={saveDraftQuestion} />
+
+              <View style={styles.modalActions}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <Button
+                    title="Cancel"
+                    variant="outline"
+                    onPress={() => setQuestionModalVisible(false)}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Save Question" onPress={saveDraftQuestion} />
+                </View>
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
@@ -497,68 +594,63 @@ export const ApplicationSettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,
+    maxWidth: 760,
+    width: "100%",
+    alignSelf: "center",
   },
-  headerRow: {
+  navBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: radius.full,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
+    ...shadows.subtle,
   },
-  headerTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  gigCard: {
-    marginBottom: spacing.lg,
-  },
-  gigTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  gigMeta: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-  },
-  sectionTitle: {
+  navTitle: {
     fontSize: typography.sizes.base,
     fontWeight: "800",
     color: colors.text,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xs,
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  gigSummaryCard: {
+    marginBottom: spacing.md,
   },
-  sectionCount: {
-    fontSize: typography.sizes.sm,
+  gigTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 2,
+  },
+  gigMeta: {
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    fontWeight: "600",
+  },
+  card: {
+    marginBottom: spacing.md,
   },
   modeCard: {
     marginBottom: spacing.sm,
-    borderWidth: 1,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   modeCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+    borderColor: colors.primaryDark,
+    backgroundColor: colors.primaryLight,
   },
   modeRow: {
     flexDirection: "row",
@@ -574,87 +666,117 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: spacing.sm,
     marginTop: 2,
+    backgroundColor: colors.surface,
   },
   radioOuterSelected: {
-    borderColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryDark,
   },
   modeLabel: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
     color: colors.text,
     marginBottom: 2,
   },
+  modeLabelSelected: {
+    color: colors.primaryDark,
+  },
   modeDescription: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    lineHeight: 18,
     marginBottom: 2,
   },
   modeSuited: {
-    fontSize: typography.sizes.xs,
+    fontSize: typography.sizes.xxs,
     color: colors.textMuted,
-  },
-  requirementsCard: {
-    marginBottom: spacing.lg,
+    fontStyle: "italic",
   },
   requirementRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   requirementLabel: {
-    fontSize: typography.sizes.base,
+    fontSize: typography.sizes.sm,
     color: colors.text,
     fontWeight: "600",
   },
-  emptyQuestionsCard: {
+  emptyQuestionsWrap: {
     alignItems: "center",
-    marginBottom: spacing.md,
+    justifyContent: "center",
+    paddingVertical: spacing.lg,
+    gap: spacing.xs,
   },
   emptyQuestionsText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
   },
-  questionCard: {
-    marginBottom: spacing.md,
+  questionItem: {
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
-  questionIndex: {
-    fontSize: typography.sizes.xs,
-    fontWeight: "700",
+  questionTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.xs + 2,
+    marginBottom: 4,
+  },
+  questionBadge: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.md,
+  },
+  questionBadgeText: {
+    fontSize: typography.sizes.xxs,
+    fontWeight: "800",
     color: colors.primaryDark,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
   },
   questionText: {
-    fontSize: typography.sizes.base,
+    flex: 1,
+    fontSize: typography.sizes.sm,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.xs,
   },
   questionMeta: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xxs,
     color: colors.textMuted,
     marginBottom: 2,
   },
+  optionsPreview: {
+    fontSize: typography.sizes.xxs,
+    color: colors.textSecondary,
+    fontStyle: "italic",
+    marginTop: 2,
+  },
   questionActions: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.lg,
     marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    paddingTop: spacing.xs + 2,
   },
-  questionActionButton: {
+  actionLink: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  questionActionText: {
-    fontSize: typography.sizes.sm,
+  actionLinkText: {
+    fontSize: typography.sizes.xs,
     fontWeight: "700",
     color: colors.primaryDark,
   },
@@ -662,65 +784,42 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.textMuted,
     textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  saveWrap: {
+    marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
-  errorState: {
+  modalBackdrop: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  errorIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    backgroundColor: colors.dangerLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  errorTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  errorText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(31, 42, 46, 0.35)",
+    backgroundColor: "rgba(21, 36, 41, 0.4)",
     justifyContent: "flex-end",
   },
-  sheet: {
+  modalSheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
     padding: spacing.lg,
     maxHeight: "85%",
-    ...shadows.medium,
-    shadowColor: colors.shadow,
+    ...shadows.floating,
   },
-  sheetTitle: {
-    fontSize: typography.sizes.lg,
+  modalTitle: {
+    fontSize: typography.sizes.base,
     fontWeight: "800",
     color: colors.text,
     marginBottom: spacing.md,
   },
-  label: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.sm,
+  fieldLabel: {
+    fontSize: typography.sizes.xs,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    marginBottom: spacing.xs + 2,
+    letterSpacing: 0.2,
   },
   typeChipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
     marginBottom: spacing.md,
   },
   typeChip: {
@@ -729,71 +828,73 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.surfaceSubtle,
   },
   typeChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primaryDark,
   },
   typeChipText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     fontWeight: "600",
-    color: colors.text,
+    color: colors.textSecondary,
   },
   typeChipTextSelected: {
     color: colors.textInverse,
-    fontWeight: "800",
+    fontWeight: "700",
   },
-  optionsSection: {
+  optionsWrap: {
     marginBottom: spacing.md,
   },
-  optionRow: {
+  optionInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+    gap: spacing.xs,
   },
   optionInput: {
     flex: 1,
-    backgroundColor: colors.cream,
-    borderWidth: 1,
-    borderColor: colors.cream,
-    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    fontSize: typography.sizes.base,
-    color: colors.text,
-    marginRight: spacing.sm,
-  },
-  optionRemove: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  error: {
+    paddingVertical: spacing.sm,
     fontSize: typography.sizes.sm,
+    color: colors.text,
+  },
+  removeOptionBtn: {
+    padding: 6,
+  },
+  optionsErrorText: {
+    fontSize: typography.sizes.xs,
     color: colors.danger,
+    marginTop: 2,
     marginBottom: spacing.xs,
   },
-  addOptionButton: {
+  addOptionBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    alignSelf: "flex-start",
+    marginTop: spacing.xs,
+    paddingVertical: 4,
   },
   addOptionText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     fontWeight: "700",
     color: colors.primaryDark,
   },
-  requiredRow: {
+  requiredToggleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
   modalActions: {
     flexDirection: "row",
+    marginBottom: spacing.md,
   },
 });

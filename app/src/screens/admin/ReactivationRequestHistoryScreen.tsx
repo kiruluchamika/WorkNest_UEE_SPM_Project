@@ -1,6 +1,7 @@
+import { toast } from "../../utils/toast";
 import { DocumentEvidence } from "../../components/common/DocumentField";
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { VerificationManagementStackParamList } from "../../navigation/AdminStack";
@@ -18,7 +19,7 @@ export const ReactivationRequestHistoryScreen: React.FC = () => {
   const route = useRoute<RouteProp<VerificationManagementStackParamList, "ReactivationRequestHistory">>();
   const [application, setApplication] = useState<VerifierApplication>();
   useEffect(() => {
-    getApplication(route.params.applicationId).then(setApplication).catch((error) => Alert.alert("Error", error instanceof Error ? error.message : "Could not load reactivation request history."));
+    getApplication(route.params.applicationId).then(setApplication).catch((error) => toast.error("Error", error instanceof Error ? error.message : "Could not load reactivation request history."));
   }, [route.params.applicationId]);
   const requests = useMemo(() => (application?.reactivationRequests ?? [])
     .filter((request) => request.suspensionEventId === route.params.suspensionEventId)
@@ -45,4 +46,4 @@ export const ReactivationRequestHistoryScreen: React.FC = () => {
   </SafeAreaView>;
 };
 
-const styles = StyleSheet.create({container:{flex:1,backgroundColor:colors.background},scroll:{padding:spacing.md},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},subtitle:{fontSize:typography.sizes.sm,color:colors.textMuted,marginTop:spacing.xs,marginBottom:spacing.lg},card:{marginBottom:spacing.md},heading:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:spacing.md},requestTitle:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.primaryDark,flex:1},status:{fontSize:typography.sizes.xs,fontWeight:"800",marginLeft:spacing.sm},pending:{color:colors.warning},approved:{color:colors.primaryDark},rejected:{color:colors.danger},field:{marginBottom:spacing.md},label:{fontSize:typography.sizes.xs,color:colors.textMuted},value:{fontSize:typography.sizes.sm,fontWeight:"700",color:colors.text,marginTop:2},empty:{fontSize:typography.sizes.sm,color:colors.textMuted,textAlign:"center"}});
+const styles = StyleSheet.create({container:{flex:1,backgroundColor: "transparent"},scroll:{padding:spacing.md},title:{fontSize:typography.sizes.lg,fontWeight:"800",color:colors.text},subtitle:{fontSize:typography.sizes.sm,color:colors.textMuted,marginTop:spacing.xs,marginBottom:spacing.lg},card:{marginBottom:spacing.md},heading:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:spacing.md},requestTitle:{fontSize:typography.sizes.base,fontWeight:"800",color:colors.primaryDark,flex:1},status:{fontSize:typography.sizes.xs,fontWeight:"800",marginLeft:spacing.sm},pending:{color:colors.warning},approved:{color:colors.primaryDark},rejected:{color:colors.danger},field:{marginBottom:spacing.md},label:{fontSize:typography.sizes.xs,color:colors.textMuted},value:{fontSize:typography.sizes.sm,fontWeight:"700",color:colors.text,marginTop:2},empty:{fontSize:typography.sizes.sm,color:colors.textMuted,textAlign:"center"}});

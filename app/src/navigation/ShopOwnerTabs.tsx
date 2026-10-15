@@ -1,3 +1,4 @@
+import { appScreenLayout } from "../components/common/AppBackground";
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -50,7 +51,7 @@ const Tab = createBottomTabNavigator<ShopOwnerTabParamList>();
 
 function ShopOwnerStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardHome" component={DashboardScreen} />
       <Stack.Screen name="Applicants" component={ApplicantsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
@@ -63,7 +64,7 @@ function ShopOwnerStack() {
 
 function MyGigsStackNavigator() {
   return (
-    <MyGigsStack.Navigator screenOptions={{ headerShown: false }}>
+    <MyGigsStack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <MyGigsStack.Screen name="MyGigs" component={MyGigsScreen} />
       <MyGigsStack.Screen name="GigDetail" component={GigPostDetailScreen} />
       <MyGigsStack.Screen name="GigForm" component={GigPostFormScreen} />
@@ -77,7 +78,7 @@ function MyGigsStackNavigator() {
 
 export const ShopOwnerTabs: React.FC = () => {
   return (
-    <Tab.Navigator
+    <Tab.Navigator screenLayout={appScreenLayout}
       tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,

@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -28,6 +27,7 @@ import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { ROLES } from "../../utils/constants";
 import { registerSchema } from "../../utils/validators";
+import { toast, errorMessage } from "../../utils/toast";
 import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 export const RegisterScreen: React.FC = () => {
@@ -84,6 +84,7 @@ export const RegisterScreen: React.FC = () => {
         fieldErrors[key] = issue.message;
       });
       setErrors(fieldErrors);
+      toast.error("Check your details", result.error.issues[0]?.message ?? "Some fields need your attention.");
       return;
     }
 
@@ -92,9 +93,11 @@ export const RegisterScreen: React.FC = () => {
         district, identityType, identityNumber, identityDocumentReference, identityDocumentReferenceUpload: documentUpload,
         addressInformation, communityReference,
       } : {}) });
-      Alert.alert("Account created!", role === "verifier" ? "Your verifier application is pending review." : "Welcome to WorkNest.");
+      toast.success("Account created!", role === "verifier" ? "Your verifier application is pending review." : "Welcome to WorkNest.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create account. Try again.");
+      const message = errorMessage(err, "Could not create account. Try again.");
+      setError(message);
+      toast.error("Could not create account", message);
     }
   };
 
@@ -102,9 +105,11 @@ export const RegisterScreen: React.FC = () => {
     setError("");
     try {
       await loginWithGoogle();
-      Alert.alert("Welcome!", "You've signed in successfully.");
+      toast.success("Welcome!", "You've signed in successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in with Google");
+      const message = errorMessage(err, "Could not sign in with Google");
+      setError(message);
+      toast.error("Sign in failed", message);
     }
   };
 
@@ -256,7 +261,7 @@ export const RegisterScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.lg,

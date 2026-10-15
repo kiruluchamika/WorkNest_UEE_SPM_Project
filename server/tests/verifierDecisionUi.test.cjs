@@ -22,10 +22,11 @@ function screen(status = 'UNDER_REVIEW', role = 'verifier') {
   };
   const { VerificationRequestDetailsScreen } = loadFrontend('screens/verifier/VerificationRequestDetailsScreen.tsx', {
     react: React,
-    'react-native': { Alert: { alert: (...args) => alerts.push(args) }, ScrollView: 'ScrollView', Text: 'Text', View: 'View', StyleSheet: { create: value => value } },
+    'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View', StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@react-navigation/native': { useFocusEffect: () => {}, useNavigation: () => ({ goBack: () => back++ }), useRoute: () => ({ params: { id: item.id } }) },
     '../../context/AuthContext': { useAuth: () => ({ user: { role } }) },
+    '../../utils/toast': { toast: { success: (...args) => alerts.push(args), error: (...args) => alerts.push(args) } },
     '../../components/common/DocumentField': { DocumentEvidence: 'DocumentEvidence' },
     '../../components/common/AppHeader': { AppHeader: 'AppHeader' },
     '../../components/common/Card': { Card: 'Card' },

@@ -1,5 +1,13 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -7,52 +15,62 @@ import { Feather } from "@expo/vector-icons";
 import { useGigPosts } from "../../context/GigPostContext";
 import { Card } from "../../components/common/Card";
 import { Button } from "../../components/common/Button";
-import { LoadingSpinner } from "../../components/common/LoadingSpinner";
-import { TrustBadge } from "../../components/trust/TrustBadge";
+import { StatusBadge } from "../../components/common/StatusBadge";
 import { AppHeader } from "../../components/common/AppHeader";
-import { colors } from "../../theme/colors";
+import { EmptyState } from "../../components/common/EmptyState";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { FilterChips, FilterOption } from "../../components/common/FilterChips";
+import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
-import { formatCurrency, formatDate, gigStatusBadge } from "../../utils/formatters";
+import { formatCurrency, formatDate } from "../../utils/formatters";
 import { GIG_PAYMENT_TYPES } from "../../utils/constants";
 import type { GigPost, GigPostStatus } from "../../types";
 
 type FilterTab = "ALL" | GigPostStatus;
 
-const TABS: { value: FilterTab; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "PENDING", label: "Pending" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "REJECTED", label: "Rejected" },
-  { value: "CLOSED", label: "Closed" },
+const TABS: { value: FilterTab; label: string; icon?: keyof typeof Feather.glyphMap }[] = [
+  { value: "ALL", label: "All", icon: "grid" },
+  { value: "ACTIVE", label: "Active", icon: "check-circle" },
+  { value: "PENDING", label: "In Review", icon: "clock" },
+  { value: "COMPLETED", label: "Completed", icon: "award" },
+  { value: "CLOSED", label: "Closed", icon: "lock" },
+  { value: "REJECTED", label: "Rejected", icon: "x-circle" },
 ];
 
-const EMPTY_COPY: Record<FilterTab, { title: string; text: string }> = {
+const EMPTY_COPY: Record<FilterTab, { title: string; description: string; icon: keyof typeof Feather.glyphMap }> = {
   ALL: {
-    title: "No gigs yet",
-    text: "Start creating opportunities for local workers.",
-  },
-  PENDING: {
-    title: "No pending gigs",
-    text: "Your gigs waiting for approval will appear here.",
+    title: "No gigs posted yet",
+    description: "Post a gig to start finding workers for your business needs.",
+    icon: "briefcase",
   },
   ACTIVE: {
     title: "No active gigs",
-    text: "Approved gigs that are live for workers will appear here.",
+    description: "Gigs approved by admin and open for applications will appear here.",
+    icon: "check-circle",
   },
-  REJECTED: {
-    title: "No rejected gigs",
-    text: "Gigs that need changes after admin review will appear here.",
-  },
-  CLOSED: {
-    title: "No closed gigs",
-    text: "Gigs you've closed will appear here.",
+  PENDING: {
+    title: "No gigs in review",
+    description: "Gigs waiting for admin review and approval will appear here.",
+    icon: "clock",
   },
   COMPLETED: {
     title: "No completed gigs",
-    text: "Finished gigs will appear here.",
+    description: "Gigs you have successfully fulfilled and marked complete.",
+    icon: "award",
+  },
+  CLOSED: {
+    title: "No closed gigs",
+    description: "Gigs that have been closed to new applicants.",
+    icon: "lock",
+  },
+  REJECTED: {
+    title: "No rejected gigs",
+    description: "Gigs that need changes before approval will appear here.",
+    icon: "x-circle",
   },
 };
+
 
 function paymentTypeLabel(value: string): string {
   return GIG_PAYMENT_TYPES.find((pt) => pt.value === value)?.label ?? value;
@@ -76,6 +94,23 @@ export const MyGigsScreen: React.FC = () => {
     setRefreshing(false);
   };
 
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { ALL: gigPosts.length };
+    gigPosts.forEach((g) => {
+      map[g.status] = (map[g.status] ?? 0) + 1;
+    });
+    return map;
+  }, [gigPosts]);
+
+  const filterOptions: FilterOption<FilterTab>[] = useMemo(() => {
+    return TABS.map((t) => ({
+      value: t.value,
+      label: t.label,
+      count: counts[t.value] ?? 0,
+      icon: t.icon,
+    }));
+  }, [counts]);
+
   const filteredGigs = useMemo(
     () => (tab === "ALL" ? gigPosts : gigPosts.filter((g) => g.status === tab)),
     [gigPosts, tab]
@@ -90,61 +125,60 @@ export const MyGigsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <AppHeader
-        subtitle="My Gigs"
+        subtitle="Manage Gigs"
         onProfilePress={() =>
           (navigation as any).getParent()?.navigate("Dashboard", { screen: "Profile" })
         }
         onBellPress={() => (navigation as any).getParent()?.navigate("Notifications")}
       />
+
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primaryDark}
+          />
+        }
       >
-        <View style={styles.hero}>
+        {/* Header Action Row */}
+        <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>Gig management</Text>
-            <Text style={styles.title}>Track every opportunity you've posted</Text>
-          </View>
-          <View style={styles.heroIcon}>
-            <Feather name="briefcase" size={18} color={colors.primaryDark} />
+            <Text style={styles.headerTitle}>My Gigs</Text>
+            <Text style={styles.headerSubtitle}>Track and manage all your posted opportunities</Text>
           </View>
         </View>
 
-        <Button title="+ Create Gig" onPress={goToCreateGig} style={{ marginBottom: spacing.md }} />
+        <Button
+          title="+ Create New Gig"
+          icon="plus-circle"
+          onPress={goToCreateGig}
+          style={{ marginBottom: spacing.md }}
+        />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
-          {TABS.map((t) => (
-            <TouchableOpacity
-              key={t.value}
-              onPress={() => setTab(t.value)}
-              style={[styles.tab, tab === t.value && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, tab === t.value && styles.tabTextActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* Filter Chips Bar */}
+        <FilterChips<FilterTab>
+          options={filterOptions}
+          selected={tab}
+          onSelect={setTab}
+          style={styles.tabsRow}
+        />
 
         {isLoading && gigPosts.length === 0 ? (
           <LoadingSpinner message="Loading your gigs..." />
         ) : filteredGigs.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <Feather name="briefcase" size={22} color={colors.primaryDark} />
-            </View>
-            <Text style={styles.emptyTitle}>{emptyCopy.title}</Text>
-            <Text style={styles.emptyText}>{emptyCopy.text}</Text>
-            {tab === "ALL" ? (
-              <Button
-                title="Create Your First Gig"
-                onPress={goToCreateGig}
-                size="sm"
-                style={{ marginTop: spacing.md }}
-              />
-            ) : null}
-          </Card>
+          <EmptyState
+            icon={emptyCopy.icon}
+            title={emptyCopy.title}
+            description={emptyCopy.description}
+            actionTitle={tab === "ALL" ? "Create Your First Gig" : "View All Gigs"}
+            onAction={tab === "ALL" ? goToCreateGig : () => setTab("ALL")}
+          />
         ) : (
           filteredGigs.map((gig: GigPost) => {
-            const badge = gigStatusBadge(gig.status);
+            const remaining = Math.max(gig.workersNeeded - (gig.filledPositions ?? 0), 0);
             return (
               <TouchableOpacity
                 key={gig.id}
@@ -157,7 +191,7 @@ export const MyGigsScreen: React.FC = () => {
                       <Image source={{ uri: gig.imageUrl }} style={styles.gigThumb} resizeMode="cover" />
                     ) : (
                       <View style={styles.gigThumbPlaceholder}>
-                        <Feather name="image" size={18} color={colors.primaryDark} />
+                        <Feather name="briefcase" size={20} color={colors.primaryDark} />
                       </View>
                     )}
                     <View style={styles.gigContent}>
@@ -165,16 +199,32 @@ export const MyGigsScreen: React.FC = () => {
                         <Text style={styles.gigTitle} numberOfLines={1}>
                           {gig.title}
                         </Text>
-                        <TrustBadge label={badge.label} variant={badge.variant} />
+                        <StatusBadge status={gig.status} size="sm" />
                       </View>
+
                       <Text style={styles.gigMeta} numberOfLines={1}>
-                        {gig.category?.name ?? "Uncategorized"} • {gig.location}
+                        {gig.category?.name ?? "General"} • {gig.location}
                       </Text>
+
                       <View style={styles.gigFooter}>
                         <Text style={styles.gigPayment}>
                           {formatCurrency(gig.paymentAmount)} / {paymentTypeLabel(gig.paymentType)}
                         </Text>
-                        <Text style={styles.gigDate}>{formatDate(gig.startDate)}</Text>
+                        <View style={styles.capacityBadge}>
+                          <Feather
+                            name="users"
+                            size={11}
+                            color={remaining === 0 ? colors.warningText : colors.primaryDark}
+                          />
+                          <Text
+                            style={[
+                              styles.capacityText,
+                              remaining === 0 && styles.capacityTextFull,
+                            ]}
+                          >
+                            {remaining === 0 ? "Full" : `${remaining} left`}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -193,106 +243,50 @@ export const MyGigsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,
+    maxWidth: 760,
+    width: "100%",
+    alignSelf: "center",
   },
-  hero: {
-    backgroundColor: colors.warmPanel,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.primarySoft,
   },
-  eyebrow: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "800",
-    color: colors.primaryDark,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontSize: typography.sizes.base,
+  headerTitle: {
+    fontSize: typography.sizes.xl,
     fontWeight: "800",
     color: colors.text,
-    maxWidth: 220,
+    letterSpacing: -0.3,
   },
-  heroIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primarySoft,
+  headerSubtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   tabsRow: {
     marginBottom: spacing.md,
   },
-  tab: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    marginRight: spacing.sm,
-  },
-  tabActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  tabText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  tabTextActive: {
-    color: colors.textInverse,
-    fontWeight: "800",
-  },
-  emptyCard: {
-    alignItems: "center",
-    padding: spacing.xl,
-  },
-  emptyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  emptyText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
   gigCard: {
     marginBottom: spacing.md,
     overflow: "hidden",
+    ...shadows.subtle,
   },
   gigRow: {
     flexDirection: "row",
     alignItems: "stretch",
   },
   gigThumb: {
-    width: 84,
+    width: 88,
     minHeight: 96,
     backgroundColor: colors.cream,
   },
   gigThumbPlaceholder: {
-    width: 84,
+    width: 88,
     minHeight: 96,
     backgroundColor: colors.primarySoft,
     alignItems: "center",
@@ -306,17 +300,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: 4,
+    gap: spacing.xs,
   },
   gigTitle: {
     fontSize: typography.sizes.base,
-    fontWeight: "700",
+    fontWeight: "800",
     color: colors.text,
     flex: 1,
-    marginRight: spacing.sm,
   },
   gigMeta: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },
@@ -326,12 +320,27 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   gigPayment: {
-    fontSize: typography.sizes.sm,
-    color: colors.success,
+    fontSize: typography.sizes.xs,
+    color: colors.successText,
     fontWeight: "700",
   },
-  gigDate: {
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
+  capacityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  capacityText: {
+    fontSize: typography.sizes.xxs,
+    fontWeight: "700",
+    color: colors.textSecondary,
+  },
+  capacityTextFull: {
+    color: colors.warningText,
   },
 });

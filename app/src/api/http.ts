@@ -41,7 +41,13 @@ export function setAuthToken(token: string | null): void {
 
 export function extractErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
-    const data = err.response?.data as { error?: string } | undefined;
+    const data = err.response?.data as
+      | { error?: string; issues?: { path?: string; message?: string }[] }
+      | undefined;
+    // Validation failures carry the specific reason in `issues`; show that
+    // instead of the generic "Validation failed".
+    const issueMessage = data?.issues?.[0]?.message;
+    if (issueMessage) return issueMessage;
     if (data?.error) return data.error;
   }
   return fallback;

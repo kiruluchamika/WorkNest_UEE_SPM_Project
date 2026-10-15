@@ -1,29 +1,285 @@
-import React from "react";
+ï»¿import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, shadows } from "../../theme/colors";
+import { radius, spacing } from "../../theme/spacing";
+import { typography } from "../../theme/typography";
 import { formatCurrency, formatDate } from "../../utils/formatters";
 import type { GigPost } from "../../types";
 
 function postedAt(value: string) {
- const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
- if (minutes < 1) return "Posted just now";
- if (minutes < 60) return `Posted ${minutes} min ago`;
- if (minutes < 1440) return `Posted ${Math.floor(minutes / 60)} hrs ago`;
- return `Posted ${formatDate(value)}`;
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+  return formatDate(value);
 }
+
 export const GigCard: React.FC<{ gig: GigPost; onPress: (gig: GigPost) => void }> = ({ gig, onPress }) => {
- const summary = gig.employerSummary;
- const unit = gig.paymentType === "HOURLY" ? "hr" : gig.paymentType === "DAILY" ? "day" : "fixed";
- return <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${gig.title}, ${formatCurrency(gig.paymentAmount)} per ${unit}. View details`} onPress={() => onPress(gig)} activeOpacity={0.85} style={styles.card}>
-  <View style={styles.top}><View style={styles.category}><Text style={styles.categoryText}>{gig.category?.name || "General"}</Text></View><Text style={styles.small}>{postedAt(gig.createdAt)}</Text>{summary?.isVerified && <Feather accessibilityLabel="Verified employer" name="check-circle" color={colors.success} size={17} />}</View>
-  <Text style={styles.title}>{gig.title}</Text><Text style={styles.business}>{gig.business?.name || "WorkNest business"}</Text>
-  <View style={styles.row}><Feather name="map-pin" color={colors.textMuted} size={14} /><Text style={styles.location}>{gig.location}</Text><Text style={styles.rating}>? {summary?.averageRating != null ? `${summary.averageRating.toFixed(1)} (${summary.totalReviews})` : "New"}</Text></View>
-  <Text style={styles.description} numberOfLines={2}>{gig.description}</Text>
-  <View style={styles.tags}><View style={styles.tag}><Feather name="calendar" size={12} color={colors.primaryDark} /><Text style={styles.small}>{formatDate(gig.startDate)}{gig.endDate ? ` – ${formatDate(gig.endDate)}` : ""}</Text></View>{gig.startTime && <View style={styles.tag}><Feather name="clock" size={12} color={colors.primaryDark} /><Text style={styles.small}>{gig.startTime}{gig.endTime ? ` – ${gig.endTime}` : ""}</Text></View>}</View>
-  <View style={styles.footer}><View style={styles.pay}><Text style={styles.amount}>{formatCurrency(gig.paymentAmount)}</Text><Text style={styles.small}> / {unit}</Text></View><View style={styles.cta}><Text style={styles.ctaText}>View Details</Text><Feather name="arrow-up-right" size={15} color="white" /></View></View>
- </TouchableOpacity>;
+  const summary = gig.employerSummary;
+  const unit = gig.paymentType === "HOURLY" ? "hr" : gig.paymentType === "DAILY" ? "day" : "fixed";
+  const remaining = Math.max((gig.workersNeeded ?? 1) - (gig.filledPositions ?? 0), 0);
+  const isFull = remaining === 0;
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={`${gig.title}, by ${gig.business?.name || "Business"}, ${formatCurrency(gig.paymentAmount)} per ${unit}. Tap to view details.`}
+      onPress={() => onPress(gig)}
+      activeOpacity={0.85}
+      style={styles.card}
+    >
+      <View style={styles.topRow}>
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText}>{gig.category?.name || "General"}</Text>
+        </View>
+        <View style={styles.topRight}>
+          <Text style={styles.timeAgo}>{postedAt(gig.createdAt)}</Text>
+          {summary?.isVerified ? (
+            <View style={styles.verifiedBadge}>
+              <Feather name="check-circle" color={colors.success} size={13} />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <Text style={styles.title} numberOfLines={2}>
+        {gig.title}
+      </Text>
+      <Text style={styles.business} numberOfLines={1}>
+        {gig.business?.name || "WorkNest Business"}
+      </Text>
+
+      <View style={styles.metaRow}>
+        <View style={styles.locationWrap}>
+          <Feather name="map-pin" color={colors.textMuted} size={13} />
+          <Text style={styles.location} numberOfLines={1}>
+            {gig.location}
+          </Text>
+        </View>
+        <View style={styles.ratingWrap}>
+          <Feather name="star" color={colors.warning} size={13} />
+          <Text style={styles.rating}>
+            {summary?.averageRating != null ? summary.averageRating.toFixed(1) : "New"}
+            {summary?.totalReviews ? ` (${summary.totalReviews})` : ""}
+          </Text>
+        </View>
+      </View>
+
+      {gig.description ? (
+        <Text style={styles.description} numberOfLines={2}>
+          {gig.description}
+        </Text>
+      ) : null}
+
+      <View style={styles.tags}>
+        <View style={styles.tag}>
+          <Feather name="calendar" size={12} color={colors.primaryDark} />
+          <Text style={styles.tagText} numberOfLines={1}>
+            {formatDate(gig.startDate)}
+            {gig.endDate ? ` - ${formatDate(gig.endDate)}` : ""}
+          </Text>
+        </View>
+        {gig.startTime ? (
+          <View style={styles.tag}>
+            <Feather name="clock" size={12} color={colors.primaryDark} />
+            <Text style={styles.tagText} numberOfLines={1}>
+              {gig.startTime}
+              {gig.endTime ? ` - ${gig.endTime}` : ""}
+            </Text>
+          </View>
+        ) : null}
+        <View style={[styles.tag, isFull && styles.tagFull]}>
+          <Feather
+            name="users"
+            size={12}
+            color={isFull ? colors.warningText : colors.primaryDark}
+          />
+          <Text style={[styles.tagText, isFull && styles.tagTextFull]}>
+            {isFull ? "Filled" : `${remaining} spot${remaining === 1 ? "" : "s"} left`}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <View style={styles.payWrap}>
+          <Text style={styles.payAmount}>{formatCurrency(gig.paymentAmount)}</Text>
+          <Text style={styles.payUnit}>/{unit}</Text>
+        </View>
+        <View style={styles.ctaButton}>
+          <Text style={styles.ctaText}>View Details</Text>
+          <Feather name="arrow-right" size={14} color={colors.textInverse} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 };
+
 const styles = StyleSheet.create({
- card: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 16, ...shadows.small }, top: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 14 }, category: { backgroundColor: colors.primarySoft, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 }, categoryText: { color: colors.primaryDark, fontSize: 11, fontWeight: "700" }, small: { color: colors.textMuted, fontSize: 11, flexShrink: 1 }, title: { color: colors.text, fontSize: 19, fontWeight: "800", marginBottom: 5 }, business: { color: colors.textMuted, fontSize: 13, marginBottom: 10 }, row: { flexDirection: "row", alignItems: "center", gap: 5 }, location: { color: colors.textMuted, fontSize: 12, flex: 1 }, rating: { color: colors.primaryDark, fontSize: 12, fontWeight: "700" }, description: { color: colors.textMuted, fontSize: 13, lineHeight: 21, marginVertical: 13 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 7 }, tag: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.background, padding: 7, borderRadius: 7, maxWidth: "100%" }, footer: { borderTopWidth: 1, borderColor: colors.border, marginTop: 16, paddingTop: 16, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }, pay: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline" }, amount: { color: colors.primaryDark, fontSize: 21, fontWeight: "800" }, cta: { backgroundColor: colors.primaryDark, paddingHorizontal: 15, paddingVertical: 12, borderRadius: 12, flexDirection: "row", gap: 8, alignItems: "center" }, ctaText: { color: "white", fontSize: 12, fontWeight: "700" },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs + 2,
+  },
+  categoryBadge: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+  },
+  categoryText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.xxs,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  topRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+  },
+  timeAgo: {
+    color: colors.textMuted,
+    fontSize: typography.sizes.xs,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: colors.successLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  verifiedText: {
+    color: colors.successText,
+    fontSize: typography.sizes.xxs,
+    fontWeight: "700",
+  },
+  title: {
+    color: colors.text,
+    fontSize: typography.sizes.base,
+    fontWeight: "800",
+    marginBottom: 2,
+    lineHeight: 22,
+  },
+  business: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.xs,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs + 2,
+    gap: spacing.sm,
+  },
+  locationWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  location: {
+    color: colors.textMuted,
+    fontSize: typography.sizes.xs,
+    flex: 1,
+  },
+  ratingWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  rating: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.xs,
+    fontWeight: "700",
+  },
+  description: {
+    color: colors.textMuted,
+    fontSize: typography.sizes.xs,
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
+  tags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  tag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.md,
+  },
+  tagFull: {
+    backgroundColor: colors.warningLight,
+    borderColor: colors.warningBorder,
+  },
+  tagText: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.xxs,
+    fontWeight: "600",
+  },
+  tagTextFull: {
+    color: colors.warningText,
+    fontWeight: "700",
+  },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    paddingTop: spacing.sm + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  payWrap: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  payAmount: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.md,
+    fontWeight: "800",
+  },
+  payUnit: {
+    color: colors.textMuted,
+    fontSize: typography.sizes.xs,
+    fontWeight: "600",
+    marginLeft: 2,
+  },
+  ctaButton: {
+    backgroundColor: colors.primaryDark,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.lg,
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+  },
+  ctaText: {
+    color: colors.textInverse,
+    fontSize: typography.sizes.xs,
+    fontWeight: "700",
+  },
 });

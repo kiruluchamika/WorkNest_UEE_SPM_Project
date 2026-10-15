@@ -1,9 +1,9 @@
-import React from "react";
+﻿import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
-import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import { colors, shadows } from "../../theme/colors";
+import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { formatCurrency, formatRelativeDate } from "../../utils/formatters";
 import type { Gig } from "../../types";
@@ -15,12 +15,22 @@ interface GigListItemProps {
 
 export const GigListItem: React.FC<GigListItemProps> = ({ gig, onPress }) => {
   return (
-    <TouchableOpacity onPress={() => onPress(gig)} activeOpacity={0.8} style={styles.container}>
+    <TouchableOpacity
+      onPress={() => onPress(gig)}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${gig.title}, ${gig.location}`}
+      style={styles.container}
+    >
       <View style={styles.content}>
-        <Text style={styles.title}>{gig.title}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {gig.title}
+        </Text>
         <View style={styles.row}>
           <Feather name="map-pin" size={12} color={colors.textMuted} />
-          <Text style={styles.meta}>{gig.location}</Text>
+          <Text style={styles.meta} numberOfLines={1}>
+            {gig.location}
+          </Text>
         </View>
         <Text style={styles.date}>{formatRelativeDate(gig.startDate)}</Text>
       </View>
@@ -38,33 +48,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.subtle,
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: typography.sizes.base,
-    fontWeight: "600",
+    fontSize: typography.sizes.sm,
+    fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
   meta: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    marginLeft: spacing.sm,
+    marginLeft: 4,
   },
   date: {
-    fontSize: typography.sizes.xs,
+    fontSize: typography.sizes.xxs,
     color: colors.textMuted,
   },
   right: {
@@ -73,19 +84,19 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   wage: {
-    fontSize: typography.sizes.base,
-    fontWeight: "700",
-    color: colors.success,
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
+    color: colors.successText,
   },
   wageType: {
-    fontSize: typography.sizes.xs,
+    fontSize: typography.sizes.xxs,
     color: colors.textMuted,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.success,
-    marginTop: spacing.sm,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.successText,
+    marginTop: spacing.xs,
   },
 });
