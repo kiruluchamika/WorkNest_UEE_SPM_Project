@@ -26,7 +26,7 @@ export const ReactivationRequestHistoryScreen: React.FC = () => {
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()), [application, route.params.suspensionEventId]);
   if (!application) return <LoadingSpinner fullScreen message="Loading reactivation request history..."/>;
   const field = (label: string, value: string) => <View style={styles.field}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>;
-  return <SafeAreaView style={styles.container}>
+  return <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
     <AppHeader subtitle="Reactivation Request History"/>
     <ScrollView contentContainerStyle={styles.scroll}>
       <Text style={styles.title}>Reactivation Request History</Text>

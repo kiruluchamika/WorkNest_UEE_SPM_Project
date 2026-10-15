@@ -26,7 +26,7 @@ export const SuspensionHistoryScreen: React.FC = () => {
   if (!application) return <LoadingSpinner fullScreen message="Loading suspension history..."/>;
   const events = application.suspensionEvents ?? [];
   const field = (label: string, value: string) => <View style={styles.field}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>;
-  return <SafeAreaView style={styles.container}>
+  return <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
     <AppHeader subtitle="Suspension History"/>
     <ScrollView contentContainerStyle={styles.scroll}>
       <Text style={styles.title}>Suspension History</Text>

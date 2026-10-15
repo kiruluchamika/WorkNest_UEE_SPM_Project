@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
@@ -13,8 +13,8 @@ import { prepareDocumentUpload, MAX_DOCUMENT_BYTES, type DocumentUpload } from "
 export type { DocumentUpload } from "../../utils/documentUpload";
 const types = ["image/jpeg", "image/png", "application/pdf"];
 
-export function DocumentField({ label, value, onChange, existing, onRemoveExisting, disabled = false, required = false, showOptionalLabel = true }: {
-  label: string; value?: DocumentUpload; onChange: (file?: DocumentUpload) => void;
+export function DocumentField({ label, labelStyle, value, onChange, existing, onRemoveExisting, disabled = false, required = false, showOptionalLabel = true }: {
+  label: string; labelStyle?: StyleProp<TextStyle>; value?: DocumentUpload; onChange: (file?: DocumentUpload) => void;
   existing?: string; onRemoveExisting?: () => void; disabled?: boolean; required?: boolean; showOptionalLabel?: boolean;
 }) {
   const [error, setError] = useState("");
@@ -47,7 +47,7 @@ export function DocumentField({ label, value, onChange, existing, onRemoveExisti
       setPicking(false);
     }
   };
-  return <View style={documentStyles.panel}><Text style={documentStyles.label}>{label}{required ? " (required)" : showOptionalLabel ? " (optional)" : ""}</Text><Text style={documentStyles.help}>JPEG, PNG or PDF · Maximum 2 MB</Text>
+  return <View style={documentStyles.panel}><Text style={[documentStyles.label, labelStyle]}>{label}{required ? " (required)" : showOptionalLabel ? " (optional)" : ""}</Text><Text style={documentStyles.help}>JPEG, PNG or PDF · Maximum 2 MB</Text>
     {value ? <Text style={documentStyles.selected}>Selected: {value.name}</Text> : existing ? <DocumentEvidence label="Previous document" value={existing}/> : null}
     <Button style={documentStyles.button} textStyle={documentStyles.buttonText} title={value || existing ? "Replace document" : "Select document"} variant="outline" onPress={select} disabled={disabled || picking}/>
     {value || existing ? <Button style={documentStyles.button} textStyle={documentStyles.buttonText} title="Remove document" variant="outline" disabled={disabled || picking} onPress={() => { onChange(undefined); onRemoveExisting?.(); setError(""); }}/> : null}

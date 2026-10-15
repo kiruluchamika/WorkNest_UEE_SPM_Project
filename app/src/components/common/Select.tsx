@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
+import type { StyleProp, ViewStyle, TextStyle } from "react-native";
 
 export interface SelectOption {
   value: string;
@@ -14,31 +15,35 @@ export interface SelectOption {
 
 interface SelectProps {
   label?: string;
+  labelStyle?: StyleProp<TextStyle>;
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
   placeholder?: string;
   error?: string;
   emptyMessage?: string;
+  triggerStyle?: StyleProp<ViewStyle>;
 }
 
 export const Select: React.FC<SelectProps> = ({
   label,
+  labelStyle,
   value,
   options,
   onChange,
   placeholder = "Select an option",
   error,
   emptyMessage = "No options available",
+  triggerStyle,
 }) => {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
 
   return (
     <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
       <TouchableOpacity
-        style={[styles.trigger, error ? { borderColor: colors.danger } : null]}
+        style={[styles.trigger, triggerStyle, error ? { borderColor: colors.danger } : null]}
         activeOpacity={0.8}
         onPress={() => setOpen(true)}
       >

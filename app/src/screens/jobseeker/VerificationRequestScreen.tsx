@@ -1,7 +1,7 @@
 import { toast } from "../../utils/toast";
 import { DocumentField, DocumentUpload } from "../../components/common/DocumentField";
-import React, { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { AppHeader } from "../../components/common/AppHeader";
@@ -12,8 +12,8 @@ import { Button } from "../../components/common/Button";
 import { useAuth } from "../../context/AuthContext";
 import { getDistricts } from "../../api/districtsApi";
 import { submitVerificationRequest, getMyVerificationState } from "../../api/verificationRequestsApi";
-import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import { colors, shadows } from "../../theme/colors";
+import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 
 const identityOptions = [
@@ -42,6 +42,7 @@ export const VerificationRequestScreen: React.FC = () => {
   const [address, setAddress] = useState(user?.location || "");
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [identityType, setIdentityType] = useState("");
+  const identityNumberRef = useRef<TextInput>(null);
   const [identityNumber, setIdentityNumber] = useState("");
   const [identityUpload,setIdentityUpload]=useState<DocumentUpload>();
   const [supportingUpload,setSupportingUpload]=useState<DocumentUpload>();
@@ -49,6 +50,13 @@ export const VerificationRequestScreen: React.FC = () => {
   const [communityReferences, setCommunityReferences] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!identityType) return;
+    // Let the document picker modal finish fading out before opening the keyboard.
+    const focusTimer = setTimeout(() => identityNumberRef.current?.focus(), 400);
+    return () => clearTimeout(focusTimer);
+  }, [identityType]);
 
   const loadVerificationState = async () => {
     setStateLoading(true);
@@ -142,12 +150,14 @@ export const VerificationRequestScreen: React.FC = () => {
       <AppHeader subtitle="Request Verification" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+          <View style={s.formCard}>
           <Text style={s.title}>Job Seeker Verification</Text>
           <Text style={s.help}>Provide accurate personal and community information for review.</Text>
-          <Input label="Full Name" value={fullName} onChangeText={setFullName} placeholder="Enter your full name" />
-          <Input label="Address" value={address} onChangeText={setAddress} multiline rows={3} placeholder="Enter your full address" />
-          <Input label="Phone Number" value={phoneNumber} onChangeText={setPhoneNumber} placeholder="Enter your phone number" keyboardType="phone-pad" />
-          <SearchableSelect
+          <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel} label="Full Name" value={fullName} onChangeText={setFullName} placeholder="Enter your full name" />
+          <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel} label="Address" value={address} onChangeText={setAddress} multiline rows={3} placeholder="Enter your full address" />
+          <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel} label="Phone Number" value={phoneNumber} onChangeText={setPhoneNumber} placeholder="Enter your phone number" keyboardType="phone-pad" />
+          <SearchableSelect labelStyle={s.fieldLabel}
+            triggerStyle={s.selectField}
             label="District"
             value={district}
             onChange={setDistrict}
@@ -156,7 +166,8 @@ export const VerificationRequestScreen: React.FC = () => {
             searchPlaceholder="Search districts..."
             emptyMessage="No districts found"
           />
-          <Select
+          <Select labelStyle={s.fieldLabel}
+            triggerStyle={s.selectField}
             label="Identity Document (required)"
             value={identityType}
             onChange={(value) => {
@@ -167,21 +178,23 @@ export const VerificationRequestScreen: React.FC = () => {
             placeholder="Select document type"
           />
           {identityType ? (
-            <Input
+            <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel}
+              inputRef={identityNumberRef}
               label={identityNumberLabels[identityType]}
               value={identityNumber}
               onChangeText={setIdentityNumber}
               placeholder={`Enter ${identityNumberLabels[identityType].toLowerCase()}`}
             />
           ) : null}
-          <DocumentField required label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
-          <DocumentField label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
-          <Input label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
-          {previouslyRevoked ? <Input label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}
-          <Input label="Community References" value={communityReferences} onChangeText={setCommunityReferences} multiline rows={3} />
+          <DocumentField labelStyle={s.fieldLabel} required label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
+          <DocumentField labelStyle={s.fieldLabel} label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
+          <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel} label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
+          {previouslyRevoked ? <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel} label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}
+          <Input inputWrapStyle={s.inputField} labelStyle={s.fieldLabel} label="Community References" value={communityReferences} onChangeText={setCommunityReferences} multiline rows={3} />
           {error ? <Text style={s.error}>{error}</Text> : null}
           {stateError ? <><Text style={s.error}>{stateError}</Text><Button style={s.polishButton} textStyle={s.polishButtonText} title="Retry verification status" variant="outline" onPress={loadVerificationState} loading={stateLoading}/></> : null}
           <Button style={s.polishButton} textStyle={s.polishButtonText} title="Submit Verification Request" onPress={submit} loading={busy} disabled={stateLoading || !!stateError} />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -190,6 +203,10 @@ export const VerificationRequestScreen: React.FC = () => {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "transparent" },
+  formCard: { backgroundColor: colors.surface, borderRadius: radius.xxl, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...shadows.small },
+  fieldLabel: { color: "#000000" },
+  selectField: { backgroundColor: colors.surfaceSubtle, borderColor: colors.border, borderWidth: 1.5, borderRadius: radius.lg },
+  inputField: { backgroundColor: colors.surfaceSubtle },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" },
   title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 },
   help: { fontSize: typography.sizes.sm, color: colors.textMuted, marginVertical: spacing.md, lineHeight: 22 },
