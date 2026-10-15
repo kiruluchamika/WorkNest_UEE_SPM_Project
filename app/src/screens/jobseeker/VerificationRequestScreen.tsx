@@ -84,7 +84,7 @@ export const VerificationRequestScreen: React.FC = () => {
       setError("Please select a supported district.");
       return;
     }
-    if (!identityType || !identityUpload) { setError("Identity document is required."); return; }
+    if (!identityType) { setError("Identity document is required."); return; }
     if (identityNumber.trim().length < 2) {
       setError(`Please enter your ${identityNumberLabels[identityType].toLowerCase()}.`);
       return;
@@ -163,7 +163,7 @@ export const VerificationRequestScreen: React.FC = () => {
               placeholder={`Enter ${identityNumberLabels[identityType].toLowerCase()}`}
             />
           ) : null}
-          <DocumentField required label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
+          <DocumentField showOptionalLabel={false} label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
           <DocumentField label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
           <Input label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
           {previouslyRevoked ? <Input label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}

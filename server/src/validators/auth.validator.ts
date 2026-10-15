@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { requireDocument } from "./verificationDocuments";
 import { districtSchemaValues } from "../constants/districts";
 
 export const registerSchema = z.object({
@@ -22,7 +21,6 @@ export const registerSchema = z.object({
     return;
   }
   if (!/^[0-9]{10}$/.test(data.phone || "")) ctx.addIssue({ code: "custom", path: ["phone"], message: "Mobile number must be exactly 10 digits." });
-  requireDocument(data, ctx, "identityDocumentReference", "Identity document is required.");
   for (const field of ["district", "identityType", "identityNumber", "addressInformation"] as const) {
     if (!data[field]) ctx.addIssue({ code: "custom", path: [field], message: `${field} is required for verifiers` });
   }

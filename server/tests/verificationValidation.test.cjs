@@ -17,13 +17,13 @@ const upload = { name: 'id.pdf', mimeType: 'application/pdf', base64: Buffer.fro
 const identity = { district: 'Colombo', identityType: 'NATIONAL_ID', identityNumber: '1234', addressInformation: 'Test address', identityDocumentReferenceUpload: upload };
 const registration = { ...identity, name: 'Test User', email: 'test@example.com', password: 'secret123', confirmPassword: 'secret123', role: 'verifier', phone: '0771234567' };
 
-test('frontend and backend verifier registration require exact mobile and identity, with community reference optional', () => {
+test('frontend and backend verifier registration require exact mobile and identity details, with community reference optional', () => {
   for (const schema of [frontend.registerSchema, backend.registerSchema]) {
     assert.equal(schema.safeParse(registration).success, true);
     for (const phone of ['', '077123456', '07712345678', '077123456a', '077-123456', ' 0771234567', '0771234567 ', undefined]) {
       assert.equal(schema.safeParse({ ...registration, phone }).success, false);
     }
-    assert.equal(schema.safeParse({ ...registration, identityDocumentReferenceUpload: undefined }).success, false);
+    assert.equal(schema.safeParse({ ...registration, identityDocumentReferenceUpload: undefined }).success, true);
     assert.equal(schema.safeParse({ ...registration, identityNumber: undefined }).success, false);
     assert.equal(schema.safeParse({ ...registration, identityType: undefined }).success, false);
     for (const role of ['jobseeker', 'shopowner']) {
@@ -33,19 +33,20 @@ test('frontend and backend verifier registration require exact mobile and identi
   assert.equal(backend.registerSchema.safeParse({ name: 'Test User', email: 'test@example.com', password: 'secret123', role: 'jobseeker' }).success, true);
 });
 
-test('frontend and backend re-application require upload or retained document, not legacy text', () => {
+test('frontend and backend re-application permits omitted identity files and retained references', () => {
   for (const schema of [frontend.verifierReapplicationSchema, applications.verifierReapplicationSchema]) {
     assert.equal(schema.safeParse(identity).success, true);
-    assert.equal(schema.safeParse({ ...identity, identityDocumentReferenceUpload: undefined }).success, false);
-    assert.equal(schema.safeParse({ ...identity, identityDocumentReferenceUpload: undefined, identityDocumentReference: 'legacy ID text' }).success, false);
+    assert.equal(schema.safeParse({ ...identity, identityDocumentReferenceUpload: undefined }).success, true);
+    assert.equal(schema.safeParse({ ...identity, identityDocumentReferenceUpload: undefined, identityDocumentReference: 'legacy ID text' }).success, true);
     assert.equal(schema.safeParse({ ...identity, identityDocumentReferenceUpload: undefined, identityDocumentReference: 'worknest-file:12345678-1234-4234-8234-123456789abc' }).success, true);
   }
 });
 
-test('verification requires identity details and document; supporting upload, text and gate explanation stay optional', () => {
+test('verification requires identity details; identity file, supporting upload, text and gate explanation stay optional', () => {
   const valid = { district: 'Colombo', personalInformation: 'Full Name: Test\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', identityDocumentUpload: upload, supportingEvidenceUpload: upload, communityReferences: 'Test community reference' };
   assert.equal(requests.createVerificationRequestSchema.safeParse(valid).success, true);
-  for (const field of ['identityDocument', 'identityDocumentUpload']) {
+  assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, identityDocumentUpload: undefined, supportingEvidenceUpload: undefined }).success, true);
+  for (const field of ['identityDocument']) {
     assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, [field]: undefined }).success, false);
   }
   assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, identityDocument: 'NATIONAL_ID:   ' }).success, false);

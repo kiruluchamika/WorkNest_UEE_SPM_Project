@@ -36,7 +36,7 @@ export const VerifierReapplicationScreen: React.FC = () => {
     <Input label="District" value={district} onChangeText={setDistrict} error={errors.district}/>
     <Select label="ID type" value={identityType} onChange={setIdentityType} placeholder="Select ID type" error={errors.identityType} options={[{value:"NATIONAL_ID",label:"National identity card"},{value:"PASSPORT",label:"Passport"},{value:"DRIVING_LICENCE",label:"Driving licence"}]}/>
     <Input label="ID number" value={identityNumber} onChangeText={setIdentityNumber} error={errors.identityNumber}/>
-    <DocumentField required label="Identity document" value={documentUpload} onChange={setDocumentUpload} existing={identityDocumentReference} onRemoveExisting={()=>setIdentityDocumentReference("")} disabled={submitting}/>
+    <DocumentField showOptionalLabel={false} label="Identity document" value={documentUpload} onChange={setDocumentUpload} existing={identityDocumentReference} onRemoveExisting={()=>setIdentityDocumentReference("")} disabled={submitting}/>
     {errors.identityDocumentReference ? <Text style={styles.error}>{errors.identityDocumentReference}</Text> : null}
     <Input label="Address / supporting information" value={addressInformation} onChangeText={setAddressInformation} multiline rows={3} error={errors.addressInformation}/>
     <Input label="Community reference (optional)" value={communityReference} onChangeText={setCommunityReference} multiline rows={3}/>

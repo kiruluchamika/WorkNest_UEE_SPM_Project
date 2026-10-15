@@ -60,7 +60,7 @@ const flows = [
   { url: '/api/jobseeker/verification-requests', role: 'jobseeker', revoked: true, fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Full Name: Revoked\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', communityReferences: 'Community reference', gateExplanation: 'Please review my new evidence' } },
 ];
 
-test('required identity and optional supporting uploads through actual endpoints and private downloads', async t => {
+test('optional identity and supporting uploads through actual endpoints and private downloads', async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'worknest-upload-test-'));
   process.env.PRIVATE_DOCUMENT_DIR = directory;
   const server = app.listen(0, '127.0.0.1');
@@ -75,17 +75,17 @@ test('required identity and optional supporting uploads through actual endpoints
       previouslyRevoked = !!flow.revoked;
       latestStatus = flow.status || 'REJECTED';
       await t.test(flow.url, async () => {
-        reset(); assert.equal((await post(flow, flow.body)).status, flow.fields.includes('attachmentReference') ? 201 : 400, 'only identity upload is required');
+        reset(); assert.equal((await post(flow, flow.body)).status, 201, 'uploads are optional');
         const validBody = { ...flow.body, ...Object.fromEntries(flow.fields.map(field => [field + 'Upload', png])) };
         for (const field of flow.fields) {
           const missing = { ...validBody }; delete missing[field + 'Upload'];
           reset();
-          const required = field === 'identityDocument' || field === 'identityDocumentReference';
+          const required = false;
           assert.equal((await post(flow, missing)).status, required ? 400 : 201, 'missing ' + field);
           if (!required && flow.revoked) {
             assert.equal(last.status, 'ADMIN_REVIEW');
             assert.equal(last.assignedVerifierId, null);
-            assert.equal(last.supportingEvidence, null);
+            if (field === 'supportingEvidence') assert.equal(last.supportingEvidence, null);
           }
         }
         if (flow.url === '/api/auth/register' || flow.role === 'jobseeker') {
@@ -131,9 +131,9 @@ test('required identity and optional supporting uploads through actual endpoints
           assert.equal(forged.status, 403);
           reset(); assert.equal((await post(flow, { ...validBody, [field + 'Upload']: { ...png, name: 'virus.exe', base64: Buffer.from('MZ executable').toString('base64') } })).status, 400);
           assert.equal((await post(flow, { ...validBody, [field + 'Upload']: { ...png, base64: Buffer.alloc(2 * 1024 * 1024 + 1).toString('base64') } })).status, 413);
-          // Only identity removal blocks submission; supporting documents can be removed.
+          // Either optional upload can be removed.
           reset();
-          assert.equal((await post(flow, { ...validBody, [field + 'Upload']: undefined })).status, field === 'identityDocument' || field === 'identityDocumentReference' ? 400 : 201);
+          assert.equal((await post(flow, { ...validBody, [field + 'Upload']: undefined })).status, 201);
           reset(); assert.equal((await post(flow, { ...validBody, [field + 'Upload']: pdf })).status, 201);
           const replacement = documentIds(last[field])[0];
           assert.equal(JSON.parse(await fs.readFile(path.join(directory, replacement), 'utf8')).name, 'evidence.pdf');
