@@ -90,6 +90,16 @@ export const VerificationRequestScreen: React.FC = () => {
       return;
     }
 
+    if (!identityUpload) {
+      setError("Please upload an identity document file.");
+      return;
+    }
+
+    if (communityReferences.trim().length < 5) {
+      setError("Community references are required (at least 5 characters).");
+      return;
+    }
+
     if(previouslyRevoked&&!gateExplanation.trim()){setError("Explain why you are requesting verification again.");return;}
     setBusy(true);
     setError("");
@@ -163,7 +173,7 @@ export const VerificationRequestScreen: React.FC = () => {
               placeholder={`Enter ${identityNumberLabels[identityType].toLowerCase()}`}
             />
           ) : null}
-          <DocumentField showOptionalLabel={false} label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
+          <DocumentField required label="Identity document file" value={identityUpload} onChange={setIdentityUpload} disabled={busy}/>
           <DocumentField label="Supporting evidence file" value={supportingUpload} onChange={setSupportingUpload} disabled={busy}/>
           <Input label="Supporting Evidence (optional)" value={supportingEvidence} onChangeText={setSupportingEvidence} multiline rows={3} />
           {previouslyRevoked ? <Input label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}

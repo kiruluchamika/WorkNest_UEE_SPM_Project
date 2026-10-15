@@ -1,15 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const Module = require('node:module');
-const ts = require('typescript');
-const filename = path.resolve(__dirname, '../../app/src/utils/validators.ts');
-const frontendModule = new Module(filename);
-frontendModule.filename = filename;
-frontendModule.paths = Module._nodeModulePaths(path.dirname(filename));
-frontendModule._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-const frontend = frontendModule.exports;
+const frontend = require('./helpers/loadFrontend.cjs')('utils/validators.ts');
 const backend = require('../dist/validators/auth.validator');
 const applications = require('../dist/validators/verifierApplication.validator');
 const requests = require('../dist/validators/verificationRequest.validator');
@@ -42,10 +33,15 @@ test('frontend and backend re-application permits omitted identity files and ret
   }
 });
 
-test('verification requires identity details; identity file, supporting upload, text and gate explanation stay optional', () => {
-  const valid = { district: 'Colombo', personalInformation: 'Full Name: Test\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', identityDocumentUpload: upload, supportingEvidenceUpload: upload, communityReferences: 'Test community reference' };
+test('verification requires identity details and an identity file; supporting evidence stays optional', () => {
+  const valid = { district: 'Colombo', personalInformation: 'Full Name: Test\nAddress: Test address\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', identityDocumentUpload: upload, supportingEvidenceUpload: upload, communityReferences: 'Test community reference' };
   assert.equal(requests.createVerificationRequestSchema.safeParse(valid).success, true);
-  assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, identityDocumentUpload: undefined, supportingEvidenceUpload: undefined }).success, true);
+  for (const identityDocumentUpload of [undefined, null]) {
+    const result = requests.createVerificationRequestSchema.safeParse({ ...valid, identityDocumentUpload, supportingEvidenceUpload: undefined });
+    assert.equal(result.success, false);
+    assert(result.error.issues.some(issue => issue.message === 'Please upload an identity document file.'));
+  }
+  assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, identityDocumentUpload: undefined, identityDocument: 'NATIONAL_ID: 1234\nworknest-file:12345678-1234-4234-8234-123456789abc' }).success, true, 'a retained file is checked for ownership by upload middleware');
   for (const field of ['identityDocument']) {
     assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, [field]: undefined }).success, false);
   }
@@ -55,4 +51,31 @@ test('verification requires identity details; identity file, supporting upload, 
   assert.equal(applications.reactivationRequestSchema.safeParse({ explanation: 'Please reactivate my access', attachmentReferenceUpload: upload }).success, true);
   assert.equal(applications.reactivationRequestSchema.safeParse({ explanation: 'Please reactivate my access' }).success, true);
   assert.equal(applications.reactivationRequestSchema.safeParse({ explanation: 'Please reactivate my access', attachmentReference: 'Written evidence alone' }).success, true);
+});
+
+test('required personal information and decision reasons reject empty, whitespace and malformed values', () => {
+  const valid = { district: 'Colombo', personalInformation: 'Full Name: Test\nAddress: Test address\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', identityDocumentUpload: upload, communityReferences: 'Test reference' };
+  for (const personalInformation of [
+    'Phone Number: 0771234567',
+    'Full Name:  \nAddress: Test address\nPhone Number: 0771234567',
+    'Full Name: Test\nAddress:   \nPhone Number: 0771234567',
+    valid.personalInformation + '\nFull Name: Duplicate',
+    valid.personalInformation + '\nPhone Number: 0771234567',
+  ]) assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, personalInformation }).success, false);
+  for (const communityReferences of ['', '    ', 'abcd']) assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, communityReferences }).success, false);
+  for (const identityDocument of ['', 'NATIONAL_ID:   ', 'OTHER: 1234']) assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, identityDocument }).success, false);
+  assert.equal(requests.createVerificationRequestSchema.safeParse({ ...valid, district: 'Unsupported' }).success, false);
+  for (const [schema, field, body] of [
+    [requests.verifierNoteSchema, 'verifierNote', {}],
+    [requests.rejectVerificationSchema, 'rejectionReason', { verifierNote: 'Reviewed evidence' }],
+    [requests.flagVerificationSchema, 'flagReason', { verifierNote: 'Reviewed evidence' }],
+    [requests.adminFlagOutcomeSchema, 'response', {}],
+    [requests.badgeReasonSchema, 'reason', {}],
+    [applications.rejectVerifierApplicationSchema, 'reason', {}],
+    [applications.suspendVerifierApplicationSchema, 'reason', {}],
+    [applications.rejectReactivationRequestSchema, 'reason', {}],
+  ]) {
+    for (const value of [undefined, '', '   ']) assert.equal(schema.safeParse({ ...body, [field]: value }).success, false);
+    assert.equal(schema.safeParse({ ...body, [field]: 'Valid meaningful reason' }).success, true);
+  }
 });
