@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Platform, Text, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Button } from "./Button";
 import { http, extractErrorMessage } from "../../api/http";
 
-export interface DocumentUpload { name: string; mimeType: string; base64: string }
-const MAX_BYTES = 2 * 1024 * 1024;
+import { prepareDocumentUpload, MAX_DOCUMENT_BYTES, type DocumentUpload } from "../../utils/documentUpload";
+export type { DocumentUpload } from "../../utils/documentUpload";
 const types = ["image/jpeg", "image/png", "application/pdf"];
 
 export function DocumentField({ label, value, onChange, existing, onRemoveExisting, disabled = false, required = false, showOptionalLabel = true }: {
@@ -20,25 +21,23 @@ export function DocumentField({ label, value, onChange, existing, onRemoveExisti
     setError(""); setPicking(true);
     let cachedUri: string | undefined;
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: types, multiple: false, copyToCacheDirectory: true });
+      // Android Expo Go may copy into the host cache outside this project's
+      // filesystem scope. Read the picker-granted content URI instead.
+      const copyToCacheDirectory = Platform.OS !== "android";
+      const result = await DocumentPicker.getDocumentAsync({ type: types, multiple: false, copyToCacheDirectory });
       if (result.canceled) return;
       const file = result.assets[0];
-      if (Platform.OS !== "web") cachedUri = file.uri;
-      const mimeType = file.mimeType || (/\.pdf$/i.test(file.name) ? "application/pdf" : /\.png$/i.test(file.name) ? "image/png" : /\.jpe?g$/i.test(file.name) ? "image/jpeg" : "");
-      if (!types.includes(mimeType)) throw new Error("Select a JPEG, PNG or PDF file.");
-      if (file.size != null && file.size > MAX_BYTES) throw new Error("Documents must be 2 MB or smaller.");
-      let base64: string;
-      try {
+      // Only delete a copy we requested, never the Android provider's source.
+      if (Platform.OS !== "web" && copyToCacheDirectory) cachedUri = file.uri;
+      const upload = await prepareDocumentUpload(file, async () => {
         if (Platform.OS === "web") {
           const blob = file.file || await (await fetch(file.uri)).blob();
-          if (blob.size > MAX_BYTES) throw new Error("Documents must be 2 MB or smaller.");
-          base64 = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.readAsDataURL(blob); });
-        } else base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-      } finally {
-        if (Platform.OS !== "web") await FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => undefined);
-      }
-      if (base64.length * 3 / 4 - (base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0) > MAX_BYTES) throw new Error("Documents must be 2 MB or smaller.");
-      onChange({ name: file.name, mimeType, base64 });
+          if (blob.size > MAX_DOCUMENT_BYTES) throw new Error("Documents must be 2 MB or smaller.");
+          return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.readAsDataURL(blob); });
+        }
+        return new File(file.uri).base64();
+      });
+      onChange(upload);
       onRemoveExisting?.();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not read the selected document."); }
     finally {
