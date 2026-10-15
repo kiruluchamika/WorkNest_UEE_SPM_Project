@@ -1,3 +1,4 @@
+import { VerificationCardAction } from "../../components/verification/VerificationCardAction";
 import React, { useCallback, useRef, useState } from "react";
 import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,6 +26,7 @@ export function VerifiedJobSeekerManagementScreen() {
   const gates = route.name === "VerificationAdminGate";
   const details = route.name === "JobSeekerVerificationDetails";
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
+  const [sort, setSort] = useState<"oldest" | "newest">("oldest");
   const [pendingCount, setPendingCount] = useState<number>();
   const [revocations, setRevocations] = useState<VerificationRevocation[]>([]);
   const [record, setRecord] = useState<JobSeekerVerificationDetails>();
@@ -54,6 +56,10 @@ export function VerifiedJobSeekerManagementScreen() {
   };
   const title = details ? "Job Seeker Verification Details" : history ? "Revocation History" : gates ? "Incoming Re-verification Requests" : verifiedList ? "Verified Job Seekers" : "Verified Job Seeker Management";
   const latestRequest = record?.requests[0];
+  const displayedRequests = gates ? [...requests].sort((a, b) => {
+    const difference = new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+    return sort === "oldest" ? difference : -difference;
+  }) : requests;
   const currentReverification = !record?.verified && latestRequest?.revocation ? latestRequest : undefined;
   const awaitingVerifier = currentReverification?.gateStatus === "ALLOWED"
     && ["PENDING", "ASSIGNED", "UNDER_REVIEW", "RETURNED_FOR_REVIEW"].includes(currentReverification.status);
@@ -65,9 +71,16 @@ export function VerifiedJobSeekerManagementScreen() {
     {field("Submitted", new Date(item.submittedAt).toLocaleString())}{field("Assigned Verifier", item.assignedVerifier?.name)}
     {field("Decision", item.decidedAt ? new Date(item.decidedAt).toLocaleString() : undefined)}
   </>;
-  return <SafeAreaView style={s.container}><AppHeader subtitle={title}/>
+  return <SafeAreaView style={s.container} edges={["left", "right", "bottom"]}><AppHeader subtitle={title}/>
     <ScrollView contentContainerStyle={s.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>
       <Text style={s.title}>{title}</Text>
+      {gates ? <>
+        <Text style={s.sortLabel}>Sort:</Text>
+        <View style={s.sortRow}>
+          <View style={s.sortOption}><Button style={s.polishButton} textStyle={s.polishButtonText} title="Oldest First" variant={sort === "oldest" ? "primary" : "outline"} onPress={() => setSort("oldest")}/></View>
+          <View style={s.sortOption}><Button style={s.polishButton} textStyle={s.polishButtonText} title="Newest First" variant={sort === "newest" ? "primary" : "outline"} onPress={() => setSort("newest")}/></View>
+        </View>
+      </> : null}
       {verifiedList ? <>
         <SearchableSelect label="District" value={district} onChange={setDistrict} options={[{ value: "", label: "All districts" }, ...districts.map(value => ({ value, label: value }))]} placeholder="All districts"/>
         <Text style={s.sectionTitle}>Verified Job Seekers</Text>
@@ -97,9 +110,9 @@ export function VerifiedJobSeekerManagementScreen() {
           {field("Original revocation reason", item.revocation?.reason)}{field("Request explanation", item.gateExplanation)}{field("Admin gate decision", item.gateStatus)}{field("Admin gate reason", item.gateReason)}
           <DocumentEvidence label="Identity document" value={item.identityDocument}/><DocumentEvidence label="Supporting information" value={item.supportingEvidence}/>
         </Card>)}
-      </> : history ? (!revocations.length ? <Card style={s.polishPanel}><Text>No revoked badges found.</Text></Card> : revocations.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.verificationRequest?.applicantId })}><Card style={s.card}><Text style={s.name}>{item.verificationRequest?.applicant.name}</Text>{field("District", item.verificationRequest?.district)}{field("Revocation reason", item.reason)}{field("Revoked", new Date(item.revokedAt).toLocaleString())}</Card></TouchableOpacity>))
+      </> : history ? (!revocations.length ? <Card style={s.polishPanel}><Text>No revoked badges found.</Text></Card> : revocations.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.verificationRequest?.applicantId })}><Card style={s.card}><Text style={s.name}>{item.verificationRequest?.applicant.name}</Text>{field("District", item.verificationRequest?.district)}{field("Revocation reason", item.reason)}{field("Revoked", new Date(item.revokedAt).toLocaleString())}<VerificationCardAction/></Card></TouchableOpacity>))
         : !requests.length ? <Card style={s.polishPanel}><Text>{gates ? "No requests awaiting Admin approval." : "No verified Job Seekers found."}</Text></Card>
-        : requests.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.applicantId })}><Card style={s.card}>{requestInfo(item)}{!gates ? <Text style={s.text}>VERIFIED</Text> : field("Original revocation reason", item.revocation?.reason)}</Card></TouchableOpacity>))}
+        : displayedRequests.map(item => <TouchableOpacity key={item.id} onPress={() => nav.navigate("JobSeekerVerificationDetails", { userId: item.applicantId })}><Card style={s.card}>{requestInfo(item)}{!gates ? <Text style={s.text}>VERIFIED</Text> : field("Original revocation reason", item.revocation?.reason)}<VerificationCardAction/></Card></TouchableOpacity>))}
       {home && error ? <Text style={s.error}>{error}</Text> : null}
       {home ? <View style={s.navigation}>
         <TouchableOpacity accessibilityRole="button" style={s.navigationRow} onPress={() => nav.navigate("VerifiedJobSeekers")}>
@@ -132,6 +145,9 @@ export function VerifiedJobSeekerManagementScreen() {
   </SafeAreaView>;
 }
 const s = StyleSheet.create({
+  sortLabel: { fontSize: typography.sizes.sm, marginTop: spacing.md, fontWeight: "700", lineHeight: 18, marginBottom: spacing.xs + 2 },
+  sortRow: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.sm + spacing.xs, marginBottom: spacing.md },
+  sortOption: { flex: 1, flexBasis: 132, minWidth: 132 },
   sectionTitle: { fontSize: typography.sizes.base, fontWeight: "700", color: colors.text, marginBottom: spacing.md, lineHeight: 24 },
   navigation: { marginTop: spacing.md },
   navigationRow: { width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, minHeight: 76, padding: spacing.md + spacing.xs, marginBottom: spacing.sm + spacing.xs, borderRadius: 16 },

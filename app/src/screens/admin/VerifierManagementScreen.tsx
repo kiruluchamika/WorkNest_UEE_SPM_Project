@@ -22,7 +22,7 @@ export const VerifierManagementScreen: React.FC = () => {
   const navigation = useNavigation();
   const { items, loading, error, load, count } = useVerifierOverview();
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <AppHeader subtitle="Verifier management" />
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
         <Text style={styles.title}>Verifier Management</Text>

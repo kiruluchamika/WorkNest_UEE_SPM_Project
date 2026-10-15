@@ -1,3 +1,4 @@
+import { VerificationCardAction } from "../../components/verification/VerificationCardAction";
 import { Button } from "../../components/common/Button";
 import React, { useCallback, useState } from "react";
 import { ScrollView, View, Text, RefreshControl, StyleSheet, TouchableOpacity } from "react-native";
@@ -22,8 +23,8 @@ function useApplications(statuses: VerifierApplicationStatus[]) {
 function RecordsScreen({title,statuses,empty,selectable=false,showIncomingReactivation=false}:{title:string;statuses:VerifierApplicationStatus[];empty:string;selectable?:boolean;showIncomingReactivation?:boolean}){
   const navigation=useNavigation(); const{items,loading,error,load}=useApplications(statuses);
   const pendingReactivationCount=items.reduce((count,item)=>count+(item.reactivationRequests??[]).filter((request)=>request.status==="PENDING").length,0);
-  const renderCard=(item:VerifierApplication)=><Card style={styles.card}><View style={styles.header}><Text style={styles.name}>{item.applicant.name}</Text><Text style={[styles.status,(item.status==="REJECTED"||item.status==="SUSPENDED")&&styles.rejected]}>{item.status}</Text></View><Text style={styles.muted}>{item.district} • Submitted {new Date(item.submittedAt).toLocaleDateString()}</Text>{item.reviewedAt?<Text style={styles.muted}>Reviewed {new Date(item.reviewedAt).toLocaleDateString()}</Text>:null}<Text style={styles.id}>Application ID: {item.id}</Text></Card>;
-  return <SafeAreaView style={styles.container}><AppHeader subtitle={title}/><ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>{showIncomingReactivation?<TouchableOpacity onPress={()=> (navigation as any).navigate("IncomingReactivationRequests")}><Card style={styles.incomingCard}><Text style={styles.incomingTitle}>Incoming Reactivation Requests ({pendingReactivationCount})</Text><Text style={styles.muted}>Review pending requests requiring Admin attention.</Text></Card></TouchableOpacity>:null}{error?<Text style={styles.error}>{error}</Text>:null}{loading&&!items.length?<LoadingSpinner message="Loading verifier records..."/>:!items.length?<Card style={styles.polishPanel}><Text style={styles.emptyTitle}>{empty}</Text><Text style={styles.muted}>Records will appear here when available.</Text></Card>:items.map((item)=>selectable?<TouchableOpacity key={item.id} onPress={()=> (navigation as any).navigate("VerifierDetails",{applicationId:item.id})}>{renderCard(item)}</TouchableOpacity>:<View key={item.id}>{renderCard(item)}</View>)}</ScrollView></SafeAreaView>;
+  const renderCard=(item:VerifierApplication)=><Card style={styles.card}><View style={styles.header}><Text style={styles.name}>{item.applicant.name}</Text><Text style={[styles.status,(item.status==="REJECTED"||item.status==="SUSPENDED")&&styles.rejected]}>{item.status}</Text></View><Text style={styles.muted}>{item.district} • Submitted {new Date(item.submittedAt).toLocaleDateString()}</Text>{item.reviewedAt?<Text style={styles.muted}>Reviewed {new Date(item.reviewedAt).toLocaleDateString()}</Text>:null}<Text style={styles.id}>Application ID: {item.id}</Text>{selectable ? <VerificationCardAction/> : null}</Card>;
+  return <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}><AppHeader subtitle={title}/><ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>{showIncomingReactivation?<TouchableOpacity onPress={()=> (navigation as any).navigate("IncomingReactivationRequests")}><Card style={styles.incomingCard}><Text style={styles.incomingTitle}>Incoming Reactivation Requests ({pendingReactivationCount})</Text><Text style={styles.muted}>Review pending requests requiring Admin attention.</Text><VerificationCardAction/></Card></TouchableOpacity>:null}{error?<Text style={styles.error}>{error}</Text>:null}{loading&&!items.length?<LoadingSpinner message="Loading verifier records..."/>:!items.length?<Card style={styles.polishPanel}><Text style={styles.emptyTitle}>{empty}</Text><Text style={styles.muted}>Records will appear here when available.</Text></Card>:items.map((item)=>selectable?<TouchableOpacity key={item.id} onPress={()=> (navigation as any).navigate("VerifierDetails",{applicationId:item.id})}>{renderCard(item)}</TouchableOpacity>:<View key={item.id}>{renderCard(item)}</View>)}</ScrollView></SafeAreaView>;
 }
 
 export const ApprovedVerifiersScreen=()=> <RecordsScreen title="Approved verifiers" statuses={["APPROVED"]} empty="No approved verifiers" selectable/>;
@@ -34,7 +35,7 @@ export const VerifierApprovalHistoryScreen = () => {
   const { items, loading, error, load } = useApplications(["APPROVED", "REJECTED", "SUSPENDED"]);
   // A suspended verifier was previously approved; keep that application in approval history.
   const visible = items.filter(item => tab === "APPROVED" ? item.status === "APPROVED" || item.status === "SUSPENDED" : item.status === "REJECTED");
-  return <SafeAreaView style={styles.container}><AppHeader subtitle="Verifier Approval History"/>
+  return <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}><AppHeader subtitle="Verifier Approval History"/>
     <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xxl }]} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>
       <Text style={styles.name}>Verifier Approval History</Text>
       <View style={{ flexDirection: "row", marginVertical: spacing.md }}>{(["APPROVED", "REJECTED"] as const).map(value => <View key={value} style={{ flex: 1, marginHorizontal: spacing.xs }}><Button style={styles.polishButton} textStyle={styles.polishButtonText} title={value === "APPROVED" ? "Approved" : "Rejected"} variant={tab === value ? "primary" : "outline"} onPress={() => setTab(value)}/></View>)}</View>
@@ -53,7 +54,7 @@ export const VerifierApprovalHistoryScreen = () => {
             <Text style={styles.muted}>Current status: {item.status}</Text>
             {item.reviewer ? <Text style={styles.muted}>Reviewed by: {item.reviewer.name}</Text> : null}
             {item.rejectionReason ? <Text style={styles.muted}>Rejection reason: {item.rejectionReason}</Text> : null}
-          </Card>
+          <VerificationCardAction/></Card>
         </TouchableOpacity>)}
     </ScrollView>
   </SafeAreaView>;

@@ -1,3 +1,4 @@
+import { VerificationCardAction } from "../../components/verification/VerificationCardAction";
 import React, { useCallback, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,7 +75,7 @@ export function AdminVerificationRecordsScreen() {
               {item.adminResponse ? <Text style={styles.text}>Admin response: {item.adminResponse}</Text> : null}
               {item.adminReviewedAt ? <Text style={styles.text}>Admin reviewed: {new Date(item.adminReviewedAt).toLocaleString()}</Text> : null}
             </> : null}
-          </Card>
+          <VerificationCardAction/></Card>
         </TouchableOpacity>)}
     </ScrollView>
   </SafeAreaView>;
