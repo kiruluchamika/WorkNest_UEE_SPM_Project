@@ -3,19 +3,18 @@ import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "re
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import { useAuth } from "../../context/AuthContext";
 import { getVerifierDashboard, setVerifierAvailability } from "../../api/verificationRequestsApi";
 import type { VerifierDashboardData, VerificationRequestStatus } from "../../types";
 import { AppHeader } from "../../components/common/AppHeader";
 import { Card } from "../../components/common/Card";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { Button } from "../../components/common/Button";
+import { VerificationCardAction } from "../../components/verification/VerificationCardAction";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 
 export const VerifierDashboardScreen: React.FC = () => {
-  const { user } = useAuth();
   const nav = useNavigation();
   const [data, setData] = useState<VerifierDashboardData>();
   const [busy, setBusy] = useState(false);
@@ -29,7 +28,7 @@ export const VerifierDashboardScreen: React.FC = () => {
       <Card style={s.row}>
         <Text style={s.rowText}>{label}</Text>
         <Text style={s.count}>{count}</Text>
-        <Feather name="chevron-right" size={18} color={colors.textMuted} />
+        <VerificationCardAction compact/>
       </Card>
     </TouchableOpacity>
   );
@@ -41,6 +40,9 @@ export const VerifierDashboardScreen: React.FC = () => {
   );
 
   const isAvailable = !!data.application?.isAvailable;
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening";
   const updateAvailability = async (value: boolean) => {
     setBusy(true);
     try {
@@ -53,10 +55,15 @@ export const VerifierDashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={s.container}>
-      <AppHeader subtitle="Community Verifier" />
       <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.title}>Welcome, {user?.name}</Text>
-        <Text style={s.muted}>{data.application?.district || "District not available"}</Text>
+        <AppHeader greeting={greeting} subtitle="Community Verifier"/>
+        <View style={s.dateRow}>
+          <Text style={s.dateText}>{now.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</Text>
+          <View style={s.districtPill}>
+            <Feather name="map-pin" size={13} color={colors.primaryDark}/>
+            <Text style={s.districtText}>{data.application?.district || "District not available"}</Text>
+          </View>
+        </View>
         <Card style={s.availability}>
           <View style={s.availabilityCopy}>
             <Text style={s.section}>Availability</Text>
@@ -104,6 +111,10 @@ export const VerifierDashboardScreen: React.FC = () => {
 };
 
 const s = StyleSheet.create({
+  dateRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.md },
+  dateText: { fontSize: typography.sizes.xs, lineHeight: 20, color: colors.textMuted },
+  districtPill: { flexDirection: "row", alignItems: "center", gap: spacing.xs, backgroundColor: colors.primarySoft, borderRadius: 999, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, maxWidth: "100%" },
+  districtText: { color: colors.primaryDark, fontSize: typography.sizes.xs, lineHeight: 20, fontWeight: "700", flexShrink: 1 },
   container: { flex: 1, backgroundColor: "transparent" },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" },
   title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 },
