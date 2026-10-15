@@ -1,18 +1,21 @@
 import React, { useState } from "react";
-import { Platform, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Button } from "./Button";
 import { http, extractErrorMessage } from "../../api/http";
+import { colors } from "../../theme/colors";
+import { spacing } from "../../theme/spacing";
 
-export interface DocumentUpload { name: string; mimeType: string; base64: string }
-const MAX_BYTES = 2 * 1024 * 1024;
+import { prepareDocumentUpload, MAX_DOCUMENT_BYTES, type DocumentUpload } from "../../utils/documentUpload";
+export type { DocumentUpload } from "../../utils/documentUpload";
 const types = ["image/jpeg", "image/png", "application/pdf"];
 
-export function DocumentField({ label, value, onChange, existing, onRemoveExisting, disabled = false, required = false }: {
+export function DocumentField({ label, value, onChange, existing, onRemoveExisting, disabled = false, required = false, showOptionalLabel = true }: {
   label: string; value?: DocumentUpload; onChange: (file?: DocumentUpload) => void;
-  existing?: string; onRemoveExisting?: () => void; disabled?: boolean; required?: boolean;
+  existing?: string; onRemoveExisting?: () => void; disabled?: boolean; required?: boolean; showOptionalLabel?: boolean;
 }) {
   const [error, setError] = useState("");
   const [picking, setPicking] = useState(false);
@@ -20,25 +23,23 @@ export function DocumentField({ label, value, onChange, existing, onRemoveExisti
     setError(""); setPicking(true);
     let cachedUri: string | undefined;
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: types, multiple: false, copyToCacheDirectory: true });
+      // Android Expo Go may copy into the host cache outside this project's
+      // filesystem scope. Read the picker-granted content URI instead.
+      const copyToCacheDirectory = Platform.OS !== "android";
+      const result = await DocumentPicker.getDocumentAsync({ type: types, multiple: false, copyToCacheDirectory });
       if (result.canceled) return;
       const file = result.assets[0];
-      if (Platform.OS !== "web") cachedUri = file.uri;
-      const mimeType = file.mimeType || (/\.pdf$/i.test(file.name) ? "application/pdf" : /\.png$/i.test(file.name) ? "image/png" : /\.jpe?g$/i.test(file.name) ? "image/jpeg" : "");
-      if (!types.includes(mimeType)) throw new Error("Select a JPEG, PNG or PDF file.");
-      if (file.size != null && file.size > MAX_BYTES) throw new Error("Documents must be 2 MB or smaller.");
-      let base64: string;
-      try {
+      // Only delete a copy we requested, never the Android provider's source.
+      if (Platform.OS !== "web" && copyToCacheDirectory) cachedUri = file.uri;
+      const upload = await prepareDocumentUpload(file, async () => {
         if (Platform.OS === "web") {
           const blob = file.file || await (await fetch(file.uri)).blob();
-          if (blob.size > MAX_BYTES) throw new Error("Documents must be 2 MB or smaller.");
-          base64 = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.readAsDataURL(blob); });
-        } else base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-      } finally {
-        if (Platform.OS !== "web") await FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => undefined);
-      }
-      if (base64.length * 3 / 4 - (base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0) > MAX_BYTES) throw new Error("Documents must be 2 MB or smaller.");
-      onChange({ name: file.name, mimeType, base64 });
+          if (blob.size > MAX_DOCUMENT_BYTES) throw new Error("Documents must be 2 MB or smaller.");
+          return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.readAsDataURL(blob); });
+        }
+        return new File(file.uri).base64();
+      });
+      onChange(upload);
       onRemoveExisting?.();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not read the selected document."); }
     finally {
@@ -46,15 +47,15 @@ export function DocumentField({ label, value, onChange, existing, onRemoveExisti
       setPicking(false);
     }
   };
-  return <View style={{ marginVertical: 10 }}><Text>{label} ({required ? "required" : "optional"})</Text><Text>JPEG, PNG or PDF · Maximum 2 MB</Text>
-    {value ? <Text>Selected: {value.name}</Text> : existing ? <DocumentEvidence label="Previous document" value={existing}/> : null}
-    <Button title={value || existing ? "Replace document" : "Select document"} variant="outline" onPress={select} disabled={disabled || picking}/>
-    {value || existing ? <Button title="Remove document" variant="outline" disabled={disabled || picking} onPress={() => { onChange(undefined); onRemoveExisting?.(); setError(""); }}/> : null}
-    {error ? <Text accessibilityRole="alert" style={{ color: "#b42318" }}>{error}</Text> : null}
+  return <View style={documentStyles.panel}><Text style={documentStyles.label}>{label}{required ? " (required)" : showOptionalLabel ? " (optional)" : ""}</Text><Text style={documentStyles.help}>JPEG, PNG or PDF · Maximum 2 MB</Text>
+    {value ? <Text style={documentStyles.selected}>Selected: {value.name}</Text> : existing ? <DocumentEvidence label="Previous document" value={existing}/> : null}
+    <Button style={documentStyles.button} textStyle={documentStyles.buttonText} title={value || existing ? "Replace document" : "Select document"} variant="outline" onPress={select} disabled={disabled || picking}/>
+    {value || existing ? <Button style={documentStyles.button} textStyle={documentStyles.buttonText} title="Remove document" variant="outline" disabled={disabled || picking} onPress={() => { onChange(undefined); onRemoveExisting?.(); setError(""); }}/> : null}
+    {error ? <Text accessibilityRole="alert" style={documentStyles.error}>{error}</Text> : null}
   </View>;
 }
 
-export function DocumentEvidence({ label, value }: { label: string; value?: string }) {
+export function DocumentEvidence({ label, value, highlightText = false }: { label: string; value?: string; highlightText?: boolean }) {
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const ids = [...(value || "").matchAll(/worknest-file:([0-9a-f-]{36})/g)].map(match => match[1]);
   const text = (value || "").replace(/worknest-file:[0-9a-f-]{36}/g, "").trim();
@@ -85,9 +86,22 @@ export function DocumentEvidence({ label, value }: { label: string; value?: stri
     } catch (e) { setError(extractErrorMessage(e, e instanceof Error ? e.message : "Could not open document.")); }
     finally { setBusy(false); }
   };
-  return <View style={{ marginVertical: 8 }}><Text>{label}</Text>{text ? <Text>{text}</Text> : null}{!value ? <Text>Not provided</Text> : null}
-    {ids.map(id => <Button key={id} title="Open attached document" variant="outline" disabled={busy} onPress={() => open(id)}/>)}
-    {value && !ids.length ? <Text>Legacy text only — no uploaded file.</Text> : null}
-    {error ? <Text accessibilityRole="alert" style={{ color: "#b42318" }}>{error}</Text> : null}
+  return <View style={[documentStyles.panel, highlightText && documentStyles.highlightPanel]}><Text style={[documentStyles.label, highlightText && documentStyles.identityLabel]}>{label}</Text>{text ? <Text style={[documentStyles.help, highlightText && documentStyles.identityValue]}>{text}</Text> : null}{!value ? <Text style={documentStyles.help}>Not provided</Text> : null}
+    {ids.map(id => <Button style={documentStyles.button} textStyle={documentStyles.buttonText} key={id} title="Open attached document" variant="outline" disabled={busy} onPress={() => open(id)}/>)}
+    {value && !ids.length ? <Text style={documentStyles.help}>Legacy text only — no uploaded file.</Text> : null}
+    {error ? <Text accessibilityRole="alert" style={documentStyles.error}>{error}</Text> : null}
   </View>;
 }
+
+const documentStyles = StyleSheet.create({
+  panel: { marginVertical: spacing.sm, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.surfaceSubtle },
+  label: { fontSize: 13, lineHeight: 20, fontWeight: "700", color: colors.text, marginBottom: spacing.xs },
+  help: { fontSize: 13, lineHeight: 20, color: colors.textMuted },
+  highlightPanel: { backgroundColor: colors.primaryLight, borderColor: colors.borderStrong },
+  identityLabel: { color: colors.primaryDark },
+  identityValue: { fontSize: 16, lineHeight: 26, fontWeight: "700", color: colors.text, marginVertical: spacing.xs },
+  selected: { fontSize: 13, lineHeight: 20, color: colors.primaryDark, fontWeight: "600", marginTop: spacing.sm },
+  button: { marginTop: spacing.sm, minHeight: 50, paddingVertical: spacing.sm },
+  buttonText: { textAlign: "center", flexShrink: 1, lineHeight: 20 },
+  error: { color: colors.danger, fontSize: 13, lineHeight: 20, marginTop: spacing.sm },
+});

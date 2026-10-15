@@ -56,11 +56,11 @@ const flows = [
   { url: '/api/auth/register', role: null, fields: ['identityDocumentReference'], body: { ...application, name: 'Upload Test', email: 'upload@example.com', password: 'test-password', role: 'verifier', phone: '0771234567' } },
   { url: '/api/verifier/applications', role: 'verifier', fields: ['identityDocumentReference'], body: application },
   { url: '/api/verifier/applications/reactivation-request', role: 'verifier', fields: ['attachmentReference'], body: { explanation: 'Please review my supporting evidence.' }, status: 'SUSPENDED' },
-  { url: '/api/jobseeker/verification-requests', role: 'jobseeker', fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Full Name: Test\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', supportingEvidence: 'Existing written evidence', communityReferences: 'Community reference' } },
-  { url: '/api/jobseeker/verification-requests', role: 'jobseeker', revoked: true, fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Full Name: Revoked\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', communityReferences: 'Community reference', gateExplanation: 'Please review my new evidence' } },
+  { url: '/api/jobseeker/verification-requests', role: 'jobseeker', fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Full Name: Test\nAddress: Test address\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', supportingEvidence: 'Existing written evidence', communityReferences: 'Community reference' } },
+  { url: '/api/jobseeker/verification-requests', role: 'jobseeker', revoked: true, fields: ['identityDocument', 'supportingEvidence'], body: { district: 'Colombo', personalInformation: 'Full Name: Revoked\nAddress: Test address\nPhone Number: 0771234567', identityDocument: 'NATIONAL_ID: 1234', communityReferences: 'Community reference', gateExplanation: 'Please review my new evidence' } },
 ];
 
-test('required identity and optional supporting uploads through actual endpoints and private downloads', async t => {
+test('required Job Seeker identity upload and optional supporting uploads through actual endpoints and private downloads', async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'worknest-upload-test-'));
   process.env.PRIVATE_DOCUMENT_DIR = directory;
   const server = app.listen(0, '127.0.0.1');
@@ -75,22 +75,22 @@ test('required identity and optional supporting uploads through actual endpoints
       previouslyRevoked = !!flow.revoked;
       latestStatus = flow.status || 'REJECTED';
       await t.test(flow.url, async () => {
-        reset(); assert.equal((await post(flow, flow.body)).status, flow.fields.includes('attachmentReference') ? 201 : 400, 'only identity upload is required');
+        reset(); assert.equal((await post(flow, flow.body)).status, flow.role === 'jobseeker' ? 400 : 201, 'Job Seeker identity file required; other existing attachment rules preserved');
         const validBody = { ...flow.body, ...Object.fromEntries(flow.fields.map(field => [field + 'Upload', png])) };
         for (const field of flow.fields) {
           const missing = { ...validBody }; delete missing[field + 'Upload'];
           reset();
-          const required = field === 'identityDocument' || field === 'identityDocumentReference';
+          const required = flow.role === 'jobseeker' && field === 'identityDocument';
           assert.equal((await post(flow, missing)).status, required ? 400 : 201, 'missing ' + field);
           if (!required && flow.revoked) {
             assert.equal(last.status, 'ADMIN_REVIEW');
             assert.equal(last.assignedVerifierId, null);
-            assert.equal(last.supportingEvidence, null);
+            if (field === 'supportingEvidence') assert.equal(last.supportingEvidence, null);
           }
         }
         if (flow.url === '/api/auth/register' || flow.role === 'jobseeker') {
           for (const phone of ['', '077123456', '07712345678', '077123456a', '077-123456', ' 0771234567', '0771234567 ']) {
-            const invalid = flow.role === 'jobseeker' ? { ...validBody, personalInformation: `Full Name: Test\nPhone Number: ${phone}` } : { ...validBody, phone };
+            const invalid = flow.role === 'jobseeker' ? { ...validBody, personalInformation: `Full Name: Test\nAddress: Test address\nPhone Number: ${phone}` } : { ...validBody, phone };
             assert.equal((await post(flow, invalid)).status, 400, 'invalid mobile ' + phone);
           }
         }
@@ -131,9 +131,9 @@ test('required identity and optional supporting uploads through actual endpoints
           assert.equal(forged.status, 403);
           reset(); assert.equal((await post(flow, { ...validBody, [field + 'Upload']: { ...png, name: 'virus.exe', base64: Buffer.from('MZ executable').toString('base64') } })).status, 400);
           assert.equal((await post(flow, { ...validBody, [field + 'Upload']: { ...png, base64: Buffer.alloc(2 * 1024 * 1024 + 1).toString('base64') } })).status, 413);
-          // Only identity removal blocks submission; supporting documents can be removed.
+          // Supporting uploads stay optional; Job Seeker identity needs a file.
           reset();
-          assert.equal((await post(flow, { ...validBody, [field + 'Upload']: undefined })).status, field === 'identityDocument' || field === 'identityDocumentReference' ? 400 : 201);
+          assert.equal((await post(flow, { ...validBody, [field + 'Upload']: undefined })).status, flow.role === 'jobseeker' && field === 'identityDocument' ? 400 : 201);
           reset(); assert.equal((await post(flow, { ...validBody, [field + 'Upload']: pdf })).status, 201);
           const replacement = documentIds(last[field])[0];
           assert.equal(JSON.parse(await fs.readFile(path.join(directory, replacement), 'utf8')).name, 'evidence.pdf');

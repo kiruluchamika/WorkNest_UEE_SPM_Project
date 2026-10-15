@@ -85,9 +85,19 @@ export const VerificationRequestScreen: React.FC = () => {
       setError("Please select a supported district.");
       return;
     }
-    if (!identityType || !identityUpload) { setError("Identity document is required."); return; }
+    if (!identityType) { setError("Identity document is required."); return; }
     if (identityNumber.trim().length < 2) {
       setError(`Please enter your ${identityNumberLabels[identityType].toLowerCase()}.`);
+      return;
+    }
+
+    if (!identityUpload) {
+      setError("Please upload an identity document file.");
+      return;
+    }
+
+    if (communityReferences.trim().length < 5) {
+      setError("Community references are required (at least 5 characters).");
       return;
     }
 
@@ -170,8 +180,8 @@ export const VerificationRequestScreen: React.FC = () => {
           {previouslyRevoked ? <Input label="Reason for requesting verification again" value={gateExplanation} onChangeText={setGateExplanation} multiline rows={3}/> : null}
           <Input label="Community References" value={communityReferences} onChangeText={setCommunityReferences} multiline rows={3} />
           {error ? <Text style={s.error}>{error}</Text> : null}
-          {stateError ? <><Text style={s.error}>{stateError}</Text><Button title="Retry verification status" variant="outline" onPress={loadVerificationState} loading={stateLoading}/></> : null}
-          <Button title="Submit Verification Request" onPress={submit} loading={busy} disabled={stateLoading || !!stateError} />
+          {stateError ? <><Text style={s.error}>{stateError}</Text><Button style={s.polishButton} textStyle={s.polishButtonText} title="Retry verification status" variant="outline" onPress={loadVerificationState} loading={stateLoading}/></> : null}
+          <Button style={s.polishButton} textStyle={s.polishButtonText} title="Submit Verification Request" onPress={submit} loading={busy} disabled={stateLoading || !!stateError} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -180,8 +190,7 @@ export const VerificationRequestScreen: React.FC = () => {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "transparent" },
-  scroll: { padding: spacing.lg },
-  title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text },
-  help: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 20, marginVertical: spacing.md },
-  error: { color: colors.danger, fontSize: typography.sizes.sm, marginBottom: spacing.md },
-});
+  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" },
+  title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 },
+  help: { fontSize: typography.sizes.sm, color: colors.textMuted, marginVertical: spacing.md, lineHeight: 22 },
+  error: { color: colors.danger, fontSize: typography.sizes.sm, marginBottom: spacing.md }, polishButton: { marginTop: spacing.sm, marginBottom: spacing.xs, minHeight: 50, paddingVertical: spacing.sm, borderRadius: 14 }, polishButtonText: { textAlign: "center", flexShrink: 1, lineHeight: 20 }});

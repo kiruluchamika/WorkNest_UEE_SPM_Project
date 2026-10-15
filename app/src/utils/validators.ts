@@ -30,7 +30,6 @@ export const registerSchema = z
       return;
     }
     if (!/^[0-9]{10}$/.test(data.phone)) ctx.addIssue({ code: "custom", path: ["phone"], message: "Mobile number must be exactly 10 digits." });
-    if (!data.identityDocumentReferenceUpload) ctx.addIssue({ code: "custom", path: ["identityDocumentReference"], message: "Identity document is required." });
     const required = [
       ["district", "District is required"], ["identityType", "ID type is required"],
       ["identityNumber", "ID number is required"],
@@ -47,8 +46,6 @@ export const verifierReapplicationSchema = z.object({
   identityDocumentReferenceUpload: z.unknown().optional(),
   addressInformation: z.string().trim().min(5, "Address information is required"),
   communityReference: z.string().trim().optional(),
-}).superRefine((data, ctx) => {
-  if (!data.identityDocumentReferenceUpload && !/worknest-file:[0-9a-f-]{36}/.test(data.identityDocumentReference || "")) ctx.addIssue({ code: "custom", path: ["identityDocumentReference"], message: "Identity document is required." });
 });
 
 // Accepts either an http(s) URL or a base64 data URI (from the device image picker).
