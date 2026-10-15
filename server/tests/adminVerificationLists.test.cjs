@@ -14,12 +14,16 @@ const rows = [
 const before = JSON.stringify(rows);
 const matches = (row, where) => Object.entries(where).every(([key, value]) => row[key] === value);
 const prisma = { verificationRequest: {
-  findMany: async ({ where, include, orderBy }) => {
+  findMany: async ({ where = {}, include, orderBy, select }) => {
+    if (select) return rows.filter(row => matches(row, where)).map(row => ({ ...row, submittedAt: new Date(), decidedAt: new Date(), flaggedAt: row.wasFlagged ? new Date() : null }));
     assert.equal(include.applicant.select.name, true);
     assert.equal(include.assignedVerifier.select.name, true);
     return rows.filter(row => matches(row, where)).sort((a, b) => a.submittedAt.localeCompare(b.submittedAt) * (orderBy.submittedAt === 'asc' ? 1 : -1));
   },
   findFirst: async ({ where }) => rows.find(row => matches(row, where)) || null,
+}, verifierApplication: {
+  findUnique: async ({ where }) => where.id === 'missing' ? null : { applicantId: 'verifier-a' },
+  findFirst: async () => ({ district: 'Colombo', status: 'APPROVED', isAvailable: true }),
 } };
 require.cache[require.resolve('../dist/config/db')] = { exports: { prisma, neonSql: () => { throw new Error('No writes permitted in list tests'); } } };
 const { app } = require('../dist/app');
@@ -57,6 +61,17 @@ test('Admin lists reuse existing data and preserve verifier scoping', async () =
     assert.deepEqual(queue, []);
     assert.equal((await get('/admin/verification-work/requests/review')).status, 200);
     assert.equal((await get('/verifier/work/requests/review', 'verifier', 'verifier-a')).status, 404);
+    const overview = (await (await get('/admin/verification-work/overview')).json()).overview;
+    assert.deepEqual(overview, { requestsToday: 7, approvedToday: 1, rejectedToday: 1, flaggedToday: 5, awaitingReview: 1, underReview: 1 });
+    const statistics = (await (await get('/admin/verification-work/verifiers/application/statistics')).json()).statistics;
+    assert.deepEqual(statistics, { assigned: 4, approved: 1, rejected: 0, flagged: 3 });
+    assert.equal((await get('/admin/verification-work/verifiers/missing/statistics')).status, 404);
+    const dashboard = (await (await get('/verifier/work/dashboard', 'verifier', 'verifier-a')).json()).dashboard;
+    assert.deepEqual(dashboard.queues, { awaiting: 1, underReview: 0, returned: 1 });
+    assert.deepEqual(dashboard.today, { assigned: 4, approved: 1, rejected: 0, flagged: 3 });
+    assert.deepEqual(dashboard.allTime, { assigned: 4, approved: 1, rejected: 0, flagged: 3 });
+    assert.equal((await get('/admin/verification-work/flagged')).status, 200);
+    assert.equal((await get('/admin/verification-work/requests/missing')).status, 404);
     assert.equal(JSON.stringify(rows), before, 'Read endpoints must not mutate records');
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
