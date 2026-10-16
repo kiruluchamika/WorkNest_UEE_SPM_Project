@@ -18,6 +18,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
     "prisma:seed-demo": "ts-node --transpile-only prisma/seedDemo.ts",
+    "prisma:cleanup-e2e": "ts-node --transpile-only prisma/cleanupE2E.ts",
     "test:email": "ts-node --transpile-only src/scripts/testEmail.ts",
     "test:sample-email": "ts-node --transpile-only src/scripts/sendSampleEmail.ts"
   },
