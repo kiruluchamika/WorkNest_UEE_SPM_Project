@@ -4,6 +4,8 @@
   "private": true,
   "main": "dist/server.js",
   "scripts": {
+    "test": "npm run build && node --test tests/*.test.cjs",
+    "test:coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-include=dist/controllers/*verif* --test-coverage-include=dist/validators/*verif* --test-coverage-include=dist/validators/auth.validator.js --test-coverage-include=dist/services/privateDocuments.js --test-coverage-include=../app/src/components/common/DocumentField.tsx --test-coverage-include=../app/src/utils/documentUpload.ts --test-coverage-include=../app/src/utils/validators.ts tests/*.test.cjs",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc && node -e \"require('fs').cpSync('src/assets','dist/assets',{recursive:true})\"",
     "start": "node dist/server.js",

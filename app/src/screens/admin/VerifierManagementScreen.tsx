@@ -22,7 +22,7 @@ export const VerifierManagementScreen: React.FC = () => {
   const navigation = useNavigation();
   const { items, loading, error, load, count } = useVerifierOverview();
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <AppHeader subtitle="Verifier management" />
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
         <Text style={styles.title}>Verifier Management</Text>
@@ -56,15 +56,14 @@ export const VerifierManagementScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "transparent" },
-  scroll: { padding: spacing.md },
-  title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text },
-  subtitle: { fontSize: typography.sizes.sm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.lg },
-  sectionTitle: { fontSize: typography.sizes.sm, fontWeight: "800", color: colors.primaryDark, marginBottom: spacing.md },
+  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl * 2, width: "100%", maxWidth: 760, alignSelf: "center" },
+  title: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.text, lineHeight: 32, letterSpacing: -0.3, marginBottom: spacing.md, flexShrink: 1 },
+  subtitle: { fontSize: typography.sizes.sm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.lg, lineHeight: 22 },
+  sectionTitle: { fontSize: typography.sizes.sm, fontWeight: "800", color: colors.primaryDark, marginBottom: spacing.md, lineHeight: 24 },
   error: { color: colors.danger, marginBottom: spacing.md },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.sm },
   metric: { width: "48%", marginBottom: spacing.md },
-  number: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.primaryDark },
-  metricLabel: { fontSize: typography.sizes.sm, color: colors.textMuted, marginTop: spacing.xs },
-  row: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
-  rowText: { flex: 1, fontSize: typography.sizes.sm, fontWeight: "700", color: colors.text, marginLeft: spacing.md },
-});
+  number: { fontSize: typography.sizes.lg, fontWeight: "800", color: colors.primaryDark, lineHeight: 38 },
+  metricLabel: { fontSize: typography.sizes.sm, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 18 },
+  row: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, minHeight: 68, padding: spacing.md + spacing.xs, marginBottom: spacing.sm + spacing.xs, borderRadius: 16 },
+  rowText: { flex: 1, fontSize: typography.sizes.sm, fontWeight: "700", color: colors.text, marginLeft: spacing.md, lineHeight: 22, flexShrink: 1 }});

@@ -7,6 +7,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { BrowseGigsScreen } from "../screens/jobseeker/BrowseGigsScreen";
 import { GigDetailScreen } from "../screens/jobseeker/GigDetailScreen";
+import { GigMapScreen } from "../screens/jobseeker/GigMapScreen";
 import { ApplyGigScreen } from "../screens/jobseeker/ApplyGigScreen";
 import { ApplyToGigScreen } from "../screens/jobseeker/ApplyToGigScreen";
 import { MyApplicationsScreen } from "../screens/jobseeker/MyApplicationsScreen";
@@ -22,6 +23,7 @@ import { GlassTabBar } from "./GlassTabBar";
 export type JobSeekerStackParamList = {
   EmployerProfile: { gigId: string };
   BrowseGigs: undefined;
+  GigMap: undefined;
   GigDetail: { gigId: string };
   ApplyGig: { gigId: string };
   ApplyToGig: { gigId: string };
@@ -57,6 +59,7 @@ function JobSeekerStack() {
   return (
     <Stack.Navigator screenLayout={appScreenLayout} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="BrowseGigs" component={BrowseGigsScreen} />
+      <Stack.Screen name="GigMap" component={GigMapScreen} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} />
       <Stack.Screen name="EmployerProfile" component={EmployerProfileScreen} />
       <Stack.Screen name="ApplyGig" component={ApplyGigScreen} />

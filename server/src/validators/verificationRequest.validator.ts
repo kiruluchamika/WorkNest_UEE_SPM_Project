@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { requireDocument } from "./verificationDocuments";
 import { districtSchemaValues } from "../constants/districts";
+import { requireDocument } from "./verificationDocuments";
 
 export const createVerificationRequestSchema = z.object({
   gateExplanation: z.string().trim().max(4000).optional(),
@@ -12,11 +12,17 @@ export const createVerificationRequestSchema = z.object({
   supportingEvidence: z.string().trim().optional(),
   communityReferences: z.string().trim().min(5, "Community references are required"),
 }).superRefine((data, ctx) => {
+  requireDocument(data, ctx, "identityDocument", "Please upload an identity document file.");
+  for (const [label, minimum] of [["Full Name", 2], ["Address", 5]] as const) {
+    const values = data.personalInformation.split("\n").filter(line => line.startsWith(`${label}: `));
+    if (values.length !== 1 || values[0].slice(label.length + 2).trim().length < minimum) {
+      ctx.addIssue({ code: "custom", path: ["personalInformation"], message: `${label} is required.` });
+    }
+  }
   const phones = [...data.personalInformation.matchAll(/^Phone Number: (.*)$/gm)];
   if (phones.length !== 1 || !/^[0-9]{10}$/.test(phones[0][1])) ctx.addIssue({ code: "custom", path: ["personalInformation"], message: "Mobile number must be exactly 10 digits." });
   const identity = /^(NATIONAL_ID|PASSPORT|DRIVING_LICENCE): ([^\n]+)/.exec(data.identityDocument.replace(/worknest-file:[0-9a-f-]{36}/g, "").trim());
   if (!identity || identity[2].trim().length < 2) ctx.addIssue({ code: "custom", path: ["identityDocument"], message: "Identity document is required." });
-  requireDocument(data, ctx, "identityDocument", "Identity document is required.");
 }).transform(data => ({ ...data, personalInformation: data.personalInformation.trim() }));
 export const availabilitySchema = z.object({ isAvailable: z.boolean() });
 export const verifierNoteSchema = z.object({ verifierNote: z.string().trim().min(5, "Verifier note is required") });

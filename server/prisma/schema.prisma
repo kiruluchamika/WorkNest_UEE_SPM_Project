@@ -100,6 +100,8 @@ enum NotificationType {
   GIG_POSTED
   APPLICATION_SUBMITTED
   APPLICATION_HIRED
+  GIG_APPROVED
+  GIG_REJECTED
 }
 
 enum EmailStatus {
@@ -298,6 +300,8 @@ model GigPost {
   businessId      String
   business        User        @relation(fields: [businessId], references: [id])
   location        String
+  latitude        Float?
+  longitude       Float?
   paymentAmount   Decimal
   paymentType     PaymentType
   startDate       DateTime

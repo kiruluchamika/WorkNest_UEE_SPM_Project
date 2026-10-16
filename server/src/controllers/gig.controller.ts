@@ -3,7 +3,13 @@ import { GigStatus, Prisma } from "@prisma/client";
 import { prisma } from "../config/db";
 import { HttpError } from "../middleware/error.middleware";
 import { AuthedRequest } from "../middleware/auth.middleware";
-import { CreateGigPostInput, UpdateGigPostInput, RejectGigInput } from "../validators/gig.validator";
+import {
+  CreateGigPostInput,
+  UpdateGigPostInput,
+  RejectGigInput,
+  findScheduleIssue,
+  isBeforeTodayInSriLanka,
+} from "../validators/gig.validator";
 import { markGigComplete } from "../services/gigCompletion.service";
 import { fetchGigWithCategory } from "../services/gig.service";
 import { createNotification } from "../services/notification.service";
@@ -58,15 +64,49 @@ function toPublicGig<T extends { paymentAmount: Prisma.Decimal }>(gig: T) {
   return { ...gig, paymentAmount: Number(gig.paymentAmount) };
 }
 
-async function toPublicGigWithFilledPositions<T extends { id: string; paymentAmount: Prisma.Decimal }>(gig: T) {
-  const filledPositions = await prisma.application.count({
+// One grouped count for the whole list instead of a count query per gig.
+async function toPublicGigsWithFilledPositions<T extends { id: string; paymentAmount: Prisma.Decimal }>(
+  gigs: T[]
+) {
+  if (!gigs.length) return [];
+
+  const counts = await prisma.application.groupBy({
+    by: ["gigPostId"],
     where: {
-      gigPostId: gig.id,
+      gigPostId: { in: gigs.map((g) => g.id) },
       status: { in: ["HIRED", "COMPLETED"] },
     },
+    _count: { id: true },
   });
+  const countMap = new Map(counts.map((c) => [c.gigPostId, c._count.id]));
 
-  return { ...toPublicGig(gig), filledPositions };
+  return gigs.map((gig) => ({ ...toPublicGig(gig), filledPositions: countMap.get(gig.id) ?? 0 }));
+}
+
+async function toPublicGigWithFilledPositions<T extends { id: string; paymentAmount: Prisma.Decimal }>(gig: T) {
+  return (await toPublicGigsWithFilledPositions([gig]))[0];
+}
+
+// Approval/rejection must never fail because the notification could not be saved.
+async function notifyGigModeration(params: {
+  recipientId: string;
+  gigId: string;
+  type: "GIG_APPROVED" | "GIG_REJECTED";
+  title: string;
+  message: string;
+}) {
+  try {
+    await createNotification({
+      recipientId: params.recipientId,
+      type: params.type,
+      title: params.title,
+      message: params.message,
+      link: `/gigs/${params.gigId}`,
+      relatedEntityId: params.gigId,
+    });
+  } catch (err) {
+    console.error(`Failed to send ${params.type} notification for gig ${params.gigId}:`, err);
+  }
 }
 
 async function fetchAdminGig(id: string) {
@@ -91,6 +131,8 @@ export async function createGig(
         categoryId: data.categoryId,
         businessId: userId,
         location: data.location,
+        latitude: data.latitude,
+        longitude: data.longitude,
         paymentAmount: data.paymentAmount,
         paymentType: data.paymentType,
         startDate: data.startDate,
@@ -148,7 +190,7 @@ export async function listMyGigs(req: Request, res: Response, next: NextFunction
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ gigs: gigs.map(toPublicGig) });
+    res.json({ gigs: await toPublicGigsWithFilledPositions(gigs) });
   } catch (err) {
     next(err);
   }
@@ -175,7 +217,7 @@ export async function listActiveGigs(req: Request, res: Response, next: NextFunc
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ gigs: await enrichEmployers(await Promise.all(gigs.map(toPublicGigWithFilledPositions))) });
+    res.json({ gigs: await enrichEmployers(await toPublicGigsWithFilledPositions(gigs)) });
   } catch (err) {
     next(err);
   }
@@ -217,7 +259,7 @@ export async function getMyGig(req: Request<{ id: string }>, res: Response, next
       return next(new HttpError(404, "Gig not found"));
     }
 
-    res.json({ gig: toPublicGig(gig) });
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     next(err);
   }
@@ -241,12 +283,32 @@ export async function updateGig(
       return next(new HttpError(404, "Gig not found"));
     }
 
-    if (existing.status === "CLOSED") {
-      return next(new HttpError(409, "Closed gigs cannot be edited."));
+    if (existing.status === "CLOSED" || existing.status === "COMPLETED") {
+      const label = existing.status === "CLOSED" ? "Closed" : "Completed";
+      return next(new HttpError(409, `${label} gigs cannot be edited.`));
     }
 
-    if (updates.categoryId) {
+    if (updates.categoryId && updates.categoryId !== existing.categoryId) {
       await assertActiveCategory(updates.categoryId);
+    }
+
+    // An untouched past start date is left alone so older gigs stay editable.
+    if (
+      updates.startDate &&
+      updates.startDate.getTime() !== existing.startDate.getTime() &&
+      isBeforeTodayInSriLanka(updates.startDate)
+    ) {
+      return next(new HttpError(400, "Start date cannot be in the past."));
+    }
+
+    const scheduleIssue = findScheduleIssue({
+      startDate: updates.startDate ?? existing.startDate,
+      startTime: updates.startTime !== undefined ? updates.startTime : existing.startTime,
+      endDate: updates.endDate !== undefined ? updates.endDate : existing.endDate,
+      endTime: updates.endTime !== undefined ? updates.endTime : existing.endTime,
+    });
+    if (scheduleIssue) {
+      return next(new HttpError(400, scheduleIssue.message));
     }
 
     const important = hasImportantChange(existing, updates);
@@ -261,7 +323,7 @@ export async function updateGig(
     });
     const gig = await fetchGigWithCategory(id);
 
-    res.json({ gig: toPublicGig(gig) });
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     if (err instanceof HttpError) return next(err);
     next(err);
@@ -279,6 +341,15 @@ export async function deleteGig(req: Request<{ id: string }>, res: Response, nex
 
     if (!existing) {
       return next(new HttpError(404, "Gig not found"));
+    }
+
+    const hiredWorkers = await prisma.application.count({
+      where: { gigPostId: id, status: "HIRED" },
+    });
+    if (hiredWorkers > 0) {
+      return next(
+        new HttpError(409, "This gig has hired workers. Mark it completed before deleting it.")
+      );
     }
 
     await prisma.gigPost.update({
@@ -312,7 +383,7 @@ export async function closeGig(req: Request<{ id: string }>, res: Response, next
     await prisma.gigPost.update({ where: { id }, data: { status: "CLOSED" } });
     const gig = await fetchGigWithCategory(id);
 
-    res.json({ gig: toPublicGig(gig) });
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     next(err);
   }
@@ -341,7 +412,7 @@ export async function resubmitGig(req: Request<{ id: string }>, res: Response, n
     });
     const gig = await fetchGigWithCategory(id);
 
-    res.json({ gig: toPublicGig(gig) });
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     next(err);
   }
@@ -354,7 +425,7 @@ export async function completeGig(req: Request<{ id: string }>, res: Response, n
 
     const gig = await markGigComplete(id, userId);
 
-    res.json({ gig: toPublicGig(gig) });
+    res.json({ gig: await toPublicGigWithFilledPositions(gig) });
   } catch (err) {
     if (err instanceof HttpError) return next(err);
     next(err);
@@ -423,6 +494,14 @@ export async function approveGig(req: Request<{ id: string }>, res: Response, ne
     });
     const gig = await fetchAdminGig(id);
 
+    await notifyGigModeration({
+      recipientId: gig.businessId,
+      gigId: gig.id,
+      type: "GIG_APPROVED",
+      title: "Gig Approved",
+      message: `"${gig.title}" has been approved and is now open for applications.`,
+    });
+
     res.json({ message: "Gig approved successfully.", gig: toPublicGig(gig) });
   } catch (err) {
     next(err);
@@ -451,6 +530,14 @@ export async function rejectGig(
       data: { status: "REJECTED", rejectionReason: reason },
     });
     const gig = await fetchAdminGig(id);
+
+    await notifyGigModeration({
+      recipientId: gig.businessId,
+      gigId: gig.id,
+      type: "GIG_REJECTED",
+      title: "Gig Needs Changes",
+      message: `"${gig.title}" was not approved: ${reason}`,
+    });
 
     res.json({ message: "Gig rejected.", gig: toPublicGig(gig) });
   } catch (err) {

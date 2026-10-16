@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { requireDocument } from "./verificationDocuments";
 import { districtSchemaValues } from "../constants/districts";
 
 export const rejectVerifierApplicationSchema = z.object({
@@ -19,7 +18,7 @@ export const verifierReapplicationSchema = z.object({
   identityDocumentMetadata: z.record(z.string(), z.unknown()).optional(),
   addressInformation: z.string().trim().min(5, "Address information is required"),
   communityReference: z.string().trim().optional(),
-}).superRefine((data, ctx) => requireDocument(data, ctx, "identityDocumentReference", "Identity document is required."));
+});
 
 export const reactivationRequestSchema = z.object({
   explanation: z.string().trim().min(10, "Please provide a meaningful reactivation explanation."),
