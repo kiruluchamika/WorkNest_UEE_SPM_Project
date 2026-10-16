@@ -80,6 +80,8 @@ const NOTIFICATION_ICONS: Record<string, string> = {
   REPORT_RESOLVED: "check-square",
   REPORT_DISMISSED: "shield",
   ACCOUNT_WARNING: "alert-triangle",
+  ACCOUNT_DISABLED: "slash",
+  ACCOUNT_ENABLED: "user-check",
 };
 
 export function notificationMeta(type: string): { icon: string } {

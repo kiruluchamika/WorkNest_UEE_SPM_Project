@@ -68,6 +68,16 @@ async function sendNotificationEmail(
         recipientName,
         reason: params.reason as string,
       });
+    case "ACCOUNT_DISABLED":
+      return emailService.sendAccountDisabledEmail(to, {
+        recipientName,
+        reason: params.reason as string,
+      });
+    case "ACCOUNT_ENABLED":
+      return emailService.sendAccountEnabledEmail(to, {
+        recipientName,
+        reason: params.reason as string | undefined,
+      });
     case "GIG_POSTED":
       return emailService.sendGigPostedEmail(to, {
         recipientName,

@@ -292,12 +292,12 @@ export async function submitApplication(
 
     const gig = await prisma.gigPost.findFirst({
       where: { id: gigId, isDeleted: false },
-      include: { business: { select: { name: true } } },
+      include: { business: { select: { name: true, isDisabled: true } } },
     });
     if (!gig) {
       return next(new HttpError(404, "Gig not found"));
     }
-    if (gig.status !== "ACTIVE") {
+    if (gig.status !== "ACTIVE" || gig.business.isDisabled) {
       return next(new HttpError(400, "This gig is not currently accepting applications."));
     }
 

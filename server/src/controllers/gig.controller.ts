@@ -205,6 +205,8 @@ export async function listActiveGigs(req: Request, res: Response, next: NextFunc
       where: {
         status: "ACTIVE",
         isDeleted: false,
+        // A disabled shop owner's gigs drop off the board until the account is re-enabled.
+        business: { isDisabled: false },
         ...(categoryId ? { categoryId } : {}),
         ...(location
           ? { location: { contains: location, mode: "insensitive" } }

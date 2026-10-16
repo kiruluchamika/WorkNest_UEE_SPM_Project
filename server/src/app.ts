@@ -13,6 +13,8 @@ import { userRoutes } from "./routes/user.routes";
 import { notificationRoutes } from "./routes/notification.routes";
 import { adminReviewRoutes } from "./routes/admin-review.routes";
 import { reviewRoutes } from "./routes/review.routes";
+import { adminReportRoutes } from "./routes/admin-report.routes";
+import { adminUserRoutes } from "./routes/admin-user.routes";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import { SRI_LANKAN_DISTRICTS } from "./constants/districts";
 import { adminVerificationRoutes, jobSeekerVerificationRoutes, verifierWorkRoutes } from "./routes/verificationRequests.routes";
@@ -46,6 +48,8 @@ app.use("/api/admin/verification-work", adminVerificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin/reviews", adminReviewRoutes);
+app.use("/api/admin/reports", adminReportRoutes);
+app.use("/api/admin/users", adminUserRoutes);
 app.use("/api", reviewRoutes);
 
 app.use(notFoundHandler);

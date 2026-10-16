@@ -102,6 +102,13 @@ enum NotificationType {
   APPLICATION_HIRED
   GIG_APPROVED
   GIG_REJECTED
+  ACCOUNT_DISABLED
+  ACCOUNT_ENABLED
+}
+
+enum UserStatusAction {
+  DISABLED
+  ENABLED
 }
 
 enum EmailStatus {
@@ -133,8 +140,15 @@ model User {
   location     String?
   avatarUrl    String?
   trustScore   Int       @default(0)
+  // Set by an admin; a disabled account can't sign in or use an existing session,
+  // and a disabled shop owner's gigs are hidden from job seekers.
+  isDisabled     Boolean   @default(false)
+  disabledAt     DateTime? @db.Timestamptz(3)
+  disabledReason String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  statusEvents      UserStatusEvent[] @relation("UserStatusEvents")
+  adminStatusEvents UserStatusEvent[] @relation("AdminUserStatusEvents")
   gigPosts     GigPost[]
   applications Application[]
   verifierApplications VerifierApplication[] @relation("VerifierApplicant")
@@ -462,6 +476,20 @@ model ModerationAudit {
   newStatus      ReviewStatus
   reason         String
   createdAt      DateTime         @default(now())
+}
+
+// Audit trail of every time an admin disables or re-enables an account.
+model UserStatusEvent {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation("UserStatusEvents", fields: [userId], references: [id])
+  adminId   String
+  admin     User             @relation("AdminUserStatusEvents", fields: [adminId], references: [id])
+  action    UserStatusAction
+  reason    String?
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
 }
 
 model ReputationAudit {
