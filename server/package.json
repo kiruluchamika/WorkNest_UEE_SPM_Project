@@ -4,14 +4,16 @@
   "private": true,
   "main": "dist/server.js",
   "scripts": {
-    "test": "npm run build && node --test tests/*.test.cjs",
+    "test": "npm run build && node --test \"tests/*.test.cjs\"",
     "test:coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-include=dist/controllers/*verif* --test-coverage-include=dist/validators/*verif* --test-coverage-include=dist/validators/auth.validator.js --test-coverage-include=dist/services/privateDocuments.js --test-coverage-include=../app/src/components/common/DocumentField.tsx --test-coverage-include=../app/src/utils/documentUpload.ts --test-coverage-include=../app/src/utils/validators.ts tests/*.test.cjs",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc && node -e \"require('fs').cpSync('src/assets','dist/assets',{recursive:true})\"",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test \"tests/*.test.cjs\"",
     "test:welcome-email": "npm run build && node --test tests/welcomeEmail.test.cjs",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
@@ -42,8 +44,12 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.14.0",
     "@types/nodemailer": "^8.0.1",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "prisma": "^6.16.3",
+    "supertest": "^7.3.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^5.0.5"
   }
 }
