@@ -80,6 +80,8 @@ function neonSql(parts, ...values) {
   throw new Error('Unexpected SQL in test');
 }
 require.cache[require.resolve('../dist/config/db')] = { exports: { prisma, neonSql } };
+// Every token in these tests belongs to an active account; the fake database has no user table to check.
+require('../dist/services/accountStatus.service').getAccountStatus = async () => ({ isDisabled: false, disabledReason: null });
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');

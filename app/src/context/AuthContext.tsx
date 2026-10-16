@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import * as authApi from "../api/authApi";
 import * as verifierApplicationsApi from "../api/verifierApplicationsApi";
-import { setAuthToken } from "../api/http";
+import { setAccountDisabledHandler, setAuthToken } from "../api/http";
 import { loadSession, saveSession, clearSession } from "../utils/session";
 import {
   addPushTokenRefreshListener,
@@ -75,6 +75,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsInitializing(false);
       }
     })();
+  }, []);
+
+  // An admin can disable an account mid-session; the next API call then fails
+  // with ACCOUNT_DISABLED and the user is signed out on this device.
+  useEffect(() => {
+    setAccountDisabledHandler((message) => {
+      setAuthToken(null);
+      pushTokenRef.current = null;
+      clearSession()
+        .catch(() => {})
+        .finally(() => {
+          setUser(null);
+          toast.error("Account disabled", message);
+        });
+    });
+    return () => setAccountDisabledHandler(null);
   }, []);
 
   useEffect(() => {

@@ -26,6 +26,8 @@ const prisma = { verificationRequest: {
   findFirst: async () => ({ district: 'Colombo', status: 'APPROVED', isAvailable: true }),
 } };
 require.cache[require.resolve('../dist/config/db')] = { exports: { prisma, neonSql: () => { throw new Error('No writes permitted in list tests'); } } };
+// Every token in these tests belongs to an active account; the fake database has no user table to check.
+require('../dist/services/accountStatus.service').getAccountStatus = async () => ({ isDisabled: false, disabledReason: null });
 const { app } = require('../dist/app');
 const { signToken } = require('../dist/utils/jwt');
 

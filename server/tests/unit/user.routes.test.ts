@@ -9,6 +9,9 @@ const prisma = vi.hoisted(() => ({
 
 vi.mock("../../src/config/db", () => ({ prisma, neonSql: vi.fn() }));
 vi.mock("../../src/services/email.service");
+vi.mock("../../src/services/accountStatus.service", async (importOriginal) =>
+  (await import("./helpers/accountStatus")).activeAccounts(importOriginal)
+);
 
 import { app } from "../../src/app";
 import { bearer } from "./helpers/auth";

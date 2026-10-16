@@ -46,6 +46,8 @@ function neonSql(strings, ...values) {
 }
 neonSql.transaction = async values => values;
 require.cache[require.resolve('../dist/config/db')] = { exports: { prisma, neonSql } };
+// Every token in these tests belongs to an active account; the fake database has no user table to check.
+require('../dist/services/accountStatus.service').getAccountStatus = async () => ({ isDisabled: false, disabledReason: null });
 const { app } = require('../dist/app');
 const { signToken } = require('../dist/utils/jwt');
 const { validateDocument, documentIds } = require('../dist/services/privateDocuments');

@@ -7,6 +7,9 @@ vi.mock("../../src/services/adminReport.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/services/adminReport.service")>()),
   getAdminReportSummary: vi.fn(),
 }));
+vi.mock("../../src/services/accountStatus.service", async (importOriginal) =>
+  (await import("./helpers/accountStatus")).activeAccounts(importOriginal)
+);
 
 import { app } from "../../src/app";
 import { getAdminReportSummary } from "../../src/services/adminReport.service";

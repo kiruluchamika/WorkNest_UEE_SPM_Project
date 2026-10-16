@@ -4,6 +4,9 @@ import request from "supertest";
 vi.mock("../../src/config/db", () => ({ prisma: {}, neonSql: vi.fn() }));
 vi.mock("../../src/services/notification.service");
 vi.mock("../../src/services/pushNotification.service");
+vi.mock("../../src/services/accountStatus.service", async (importOriginal) =>
+  (await import("./helpers/accountStatus")).activeAccounts(importOriginal)
+);
 
 import { app } from "../../src/app";
 import * as notificationService from "../../src/services/notification.service";

@@ -332,7 +332,56 @@ export type NotificationType =
   | "REVIEW_REMOVED"
   | "REPORT_RESOLVED"
   | "REPORT_DISMISSED"
-  | "ACCOUNT_WARNING";
+  | "ACCOUNT_WARNING"
+  | "ACCOUNT_DISABLED"
+  | "ACCOUNT_ENABLED";
+
+// ---- Admin user management ----
+
+export type UserStatusFilter = "all" | "active" | "disabled";
+export type UserRoleFilter = "all" | UserRole;
+
+export interface AdminUserSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  phone?: string | null;
+  location?: string | null;
+  avatarUrl?: string | null;
+  createdAt: string;
+  isDisabled: boolean;
+  disabledAt?: string | null;
+  disabledReason?: string | null;
+}
+
+export interface AdminUserList {
+  users: AdminUserSummary[];
+  total: number;
+  page: number;
+  limit: number;
+  counts: { all: number; active: number; disabled: number };
+}
+
+export interface UserStatusEvent {
+  id: string;
+  action: "DISABLED" | "ENABLED";
+  reason?: string | null;
+  createdAt: string;
+  admin: { id: string; name: string };
+}
+
+export interface AdminUserDetail {
+  user: AdminUserSummary & { bio?: string | null; trustScore: number };
+  stats: { gigsPosted: number; activeGigs: number; applications: number; hiredApplications: number; completedJobs: number };
+  reputation: { averageRating: number | null; totalReviews: number };
+  warnings: { total: number; recent: { id: string; message: string; createdAt: string }[] };
+  verification: {
+    jobSeekerRequest: { status: string; submittedAt: string } | null;
+    verifierApplication: { status: string; submittedAt: string } | null;
+  };
+  statusHistory: UserStatusEvent[];
+}
 
 export type EmailStatus = "NOT_REQUIRED" | "PENDING" | "SENT" | "FAILED";
 

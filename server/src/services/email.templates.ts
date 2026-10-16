@@ -422,6 +422,56 @@ export function accountWarningTemplate(params: {
   };
 }
 
+export function accountDisabledTemplate(params: {
+  recipientName: string;
+  reason: string;
+}): EmailTemplateContent {
+  const { recipientName, reason } = params;
+  const name = escapeHtml(recipientName);
+  const reasonText = escapeHtml(reason);
+
+  return {
+    subject: "Your WorkNest account has been disabled",
+    html: renderLayout({
+      kind: "danger",
+      eyebrow: "Account disabled",
+      heading: "Your account has been disabled",
+      preheader: "An administrator disabled your WorkNest account.",
+      bodyHtml: `
+        <p style="margin:0 0 8px;">Hi ${name},</p>
+        <p style="margin:0;">An administrator has disabled your WorkNest account. You won't be able to sign in until it is re-enabled.</p>
+        ${detailBox(detailRow("Reason", reasonText, true))}
+        <p style="margin:0;font-size:13px;color:${brand.textMuted};">If you think this is a mistake, reply to this email to contact the WorkNest team.</p>
+      `,
+    }),
+    text: `Hi ${recipientName},\n\nAn administrator has disabled your WorkNest account. You won't be able to sign in until it is re-enabled.\n\nReason: ${reason}\n\nIf you think this is a mistake, reply to this email to contact the WorkNest team.\n\n— WorkNest`,
+  };
+}
+
+export function accountEnabledTemplate(params: {
+  recipientName: string;
+  reason?: string;
+}): EmailTemplateContent {
+  const { recipientName, reason } = params;
+  const name = escapeHtml(recipientName);
+
+  return {
+    subject: "Your WorkNest account has been re-enabled",
+    html: renderLayout({
+      kind: "success",
+      eyebrow: "Account re-enabled",
+      heading: "Welcome back to WorkNest",
+      preheader: "Your WorkNest account is active again.",
+      bodyHtml: `
+        <p style="margin:0 0 8px;">Hi ${name},</p>
+        <p style="margin:0;">An administrator has re-enabled your WorkNest account. You can sign in and use the app again.</p>
+        ${reason ? detailBox(detailRow("Note", escapeHtml(reason), true)) : ""}
+      `,
+    }),
+    text: `Hi ${recipientName},\n\nAn administrator has re-enabled your WorkNest account. You can sign in and use the app again.${reason ? `\n\nNote: ${reason}` : ""}\n\n— WorkNest`,
+  };
+}
+
 export function gigPostedTemplate(params: {
   recipientName: string;
   gigTitle: string;

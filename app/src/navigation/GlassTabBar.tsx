@@ -111,7 +111,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   iconWrap: {
-    width: 48,
+    // Shrinks to fit when a role has many tabs (admin has seven) instead of overlapping neighbours.
+    width: "100%",
+    maxWidth: 48,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
