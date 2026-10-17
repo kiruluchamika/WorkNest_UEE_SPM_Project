@@ -43,6 +43,34 @@ export const DateTimeField: React.FC<DateTimeFieldProps> = ({
   const displayText = value ? (mode === "date" ? formatDateOnly(value) : formatTimeOnly(value)) : undefined;
   const icon = mode === "date" ? "calendar" : "clock";
 
+  if (Platform.OS === "web") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={[styles.trigger, error ? { borderColor: colors.danger } : null]}>
+          <Feather name={icon} size={14} color={colors.primaryDark} />
+          {React.createElement("input", {
+            type: mode,
+            "aria-label": label,
+            value: value ?? "",
+            min: mode === "date" && minimumDate ? toDateOnlyString(minimumDate) : undefined,
+            onChange: (event: { target: { value: string } }) => onChange(event.target.value || undefined),
+            style: {
+              flex: 1,
+              marginLeft: spacing.sm,
+              border: 0,
+              outline: "none",
+              background: "transparent",
+              fontSize: typography.sizes.sm,
+              color: colors.text,
+            },
+          })}
+        </View>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </View>
+    );
+  }
+
   const handleChange = (event: DateTimePickerEvent, selected?: Date) => {
     if (Platform.OS !== "ios") {
       setShowPicker(false);

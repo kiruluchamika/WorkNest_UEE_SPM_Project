@@ -1,6 +1,7 @@
 import { toast } from "../../utils/toast";
 import React, { useCallback, useState } from "react";
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { confirmAction } from "../../utils/confirm";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -94,27 +95,26 @@ export const GigReviewScreen: React.FC = () => {
     .join("  ");
 
   const handleApprove = () => {
-    Alert.alert("Approve this gig?", `"${gig.title}" will become active and visible to workers.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Approve",
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await approveGig(gig.id);
-            toast.success("Gig approved successfully.");
-            navigation.goBack();
-          } catch (err) {
-            toast.error(
-              "Something went wrong",
-              err instanceof Error ? err.message : "Could not approve this gig."
-            );
-          } finally {
-            setBusy(false);
-          }
-        },
-      },
-    ]);
+    confirmAction(
+      "Approve this gig?",
+      `"${gig.title}" will become active and visible to workers.`,
+      "Approve",
+      async () => {
+        setBusy(true);
+        try {
+          await approveGig(gig.id);
+          toast.success("Gig approved successfully.");
+          navigation.goBack();
+        } catch (err) {
+          toast.error(
+            "Something went wrong",
+            err instanceof Error ? err.message : "Could not approve this gig."
+          );
+        } finally {
+          setBusy(false);
+        }
+      }
+    );
   };
 
   const handleReject = async (reason: string) => {
@@ -124,7 +124,7 @@ export const GigReviewScreen: React.FC = () => {
       setRejectModalVisible(false);
       navigation.goBack();
     } catch (err) {
-      Alert.alert(
+      toast.error(
         "Something went wrong",
         err instanceof Error ? err.message : "Could not reject this gig."
       );

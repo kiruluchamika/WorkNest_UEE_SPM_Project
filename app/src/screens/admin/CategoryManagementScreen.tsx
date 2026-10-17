@@ -1,6 +1,7 @@
 import { toast } from "../../utils/toast";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { confirmAction } from "../../utils/confirm";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -33,21 +34,17 @@ export const CategoryManagementScreen: React.FC = () => {
 
   const toggleStatus = (category: Category) => {
     const nextLabel = category.isActive ? "Deactivate" : "Activate";
-    Alert.alert(
+    confirmAction(
       `${nextLabel} "${category.name}"?`,
       category.isActive
         ? "It will no longer appear when businesses create new gigs. Existing gigs keep this category."
         : "It will become available again when businesses create new gigs.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: nextLabel,
-          style: category.isActive ? "destructive" : "default",
-          onPress: () => setStatus(category.id, !category.isActive).catch(() => {
-            toast.error("Something went wrong", "Could not update this category. Try again.");
-          }),
-        },
-      ]
+      nextLabel,
+      () =>
+        void setStatus(category.id, !category.isActive).catch(() => {
+          toast.error("Something went wrong", "Could not update this category. Try again.");
+        }),
+      { destructive: category.isActive }
     );
   };
 
