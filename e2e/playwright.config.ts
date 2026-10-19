@@ -10,6 +10,7 @@ const BASE_URL = process.env.E2E_BASE_URL || `http://localhost:${WEB_PORT}`;
 export default defineConfig({
   testDir: "./tests",
   globalSetup: require.resolve("./tests/global-setup"),
+  globalTeardown: require.resolve("./tests/global-teardown"),
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
