@@ -60,6 +60,11 @@ export const DateTimeField: React.FC<DateTimeFieldProps> = ({
       display={mode === "date" ? "inline" : "spinner"}
       onChange={handleChange}
       minimumDate={minimumDate}
+      // The iOS sheet is always light, so pin the picker to light mode; otherwise a
+      // device in dark mode renders white spinner text on the white sheet.
+      themeVariant="light"
+      textColor={colors.text}
+      accentColor={colors.primary}
     />
   );
 

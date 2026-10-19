@@ -19,13 +19,15 @@ import { Input } from "../../components/common/Input";
 import { Select } from "../../components/common/Select";
 import { DateTimeField } from "../../components/common/DateTimeField";
 import { ImagePickerField } from "../../components/common/ImagePickerField";
+import { LocationPickerField } from "../../components/map/LocationPickerField";
+import type { LatLng } from "../../components/map/leafletHtml";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { colors } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { GIG_PAYMENT_TYPES } from "../../utils/constants";
 import { gigPostFormSchema } from "../../utils/validators";
-import { parseDateOnly } from "../../utils/datetime";
+import { parseDateOnly, toDateOnlyString } from "../../utils/datetime";
 import * as categoryApi from "../../api/categoryApi";
 import type { Category, GigPaymentType } from "../../types";
 
@@ -62,6 +64,11 @@ export const GigPostFormScreen: React.FC = () => {
   const [categoryId, setCategoryId] = useState(editingGig?.categoryId ?? "");
   const [description, setDescription] = useState(editingGig?.description ?? "");
   const [location, setLocation] = useState(editingGig?.location ?? "");
+  const [mapPin, setMapPin] = useState<LatLng | null>(
+    editingGig?.latitude != null && editingGig?.longitude != null
+      ? { latitude: editingGig.latitude, longitude: editingGig.longitude }
+      : null
+  );
   const [paymentAmount, setPaymentAmount] = useState(
     editingGig ? String(editingGig.paymentAmount) : ""
   );
@@ -90,6 +97,7 @@ export const GigPostFormScreen: React.FC = () => {
     setCategoryId("");
     setDescription("");
     setLocation("");
+    setMapPin(null);
     setPaymentAmount("");
     setPaymentType("DAILY");
     setStartDate("");
@@ -162,13 +170,22 @@ export const GigPostFormScreen: React.FC = () => {
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
-        fieldErrors[issue.path[0].toString()] = issue.message;
+        const field = issue.path[0]?.toString() ?? "form";
+        // Keep the first message per field.
+        if (!fieldErrors[field]) fieldErrors[field] = issue.message;
       });
       setErrors(fieldErrors);
       return;
     }
 
-    const payload = {
+    // An untouched past start date is left alone so older gigs stay editable.
+    const startDateChanged = result.data.startDate !== editingGig?.startDate?.slice(0, 10);
+    if (startDateChanged && result.data.startDate < toDateOnlyString(new Date())) {
+      setErrors({ startDate: "Start date cannot be in the past." });
+      return;
+    }
+
+    const required = {
       title: result.data.title,
       categoryId: result.data.categoryId,
       description: result.data.description,
@@ -176,9 +193,6 @@ export const GigPostFormScreen: React.FC = () => {
       paymentAmount: result.data.paymentAmount,
       paymentType: result.data.paymentType,
       startDate: result.data.startDate,
-      startTime: result.data.startTime || undefined,
-      endDate: result.data.endDate || undefined,
-      endTime: result.data.endTime || undefined,
       workersNeeded: result.data.workersNeeded,
       requiredSkills: result.data.requiredSkills
         ? result.data.requiredSkills
@@ -186,17 +200,34 @@ export const GigPostFormScreen: React.FC = () => {
             .map((s) => s.trim())
             .filter(Boolean)
         : [],
-      contactInfo: result.data.contactInfo || undefined,
-      imageUrl: result.data.imageUrl || undefined,
     };
 
     setSubmitting(true);
     try {
       if (isEditing && gigId) {
-        await editGig(gigId, payload);
+        // null (not undefined) so emptied optional fields are cleared on the server.
+        await editGig(gigId, {
+          ...required,
+          startTime: result.data.startTime || null,
+          endDate: result.data.endDate || null,
+          endTime: result.data.endTime || null,
+          contactInfo: result.data.contactInfo || null,
+          imageUrl: result.data.imageUrl || null,
+          latitude: mapPin?.latitude ?? null,
+          longitude: mapPin?.longitude ?? null,
+        });
         navigation.goBack();
       } else {
-        await addGig(payload);
+        await addGig({
+          ...required,
+          startTime: result.data.startTime || undefined,
+          endDate: result.data.endDate || undefined,
+          endTime: result.data.endTime || undefined,
+          contactInfo: result.data.contactInfo || undefined,
+          imageUrl: result.data.imageUrl || undefined,
+          latitude: mapPin?.latitude,
+          longitude: mapPin?.longitude,
+        });
         setSuccess(true);
       }
     } catch (err) {
@@ -298,6 +329,12 @@ export const GigPostFormScreen: React.FC = () => {
               onChangeText={setLocation}
               placeholder="e.g. Colombo 05"
               error={errors.location}
+            />
+            <LocationPickerField
+              value={mapPin}
+              onChange={setMapPin}
+              addressQuery={location}
+              error={errors.latitude}
             />
             <Input
               label="Workers Needed"
@@ -422,7 +459,7 @@ export const GigPostFormScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,

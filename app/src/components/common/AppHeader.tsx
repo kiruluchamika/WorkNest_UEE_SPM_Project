@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
 
 interface AppHeaderProps {
+  greeting?: string;
   title?: string;
   subtitle?: string;
   showBack?: boolean;
@@ -19,6 +20,7 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
+  greeting,
   title,
   subtitle,
   showBack = false,
@@ -41,8 +43,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <View style={styles.header}>
-      <View style={styles.brandRow}>
+    <View style={[styles.header, greeting && styles.welcomeHeader]}>
+      {greeting ? <View style={styles.welcomeCopy}>
+        <Text style={styles.welcomeEyebrow}>{greeting}</Text>
+        <Text style={styles.welcomeName}>{title || user?.name || "WorkNest"}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      </View> : <View style={styles.brandRow}>
         {showBack && onBackPress ? (
           <TouchableOpacity
             onPress={onBackPress}
@@ -70,7 +76,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </Text>
           ) : null}
         </View>
-      </View>
+      </View>}
 
       <View style={styles.actions}>
         {rightElement ? (
@@ -156,6 +162,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 };
 
 const styles = StyleSheet.create({
+  welcomeHeader: { backgroundColor: "transparent", borderBottomWidth: 0, paddingHorizontal: 0, paddingTop: spacing.sm, paddingBottom: spacing.sm, alignItems: "center" },
+  welcomeCopy: { flex: 1, marginRight: spacing.md },
+  welcomeEyebrow: { fontSize: typography.sizes.sm, lineHeight: 22, fontWeight: "600", color: colors.textMuted, marginBottom: spacing.xs },
+  welcomeName: { fontSize: typography.sizes.xl, lineHeight: 36, fontWeight: "800", letterSpacing: -0.3, color: colors.text },
   header: {
     backgroundColor: colors.surface,
     borderBottomWidth: 1,

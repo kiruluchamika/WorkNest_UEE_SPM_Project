@@ -58,6 +58,8 @@ enum VerifierReactivationRequestStatus {
 }
 
 enum VerificationRequestStatus {
+  ADMIN_REVIEW
+  ADMIN_DENIED
   PENDING
   ASSIGNED
   UNDER_REVIEW
@@ -98,6 +100,15 @@ enum NotificationType {
   GIG_POSTED
   APPLICATION_SUBMITTED
   APPLICATION_HIRED
+  GIG_APPROVED
+  GIG_REJECTED
+  ACCOUNT_DISABLED
+  ACCOUNT_ENABLED
+}
+
+enum UserStatusAction {
+  DISABLED
+  ENABLED
 }
 
 enum EmailStatus {
@@ -112,6 +123,12 @@ enum WorkHistoryRole {
   BUSINESS
 }
 
+enum VerificationGateStatus {
+  PENDING
+  ALLOWED
+  DENIED
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -123,8 +140,15 @@ model User {
   location     String?
   avatarUrl    String?
   trustScore   Int       @default(0)
+  // Set by an admin; a disabled account can't sign in or use an existing session,
+  // and a disabled shop owner's gigs are hidden from job seekers.
+  isDisabled     Boolean   @default(false)
+  disabledAt     DateTime? @db.Timestamptz(3)
+  disabledReason String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  statusEvents      UserStatusEvent[] @relation("UserStatusEvents")
+  adminStatusEvents UserStatusEvent[] @relation("AdminUserStatusEvents")
   gigPosts     GigPost[]
   applications Application[]
   verifierApplications VerifierApplication[] @relation("VerifierApplicant")
@@ -145,6 +169,8 @@ model User {
   moderationAudits       ModerationAudit[]  @relation("AdminModerationAudits")
   reputationAudits       ReputationAudit[]  @relation("ReputationAudits")
   adminReputationAudits  ReputationAudit[]  @relation("AdminReputationAudits")
+  badgeRevocations VerificationRevocation[] @relation("BadgeRevokingAdmin")
+  gateReviews VerificationRequest[] @relation("VerificationGateAdmin")
 }
 
 model VerifierApplication {
@@ -178,6 +204,17 @@ model VerifierApplication {
   @@index([status, submittedAt])
 }
 
+model VerificationRevocation {
+  id String @id @default(uuid())
+  verificationRequestId String @unique
+  verificationRequest VerificationRequest @relation("RevokedVerification", fields: [verificationRequestId], references: [id])
+  reason String
+  revokedById String
+  revokedBy User @relation("BadgeRevokingAdmin", fields: [revokedById], references: [id])
+  revokedAt DateTime @default(now()) @db.Timestamptz(3)
+  gatedRequests VerificationRequest[] @relation("RevocationGate")
+}
+
 model VerificationRequest {
   id                    String                    @id @default(uuid())
   applicantId           String
@@ -203,6 +240,15 @@ model VerificationRequest {
   adminReviewedAt       DateTime?                 @db.Timestamptz(3)
   adminReviewerId       String?
   adminReviewer         User?                     @relation("VerificationAdminReviewer", fields: [adminReviewerId], references: [id])
+  badgeRevocation VerificationRevocation? @relation("RevokedVerification")
+  revocationId String?
+  revocation VerificationRevocation? @relation("RevocationGate", fields: [revocationId], references: [id])
+  gateStatus VerificationGateStatus?
+  gateExplanation String?
+  gateReason String?
+  gateReviewedAt DateTime? @db.Timestamptz(3)
+  gateReviewerId String?
+  gateReviewer User? @relation("VerificationGateAdmin", fields: [gateReviewerId], references: [id])
 
   @@index([applicantId, submittedAt])
   @@index([assignedVerifierId, status, submittedAt])
@@ -268,6 +314,8 @@ model GigPost {
   businessId      String
   business        User        @relation(fields: [businessId], references: [id])
   location        String
+  latitude        Float?
+  longitude       Float?
   paymentAmount   Decimal
   paymentType     PaymentType
   startDate       DateTime
@@ -428,6 +476,20 @@ model ModerationAudit {
   newStatus      ReviewStatus
   reason         String
   createdAt      DateTime         @default(now())
+}
+
+// Audit trail of every time an admin disables or re-enables an account.
+model UserStatusEvent {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation("UserStatusEvents", fields: [userId], references: [id])
+  adminId   String
+  admin     User             @relation("AdminUserStatusEvents", fields: [adminId], references: [id])
+  action    UserStatusAction
+  reason    String?
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
 }
 
 model ReputationAudit {

@@ -60,6 +60,45 @@ export function registerDialogAutoAccept(page: Page) {
   page.on("dialog", (dialog) => dialog.accept());
 }
 
+/**
+ * Status labels like "Hired" or "Pending" also appear as filter chips at the top of
+ * list screens, so asserting on the bare text can match the chip instead of the
+ * status badge. This finds the innermost visible element holding both the anchor
+ * text (a gig title or applicant name) and the expected label.
+ */
+export function rowWith(page: Page, anchorText: string, text: string) {
+  return page
+    .locator("div")
+    .filter({ has: page.getByText(anchorText, { exact: true }) })
+    .filter({ has: page.getByText(text, { exact: true }) })
+    .and(page.locator(":visible"))
+    .last();
+}
+
+/** Stack screens stay mounted underneath on web, so only the visible back button is the current one. */
+export async function goBack(page: Page) {
+  await page.getByLabel("Go back", { exact: true }).and(page.locator(":visible")).first().click();
+}
+
+/** Fills the Standard-mode application form (the default when a gig has no settings saved). */
+export async function fillStandardApplication(
+  page: Page,
+  values: { experience: string; availability: string; expectedPay: string; message: string }
+) {
+  await page.getByPlaceholder("Briefly describe any relevant work experience or skills...").fill(values.experience);
+  await page.getByPlaceholder("e.g., Available all days for the specified gig hours").fill(values.availability);
+  await page.getByPlaceholder("e.g., 3000").fill(values.expectedPay);
+  await page.getByPlaceholder("A brief greeting or introduction...").fill(values.message);
+}
+
+/** Searches Browse Gigs for the gig's unique location and opens its apply form. */
+export async function openApplyForm(page: Page, gig: { title: string; location: string }) {
+  await page.getByPlaceholder("Search by title, skills, location...").fill(gig.location);
+  await click(page, gig.title);
+  await page.getByText("Apply for this Gig", { exact: true }).and(page.locator(":visible")).first().waitFor();
+  await click(page, "Apply for this Gig");
+}
+
 /** Waits for the actual POST /api/applications round trip, not just the click event. */
 export async function submitApplication(page: Page) {
   await Promise.all([

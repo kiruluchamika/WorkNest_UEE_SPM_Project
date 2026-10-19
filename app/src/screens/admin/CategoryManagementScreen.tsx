@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,7 +44,7 @@ export const CategoryManagementScreen: React.FC = () => {
           text: nextLabel,
           style: category.isActive ? "destructive" : "default",
           onPress: () => setStatus(category.id, !category.isActive).catch(() => {
-            Alert.alert("Something went wrong", "Could not update this category. Try again.");
+            toast.error("Something went wrong", "Could not update this category. Try again.");
           }),
         },
       ]
@@ -157,7 +158,7 @@ export const CategoryManagementScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,

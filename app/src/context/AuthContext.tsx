@@ -1,17 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import * as authApi from "../api/authApi";
 import * as verifierApplicationsApi from "../api/verifierApplicationsApi";
-import { setAuthToken } from "../api/http";
+import { setAccountDisabledHandler, setAuthToken } from "../api/http";
 import { loadSession, saveSession, clearSession } from "../utils/session";
 import {
   addPushTokenRefreshListener,
   registerForPushNotificationsAsync,
   unregisterPushTokenAsync,
 } from "../utils/pushNotifications";
+import { toast, errorMessage } from "../utils/toast";
 import type { User, UserRole, VerifierApplicationPayload } from "../types";
 
 interface AuthContextValue {
   user: User | null;
+  /** True only while the saved session is being restored on app start. */
+  isInitializing: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -33,6 +36,7 @@ export interface RegisterPayload {
   district?: string;
   identityType?: string;
   identityNumber?: string;
+  identityDocumentReferenceUpload?: import("../components/common/DocumentField").DocumentUpload;
   identityDocumentReference?: string;
   identityDocumentMetadata?: Record<string, unknown>;
   addressInformation?: string;
@@ -43,7 +47,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const pushTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -67,9 +72,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await clearSession();
         }
       } finally {
-        setIsLoading(false);
+        setIsInitializing(false);
       }
     })();
+  }, []);
+
+  // An admin can disable an account mid-session; the next API call then fails
+  // with ACCOUNT_DISABLED and the user is signed out on this device.
+  useEffect(() => {
+    setAccountDisabledHandler((message) => {
+      setAuthToken(null);
+      pushTokenRef.current = null;
+      clearSession()
+        .catch(() => {})
+        .finally(() => {
+          setUser(null);
+          toast.error("Account disabled", message);
+        });
+    });
+    return () => setAccountDisabledHandler(null);
   }, []);
 
   useEffect(() => {
@@ -134,6 +155,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthToken(null);
       await clearSession();
       setUser(null);
+      toast.success("Signed out", "You've been signed out successfully.");
+    } catch (err) {
+      toast.error("Could not sign out", errorMessage(err, "Please try again."));
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser, refreshCurrentUser, acknowledgeVerifierApproval, submitVerifierReapplication }}
+      value={{ user, isInitializing, isLoading, login, loginWithGoogle, register, logout, switchRole, updateUser, refreshCurrentUser, acknowledgeVerifierApproval, submitVerifierReapplication }}
     >
       {children}
     </AuthContext.Provider>

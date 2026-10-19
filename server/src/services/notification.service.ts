@@ -6,8 +6,14 @@ import { sendPushNotification } from "./pushNotification.service";
 // Notification types that never generate an email: GIG_COMPLETED's email is
 // folded into the REVIEW_REQUESTED email sent alongside it (one combined
 // email instead of two), and REVIEW_REPORTED is purely an in-app receipt
-// for the reporter, per the SMTP rules in the feature spec.
-const NO_EMAIL_TYPES: NotificationType[] = ["GIG_COMPLETED", "REVIEW_REPORTED"];
+// for the reporter, per the SMTP rules in the feature spec. Gig moderation
+// outcomes (GIG_APPROVED / GIG_REJECTED) are in-app + push only.
+const NO_EMAIL_TYPES: NotificationType[] = [
+  "GIG_COMPLETED",
+  "REVIEW_REPORTED",
+  "GIG_APPROVED",
+  "GIG_REJECTED",
+];
 
 export interface CreateNotificationInput {
   recipientId: string;
@@ -62,6 +68,16 @@ async function sendNotificationEmail(
         recipientName,
         reason: params.reason as string,
       });
+    case "ACCOUNT_DISABLED":
+      return emailService.sendAccountDisabledEmail(to, {
+        recipientName,
+        reason: params.reason as string,
+      });
+    case "ACCOUNT_ENABLED":
+      return emailService.sendAccountEnabledEmail(to, {
+        recipientName,
+        reason: params.reason as string | undefined,
+      });
     case "GIG_POSTED":
       return emailService.sendGigPostedEmail(to, {
         recipientName,
@@ -93,6 +109,8 @@ async function sendNotificationEmail(
       });
     case "GIG_COMPLETED":
     case "REVIEW_REPORTED":
+    case "GIG_APPROVED":
+    case "GIG_REJECTED":
       return;
   }
 }

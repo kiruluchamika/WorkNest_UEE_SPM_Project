@@ -6,6 +6,8 @@ export interface GigPostFormPayload {
   categoryId: string;
   description: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   paymentAmount: number;
   paymentType: GigPaymentType;
   startDate: string;
@@ -17,6 +19,22 @@ export interface GigPostFormPayload {
   contactInfo?: string;
   imageUrl?: string;
 }
+
+// On update, null clears an optional field (undefined leaves it unchanged).
+export type GigPostUpdatePayload = Partial<
+  Omit<
+    GigPostFormPayload,
+    "startTime" | "endDate" | "endTime" | "contactInfo" | "imageUrl" | "latitude" | "longitude"
+  >
+> & {
+  latitude?: number | null;
+  longitude?: number | null;
+  startTime?: string | null;
+  endDate?: string | null;
+  endTime?: string | null;
+  contactInfo?: string | null;
+  imageUrl?: string | null;
+};
 
 export async function createGigPost(payload: GigPostFormPayload): Promise<GigPost> {
   try {
@@ -68,7 +86,7 @@ export async function getPublicGigPost(id: string): Promise<GigPost> {
 
 export async function updateGigPost(
   id: string,
-  payload: Partial<GigPostFormPayload>
+  payload: GigPostUpdatePayload
 ): Promise<GigPost> {
   try {
     const { data } = await http.put(`/gigs/${id}`, payload);

@@ -6,10 +6,21 @@ import {
   reportResolvedTemplate,
   reportDismissedTemplate,
   accountWarningTemplate,
+  accountDisabledTemplate,
+  accountEnabledTemplate,
   gigPostedTemplate,
   applicationSubmittedTemplate,
   hiredConfirmationTemplate,
+  welcomeTemplate,
 } from "./email.templates";
+
+export async function sendWelcomeEmail(
+  to: string,
+  params: { recipientName: string; role: string }
+): Promise<void> {
+  const { subject, html, text } = welcomeTemplate({ ...params, email: to });
+  await sendMail({ to, subject, html, text });
+}
 
 export async function sendGigCompletedAndReviewRequestedEmail(
   to: string,
@@ -109,5 +120,21 @@ export async function sendAccountWarningEmail(
   params: { recipientName: string; reason: string }
 ): Promise<void> {
   const { subject, html, text } = accountWarningTemplate(params);
+  await sendMail({ to, subject, html, text });
+}
+
+export async function sendAccountDisabledEmail(
+  to: string,
+  params: { recipientName: string; reason: string }
+): Promise<void> {
+  const { subject, html, text } = accountDisabledTemplate(params);
+  await sendMail({ to, subject, html, text });
+}
+
+export async function sendAccountEnabledEmail(
+  to: string,
+  params: { recipientName: string; reason?: string }
+): Promise<void> {
+  const { subject, html, text } = accountEnabledTemplate(params);
   await sendMail({ to, subject, html, text });
 }

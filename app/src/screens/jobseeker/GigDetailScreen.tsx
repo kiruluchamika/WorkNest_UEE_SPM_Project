@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +16,7 @@ import { StatusBadge } from "../../components/common/StatusBadge";
 import { InfoRow } from "../../components/common/InfoRow";
 import { SectionHeader } from "../../components/common/SectionHeader";
 import { EmployerSection } from "../../components/gig/EmployerSection";
+import { GigLocationMapCard } from "../../components/map/GigLocationMapCard";
 import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -143,6 +144,10 @@ export const GigDetailScreen: React.FC = () => {
           <View style={{ width: 36 }} />
         </View>
 
+        {gig.imageUrl ? (
+          <Image source={{ uri: gig.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+        ) : null}
+
         {/* Hero Card */}
         <Card style={styles.heroCard}>
           <View style={styles.heroTopRow}>
@@ -192,6 +197,14 @@ export const GigDetailScreen: React.FC = () => {
             <InfoRow icon="phone" label="Contact Info" value={gig.contactInfo} />
           ) : null}
         </Card>
+
+        {/* Renders nothing for gigs without a map pin */}
+        <GigLocationMapCard
+          latitude={gig.latitude}
+          longitude={gig.longitude}
+          locationText={gig.location}
+          style={styles.sectionCard}
+        />
 
         {/* About the Gig Description */}
         <Card style={styles.sectionCard}>
@@ -286,7 +299,7 @@ export const GigDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,
@@ -315,6 +328,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.base,
     fontWeight: "800",
     color: colors.text,
+  },
+  heroImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: radius.xl,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surfaceSubtle,
   },
   heroCard: {
     marginBottom: spacing.md,

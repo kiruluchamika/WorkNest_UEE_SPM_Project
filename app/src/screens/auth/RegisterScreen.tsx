@@ -1,3 +1,4 @@
+import { DocumentField, DocumentUpload } from "../../components/common/DocumentField";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -8,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -27,6 +27,7 @@ import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { ROLES } from "../../utils/constants";
 import { registerSchema } from "../../utils/validators";
+import { toast, errorMessage } from "../../utils/toast";
 import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 export const RegisterScreen: React.FC = () => {
@@ -46,6 +47,7 @@ export const RegisterScreen: React.FC = () => {
   const [districtLoadError, setDistrictLoadError] = useState("");
   const [identityType, setIdentityType] = useState("");
   const [identityNumber, setIdentityNumber] = useState("");
+  const [documentUpload, setDocumentUpload] = useState<DocumentUpload>();
   const [identityDocumentReference, setIdentityDocumentReference] = useState("");
   const [addressInformation, setAddressInformation] = useState("");
   const [communityReference, setCommunityReference] = useState("");
@@ -72,7 +74,7 @@ export const RegisterScreen: React.FC = () => {
       role,
       password,
       confirmPassword,
-      district, identityType, identityNumber, identityDocumentReference, addressInformation, communityReference,
+      district, identityType, identityNumber, identityDocumentReference, identityDocumentReferenceUpload: documentUpload, addressInformation, communityReference,
     });
 
     if (!result.success) {
@@ -82,18 +84,20 @@ export const RegisterScreen: React.FC = () => {
         fieldErrors[key] = issue.message;
       });
       setErrors(fieldErrors);
+      toast.error("Check your details", result.error.issues[0]?.message ?? "Some fields need your attention.");
       return;
     }
 
     try {
       await register({ name, email, phone, role, password, ...(role === "verifier" ? {
-        district, identityType, identityNumber, identityDocumentReference,
-        ...(identityDocumentReference ? { identityDocumentMetadata: { storage: "private-reference", originalName: identityDocumentReference } } : {}),
+        district, identityType, identityNumber, identityDocumentReference, identityDocumentReferenceUpload: documentUpload,
         addressInformation, communityReference,
       } : {}) });
-      Alert.alert("Account created!", role === "verifier" ? "Your verifier application is pending review." : "Welcome to WorkNest.");
+      toast.success("Account created!", role === "verifier" ? "Your verifier application is pending review." : "Welcome to WorkNest.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create account. Try again.");
+      const message = errorMessage(err, "Could not create account. Try again.");
+      setError(message);
+      toast.error("Could not create account", message);
     }
   };
 
@@ -101,9 +105,11 @@ export const RegisterScreen: React.FC = () => {
     setError("");
     try {
       await loginWithGoogle();
-      Alert.alert("Welcome!", "You've signed in successfully.");
+      toast.success("Welcome!", "You've signed in successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in with Google");
+      const message = errorMessage(err, "Could not sign in with Google");
+      setError(message);
+      toast.error("Sign in failed", message);
     }
   };
 
@@ -200,8 +206,9 @@ export const RegisterScreen: React.FC = () => {
                 { value: "NATIONAL_ID", label: "National identity card" }, { value: "PASSPORT", label: "Passport" }, { value: "DRIVING_LICENCE", label: "Driving licence" },
               ]} />
               <Input label="ID number" value={identityNumber} onChangeText={setIdentityNumber} placeholder="Identity document number" error={errors.identityNumber} />
-              <Input label="Identity document (optional for testing)" value={identityDocumentReference} onChangeText={setIdentityDocumentReference} placeholder="Secure file reference or filename" error={errors.identityDocumentReference} />
-              <Text style={styles.documentNote}>Optional in this development build. When supplied, the document reference is not published by WorkNest.</Text>
+              <DocumentField showOptionalLabel={false} label="Identity document" value={documentUpload} onChange={setDocumentUpload} disabled={isLoading}/>
+              {errors.identityDocumentReference ? <Text style={styles.error}>{errors.identityDocumentReference}</Text> : null}
+              <Text style={styles.documentNote}>The document reference is not published by WorkNest.</Text>
               <Input label="Address / supporting information" value={addressInformation} onChangeText={setAddressInformation} placeholder="Residential address and supporting details" multiline rows={3} error={errors.addressInformation} />
               <Input label="Community reference (optional)" value={communityReference} onChangeText={setCommunityReference} placeholder="Reference name and contact information" multiline rows={3} error={errors.communityReference} />
             </View>
@@ -254,7 +261,7 @@ export const RegisterScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.lg,
@@ -320,10 +327,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontSize: typography.sizes.sm,
   },
-  verifierSection: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md },
+  verifierSection: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, padding: spacing.lg, marginTop: spacing.sm, marginBottom: spacing.lg },
   sectionTitle: { fontSize: typography.sizes.base, fontWeight: "800", color: colors.primaryDark, marginBottom: spacing.xs },
-  sectionHelp: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 20, marginBottom: spacing.md },
-  documentNote: { fontSize: typography.sizes.xs, color: colors.textMuted, marginTop: -spacing.sm, marginBottom: spacing.md, lineHeight: 17 },
+  sectionHelp: { fontSize: typography.sizes.sm, color: colors.textMuted, lineHeight: 22, marginBottom: spacing.lg },
+  documentNote: { fontSize: typography.sizes.xs, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md, lineHeight: 19 },
   divider: {
     flexDirection: "row",
     alignItems: "center",

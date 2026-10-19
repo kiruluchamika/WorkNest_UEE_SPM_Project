@@ -93,6 +93,23 @@ export const GigManagementScreen: React.FC = () => {
           </View>
         </View>
 
+        <TouchableOpacity
+          style={styles.reportsLink}
+          activeOpacity={0.85}
+          onPress={() => (navigation as any).navigate("Reports")}
+          accessibilityRole="button"
+          accessibilityLabel="Open reports and insights"
+        >
+          <View style={styles.reportsIcon}>
+            <Feather name="bar-chart-2" size={18} color={colors.primaryDark} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportsTitle}>Reports & insights</Text>
+            <Text style={styles.reportsText}>Gigs, customers and what needs attention</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.primaryDark} />
+        </TouchableOpacity>
+
         <View style={styles.statsRow}>
           <View style={styles.statPill}>
             <Text style={styles.statValue}>{stats.pending}</Text>
@@ -180,7 +197,7 @@ export const GigManagementScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,
@@ -215,6 +232,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primarySoft,
+  },
+  reportsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  reportsIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primarySoft,
+    marginRight: spacing.sm,
+  },
+  reportsTitle: {
+    fontSize: typography.sizes.sm,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  reportsText: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    marginTop: 1,
   },
   statsRow: {
     flexDirection: "row",

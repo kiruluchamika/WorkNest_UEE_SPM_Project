@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useState } from "react";
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +15,7 @@ import { ErrorState } from "../../components/common/ErrorState";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import { SectionHeader } from "../../components/common/SectionHeader";
 import { InfoRow } from "../../components/common/InfoRow";
+import { GigLocationMapCard } from "../../components/map/GigLocationMapCard";
 import { colors, shadows } from "../../theme/colors";
 import { radius, spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -103,7 +105,7 @@ export const GigPostDetailScreen: React.FC = () => {
             await closeGig(gig.id);
             await refresh();
           } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to close gig");
+            toast.error("Error", err instanceof Error ? err.message : "Failed to close gig");
           } finally {
             setBusy(false);
           }
@@ -125,7 +127,7 @@ export const GigPostDetailScreen: React.FC = () => {
             await removeGig(gig.id);
             navigation.goBack();
           } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to delete gig");
+            toast.error("Error", err instanceof Error ? err.message : "Failed to delete gig");
             setBusy(false);
           }
         },
@@ -138,10 +140,10 @@ export const GigPostDetailScreen: React.FC = () => {
     setBusy(true);
     try {
       await resubmitGig(gig.id);
-      Alert.alert("Resubmitted", "Your gig has been resubmitted for admin review.");
+      toast.success("Resubmitted", "Your gig has been resubmitted for admin review.");
       await refresh();
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to resubmit gig");
+      toast.error("Error", err instanceof Error ? err.message : "Failed to resubmit gig");
     } finally {
       setBusy(false);
     }
@@ -162,7 +164,7 @@ export const GigPostDetailScreen: React.FC = () => {
               await completeGig(gig.id);
               await refresh();
             } catch (err) {
-              Alert.alert("Error", err instanceof Error ? err.message : "Failed to complete gig");
+              toast.error("Error", err instanceof Error ? err.message : "Failed to complete gig");
             } finally {
               setBusy(false);
             }
@@ -343,9 +345,16 @@ export const GigPostDetailScreen: React.FC = () => {
           <InfoRow icon="clock" label="Posted On" value={formatDate(gig.createdAt)} />
         </Card>
 
+        <GigLocationMapCard
+          latitude={gig.latitude}
+          longitude={gig.longitude}
+          locationText={gig.location}
+          style={styles.card}
+        />
+
         {/* Gig Actions Section */}
         <View style={styles.actionsBlock}>
-          {gig.status !== "CLOSED" ? (
+          {gig.status !== "CLOSED" && gig.status !== "COMPLETED" ? (
             <Button
               title="Edit Gig Details"
               icon="edit-2"
@@ -405,7 +414,7 @@ export const GigPostDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,

@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -22,6 +21,7 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { APP_NAME, APP_TAGLINE } from "../../utils/constants";
+import { toast, errorMessage } from "../../utils/toast";
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,13 +30,27 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const fail = (message: string) => {
+    setError(message);
+    toast.error("Sign in failed", message);
+  };
+
   const handleLogin = async () => {
     setError("");
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      fail("Please enter your email and password.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      fail("Please enter a valid email address.");
+      return;
+    }
     try {
-      await login(email, password);
-      Alert.alert("Welcome back!", "You've signed in successfully.");
+      await login(trimmedEmail, password);
+      toast.success("Welcome back!", "You've signed in successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid email or password");
+      fail(errorMessage(err, "Invalid email or password"));
     }
   };
 
@@ -44,9 +58,9 @@ export const LoginScreen: React.FC = () => {
     setError("");
     try {
       await loginWithGoogle();
-      Alert.alert("Welcome back!", "You've signed in successfully.");
+      toast.success("Welcome back!", "You've signed in successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in with Google");
+      fail(errorMessage(err, "Could not sign in with Google"));
     }
   };
 
@@ -111,7 +125,7 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.lg,

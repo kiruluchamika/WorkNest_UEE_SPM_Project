@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 import * as gigPostApi from "../api/gigPostApi";
 import type { GigPost } from "../types";
-import type { GigPostFormPayload } from "../api/gigPostApi";
+import type { GigPostFormPayload, GigPostUpdatePayload } from "../api/gigPostApi";
 
 interface GigPostStats {
   total: number;
@@ -17,7 +17,7 @@ interface GigPostContextValue {
   stats: GigPostStats;
   refresh: () => Promise<void>;
   addGig: (payload: GigPostFormPayload) => Promise<GigPost>;
-  editGig: (id: string, updates: Partial<GigPostFormPayload>) => Promise<GigPost>;
+  editGig: (id: string, updates: GigPostUpdatePayload) => Promise<GigPost>;
   removeGig: (id: string) => Promise<void>;
   closeGig: (id: string) => Promise<GigPost>;
   resubmitGig: (id: string) => Promise<GigPost>;
@@ -46,7 +46,7 @@ export const GigPostProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return gig;
   }, []);
 
-  const editGig = useCallback(async (id: string, updates: Partial<GigPostFormPayload>) => {
+  const editGig = useCallback(async (id: string, updates: GigPostUpdatePayload) => {
     const gig = await gigPostApi.updateGigPost(id, updates);
     setGigPosts((prev) => prev.map((g) => (g.id === id ? gig : g)));
     return gig;

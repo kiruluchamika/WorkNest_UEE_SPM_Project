@@ -69,18 +69,20 @@ export interface VerifierApplicationPayload {
   district: string;
   identityType: "NATIONAL_ID" | "PASSPORT" | "DRIVING_LICENCE";
   identityNumber: string;
+  identityDocumentReferenceUpload?: import("../components/common/DocumentField").DocumentUpload;
   identityDocumentReference?: string;
   identityDocumentMetadata?: Record<string, unknown>;
   addressInformation: string;
   communityReference?: string;
 }
 
-export type VerificationRequestStatus = "PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
+export type VerificationRequestStatus = "ADMIN_REVIEW"|"ADMIN_DENIED"|"PENDING"|"ASSIGNED"|"UNDER_REVIEW"|"FLAGGED"|"RETURNED_FOR_REVIEW"|"APPROVED"|"REJECTED"|"ADMIN_CONFIRMED";
 export interface VerificationRequest {
   id:string; applicantId:string; applicant:{id:string;name:string;email:string;phone?:string;bio?:string;location?:string};
   district:string; personalInformation:string; identityDocument:string; supportingEvidence?:string; communityReferences:string;
   status:VerificationRequestStatus; assignedVerifierId?:string; submittedAt:string; assignedAt?:string; reviewStartedAt?:string; decidedAt?:string;
   verifierNote?:string; rejectionReason?:string; flagReason?:string; flaggedAt?:string; wasFlagged:boolean; adminResponse?:string; adminReviewedAt?:string;
+  gateStatus?: "PENDING" | "ALLOWED" | "DENIED"; gateExplanation?:string; gateReason?:string; gateReviewedAt?:string; revocation?: VerificationRevocation; badgeRevocation?: VerificationRevocation;
   assignedVerifier?:{id:string;name:string;email:string}; adminReviewer?:{id:string;name:string;email:string};
 }
 export interface VerifierDashboardData { application?:{district:string;isAvailable:boolean;status:VerifierApplicationStatus};queues:{awaiting:number;underReview:number;returned:number};today:{assigned:number;approved:number;rejected:number;flagged:number};allTime:{assigned:number;approved:number;rejected:number;flagged:number}; }
@@ -126,6 +128,9 @@ export interface GigPost {
   businessId: string;
   business?: GigPostBusiness;
   location: string;
+  /** Optional map pin; both are set together or both absent. */
+  latitude?: number | null;
+  longitude?: number | null;
   paymentAmount: number;
   paymentType: GigPaymentType;
   startDate: string;
@@ -327,7 +332,56 @@ export type NotificationType =
   | "REVIEW_REMOVED"
   | "REPORT_RESOLVED"
   | "REPORT_DISMISSED"
-  | "ACCOUNT_WARNING";
+  | "ACCOUNT_WARNING"
+  | "ACCOUNT_DISABLED"
+  | "ACCOUNT_ENABLED";
+
+// ---- Admin user management ----
+
+export type UserStatusFilter = "all" | "active" | "disabled";
+export type UserRoleFilter = "all" | UserRole;
+
+export interface AdminUserSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  phone?: string | null;
+  location?: string | null;
+  avatarUrl?: string | null;
+  createdAt: string;
+  isDisabled: boolean;
+  disabledAt?: string | null;
+  disabledReason?: string | null;
+}
+
+export interface AdminUserList {
+  users: AdminUserSummary[];
+  total: number;
+  page: number;
+  limit: number;
+  counts: { all: number; active: number; disabled: number };
+}
+
+export interface UserStatusEvent {
+  id: string;
+  action: "DISABLED" | "ENABLED";
+  reason?: string | null;
+  createdAt: string;
+  admin: { id: string; name: string };
+}
+
+export interface AdminUserDetail {
+  user: AdminUserSummary & { bio?: string | null; trustScore: number };
+  stats: { gigsPosted: number; activeGigs: number; applications: number; hiredApplications: number; completedJobs: number };
+  reputation: { averageRating: number | null; totalReviews: number };
+  warnings: { total: number; recent: { id: string; message: string; createdAt: string }[] };
+  verification: {
+    jobSeekerRequest: { status: string; submittedAt: string } | null;
+    verifierApplication: { status: string; submittedAt: string } | null;
+  };
+  statusHistory: UserStatusEvent[];
+}
 
 export type EmailStatus = "NOT_REQUIRED" | "PENDING" | "SENT" | "FAILED";
 
@@ -405,3 +459,10 @@ export interface ReviewReport {
 export interface FlaggedReview extends Review {
   reports: ReviewReport[];
 }
+
+export interface VerificationRevocation {
+  id: string; verificationRequestId: string; reason: string; revokedAt: string; revokedById: string;
+  revokedBy?: { id: string; name: string }; verificationRequest?: VerificationRequest;
+}
+export interface VerificationState { verified: boolean; revocation?: VerificationRevocation; request?: VerificationRequest }
+export interface JobSeekerVerificationDetails { user: { id: string; name: string; email: string }; verified: boolean; requests: VerificationRequest[]; revocations: VerificationRevocation[] }

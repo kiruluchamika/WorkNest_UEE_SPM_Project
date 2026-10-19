@@ -1,3 +1,4 @@
+import { toast } from "../../utils/toast";
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,13 +23,13 @@ import type { ApplicationDetail } from "../../types";
 
 async function openExternalUrl(url: string) {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    Alert.alert("Invalid Link", "This link must start with http:// or https://.");
+    toast.error("Invalid Link", "This link must start with http:// or https://.");
     return;
   }
 
   const supported = await Linking.canOpenURL(url);
   if (!supported) {
-    Alert.alert("Cannot Open Link", "This link could not be opened on this device.");
+    toast.error("Cannot Open Link", "This link could not be opened on this device.");
     return;
   }
 
@@ -76,7 +77,7 @@ export const ApplicantDetailsScreen: React.FC = () => {
       await applicationsApi.shortlistApplication(applicationId);
       await load();
     } catch (err) {
-      Alert.alert("Could not shortlist", err instanceof Error ? err.message : "Please try again.");
+      toast.error("Could not shortlist", err instanceof Error ? err.message : "Please try again.");
     } finally {
       setActionInFlight(null);
     }
@@ -94,7 +95,7 @@ export const ApplicantDetailsScreen: React.FC = () => {
             await applicationsApi.hireApplication(applicationId);
             await load();
           } catch (err) {
-            Alert.alert("Could not hire", err instanceof Error ? err.message : "Please try again.");
+            toast.error("Could not hire", err instanceof Error ? err.message : "Please try again.");
           } finally {
             setActionInFlight(null);
           }
@@ -132,7 +133,7 @@ export const ApplicantDetailsScreen: React.FC = () => {
               await applicationsApi.completeApplication(applicationId);
               await load();
             } catch (err) {
-              Alert.alert("Could not complete", err instanceof Error ? err.message : "Please try again.");
+              toast.error("Could not complete", err instanceof Error ? err.message : "Please try again.");
             } finally {
               setActionInFlight(null);
             }
@@ -394,7 +395,7 @@ export const ApplicantDetailsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   scroll: {
     padding: spacing.md,

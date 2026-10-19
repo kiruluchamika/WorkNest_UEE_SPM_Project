@@ -184,6 +184,61 @@ function renderLayout(params: {
 </html>`;
 }
 
+const welcomeCopyByRole: Record<string, { roleLabel: string; intro: string; nextStep: string }> = {
+  jobseeker: {
+    roleLabel: "Job seeker",
+    intro: "Your account is ready. You can now browse local gigs and apply to the ones that suit you.",
+    nextStep: "Complete your profile so businesses can get to know you, then head to the gig feed to find your first job.",
+  },
+  shopowner: {
+    roleLabel: "Shop owner",
+    intro: "Your account is ready. You can now post gigs and hire trusted people from your community.",
+    nextStep: "Complete your business profile, then post your first gig to start receiving applications.",
+  },
+  verifier: {
+    roleLabel: "Community verifier",
+    intro: "Your account has been created and your verifier application has been submitted for review.",
+    nextStep: "Our team will review your details and identity document. You&rsquo;ll be notified in the app as soon as a decision is made.",
+  },
+};
+
+export function welcomeTemplate(params: {
+  recipientName: string;
+  email: string;
+  role: string;
+}): EmailTemplateContent {
+  const { recipientName, email, role } = params;
+  const name = escapeHtml(recipientName);
+  const copy = welcomeCopyByRole[role] ?? welcomeCopyByRole.jobseeker;
+  const isVerifier = role === "verifier";
+  const status = isVerifier
+    ? pill("Pending review", brand.warning, brand.warningLight)
+    : pill("Active", brand.success, brand.successLight);
+  const nextStepText = copy.nextStep.replace(/&rsquo;/g, "'");
+
+  return {
+    subject: "Welcome to WorkNest",
+    html: renderLayout({
+      kind: "success",
+      eyebrow: "Welcome",
+      heading: "Welcome to WorkNest!",
+      preheader: `Your WorkNest account has been created. ${copy.intro}`,
+      bodyHtml: `
+        <p style="margin:0 0 8px;">Hi ${name},</p>
+        <p style="margin:0;">${copy.intro}</p>
+        ${detailBox(
+          detailRow("Email", escapeHtml(email)) +
+            detailRow("Account type", escapeHtml(copy.roleLabel)) +
+            detailRow(isVerifier ? "Application" : "Status", status, true)
+        )}
+        <p style="margin:0 0 8px;">${copy.nextStep}</p>
+        <p style="margin:0;font-size:13px;color:${brand.textMuted};">If you didn&rsquo;t create this account, please contact WorkNest support.</p>
+      `,
+    }),
+    text: `Hi ${recipientName},\n\nWelcome to WorkNest! ${copy.intro}\n\nEmail: ${email}\nAccount type: ${copy.roleLabel}\n\n${nextStepText}\n\nIf you didn't create this account, please contact WorkNest support.\n\n— WorkNest`,
+  };
+}
+
 export function gigCompletedAndReviewRequestedTemplate(params: {
   recipientName: string;
   counterpartName: string;
@@ -364,6 +419,56 @@ export function accountWarningTemplate(params: {
       `,
     }),
     text: `Hi ${recipientName},\n\nAn administrator has issued a warning on your account.\n\nReason: ${reason}\n\n— WorkNest`,
+  };
+}
+
+export function accountDisabledTemplate(params: {
+  recipientName: string;
+  reason: string;
+}): EmailTemplateContent {
+  const { recipientName, reason } = params;
+  const name = escapeHtml(recipientName);
+  const reasonText = escapeHtml(reason);
+
+  return {
+    subject: "Your WorkNest account has been disabled",
+    html: renderLayout({
+      kind: "danger",
+      eyebrow: "Account disabled",
+      heading: "Your account has been disabled",
+      preheader: "An administrator disabled your WorkNest account.",
+      bodyHtml: `
+        <p style="margin:0 0 8px;">Hi ${name},</p>
+        <p style="margin:0;">An administrator has disabled your WorkNest account. You won't be able to sign in until it is re-enabled.</p>
+        ${detailBox(detailRow("Reason", reasonText, true))}
+        <p style="margin:0;font-size:13px;color:${brand.textMuted};">If you think this is a mistake, reply to this email to contact the WorkNest team.</p>
+      `,
+    }),
+    text: `Hi ${recipientName},\n\nAn administrator has disabled your WorkNest account. You won't be able to sign in until it is re-enabled.\n\nReason: ${reason}\n\nIf you think this is a mistake, reply to this email to contact the WorkNest team.\n\n— WorkNest`,
+  };
+}
+
+export function accountEnabledTemplate(params: {
+  recipientName: string;
+  reason?: string;
+}): EmailTemplateContent {
+  const { recipientName, reason } = params;
+  const name = escapeHtml(recipientName);
+
+  return {
+    subject: "Your WorkNest account has been re-enabled",
+    html: renderLayout({
+      kind: "success",
+      eyebrow: "Account re-enabled",
+      heading: "Welcome back to WorkNest",
+      preheader: "Your WorkNest account is active again.",
+      bodyHtml: `
+        <p style="margin:0 0 8px;">Hi ${name},</p>
+        <p style="margin:0;">An administrator has re-enabled your WorkNest account. You can sign in and use the app again.</p>
+        ${reason ? detailBox(detailRow("Note", escapeHtml(reason), true)) : ""}
+      `,
+    }),
+    text: `Hi ${recipientName},\n\nAn administrator has re-enabled your WorkNest account. You can sign in and use the app again.${reason ? `\n\nNote: ${reason}` : ""}\n\n— WorkNest`,
   };
 }
 

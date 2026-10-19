@@ -13,6 +13,7 @@ export const verifierReapplicationSchema = z.object({
   district: z.enum(districtSchemaValues, { error: "Please select a supported district" }),
   identityType: z.enum(["NATIONAL_ID", "PASSPORT", "DRIVING_LICENCE"]),
   identityNumber: z.string().trim().min(4, "ID number is required"),
+  identityDocumentReferenceUpload: z.unknown().optional(),
   identityDocumentReference: z.string().trim().optional(),
   identityDocumentMetadata: z.record(z.string(), z.unknown()).optional(),
   addressInformation: z.string().trim().min(5, "Address information is required"),
@@ -21,6 +22,7 @@ export const verifierReapplicationSchema = z.object({
 
 export const reactivationRequestSchema = z.object({
   explanation: z.string().trim().min(10, "Please provide a meaningful reactivation explanation."),
+  attachmentReferenceUpload: z.unknown().optional(),
   attachmentReference: z.string().trim().max(500, "Attachment reference is too long.").optional(),
   attachmentMetadata: z.record(z.string(), z.unknown()).optional(),
 });

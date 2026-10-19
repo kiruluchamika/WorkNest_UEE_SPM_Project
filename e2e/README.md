@@ -48,13 +48,27 @@ API calls (see `tests/helpers/api.ts`), so every run is isolated and doesn't dep
 what's already in the database. The actual apply/shortlist/hire/reject steps are then
 driven through the real UI in a browser.
 
+## Cleanup after a run
+
+When the suite finishes (pass or fail), `tests/global-teardown.ts` runs
+`npm run prisma:cleanup-e2e -- --confirm` in `server/`, which deletes every
+`e2e-*@worknest.test` user, every `E2E ...` gig and all rows hanging off them
+(applications, notifications, settings...). Real accounts are never deleted.
+
+```bash
+E2E_KEEP_DATA=1 npm test                   # keep the test data to inspect it
+cd ../server && npm run prisma:cleanup-e2e # dry run: list leftover e2e data
+```
+
 ## A note on `Alert.alert` on web
 
 `react-native-web` stubs `Alert.alert()` as a no-op, so any flow gated behind a native
-confirm dialog does nothing when clicked in a browser. `app/src/screens/shopowner/ApplicantDetailsScreen.tsx`
-now uses `app/src/utils/confirm.ts`, which falls back to `window.confirm` on web and
-keeps the native `Alert.alert` behavior on iOS/Android — that's what lets these tests
-click Hire/Reject/Mark Completed for real instead of only exercising the API.
+confirm dialog does nothing when clicked in a browser. Screens that use
+`app/src/utils/confirm.ts` (e.g. Withdraw Application) fall back to `window.confirm`
+on web, so the tests click those for real. `ApplicantDetailsScreen`'s Hire button still
+confirms through `Alert.alert`, so the hiring test hires through the API
+(`hireApplication` in `tests/helpers/api.ts`) and then checks the UI reflects it.
+Reject uses an in-app modal and is driven through the UI.
 
 ## Ports
 

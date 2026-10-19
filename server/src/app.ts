@@ -1,3 +1,5 @@
+import { requireAuth } from "./middleware/auth.middleware";
+import { downloadDocument } from "./services/privateDocuments";
 import express from "express";
 import cors from "cors";
 import { authRoutes } from "./routes/auth.routes";
@@ -11,13 +13,15 @@ import { userRoutes } from "./routes/user.routes";
 import { notificationRoutes } from "./routes/notification.routes";
 import { adminReviewRoutes } from "./routes/admin-review.routes";
 import { reviewRoutes } from "./routes/review.routes";
+import { adminReportRoutes } from "./routes/admin-report.routes";
+import { adminUserRoutes } from "./routes/admin-user.routes";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import { SRI_LANKAN_DISTRICTS } from "./constants/districts";
 import { adminVerificationRoutes, jobSeekerVerificationRoutes, verifierWorkRoutes } from "./routes/verificationRequests.routes";
 
 export const app = express();
 
-app.use(cors());
+app.use(cors({ exposedHeaders: ["Content-Disposition"] }));
 // Raised from the default 100kb so gig/profile photos (sent as base64 data URIs) fit.
 app.use(express.json({ limit: "8mb" }));
 
@@ -29,6 +33,7 @@ app.get("/api/districts", (_req, res) => {
   res.json({ districts: SRI_LANKAN_DISTRICTS });
 });
 
+app.get("/api/private-documents/:id", requireAuth, downloadDocument);
 app.use("/api/auth", authRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api/gigs", gigRoutes);
@@ -43,6 +48,8 @@ app.use("/api/admin/verification-work", adminVerificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin/reviews", adminReviewRoutes);
+app.use("/api/admin/reports", adminReportRoutes);
+app.use("/api/admin/users", adminUserRoutes);
 app.use("/api", reviewRoutes);
 
 app.use(notFoundHandler);
