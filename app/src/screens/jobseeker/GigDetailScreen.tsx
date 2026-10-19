@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -143,6 +143,10 @@ export const GigDetailScreen: React.FC = () => {
           </Text>
           <View style={{ width: 36 }} />
         </View>
+
+        {gig.imageUrl ? (
+          <Image source={{ uri: gig.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+        ) : null}
 
         {/* Hero Card */}
         <Card style={styles.heroCard}>
@@ -324,6 +328,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.base,
     fontWeight: "800",
     color: colors.text,
+  },
+  heroImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: radius.xl,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surfaceSubtle,
   },
   heroCard: {
     marginBottom: spacing.md,
