@@ -69,6 +69,18 @@ export async function getFirstCategoryId(request: APIRequestContext): Promise<st
   return categories[0].id as string;
 }
 
+/**
+ * ApplicantDetailsScreen gates Hire behind a multi-button Alert.alert, which
+ * react-native-web stubs as a no-op, so the Hire button can't be driven from a
+ * browser. The test hires through the same endpoint the button calls instead.
+ */
+export async function hireApplication(request: APIRequestContext, shopownerToken: string, applicationId: string) {
+  const res = await request.patch(`${API_BASE_URL}/applications/${applicationId}/hire`, {
+    headers: { Authorization: `Bearer ${shopownerToken}` },
+  });
+  await asJson(res);
+}
+
 export interface CreatedGig {
   id: string;
   title: string;
